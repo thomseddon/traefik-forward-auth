@@ -7,7 +7,7 @@ A minimal forward authentication service that provides Google oauth based login 
 ## Why?
 
 - Seamlessly overlays any http service with a single endpoint (see: `-url-path` in [Configuration](#configuration))
-- Supports multiple domains/subdomains
+- Supports multiple domains/subdomains by dynamically generating redirect_uri's
 - Allows authentication to persist across multiple domains (see [Cookie Domains](#cookie-domains))
 - Supports extended authentication beyond Google token lifetime (see: `-lifetime` in [Configuration](#configuration))
 
