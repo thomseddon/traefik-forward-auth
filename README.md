@@ -1,5 +1,5 @@
 
-# Traefik Forward Auth
+# Traefik Forward Auth [![Build Status](https://travis-ci.org/thomseddon/traefik-forward-auth.svg?branch=master)](https://travis-ci.org/thomseddon/traefik-forward-auth)
 
 A minimal forward authentication service that provides Google oauth based login and authentication for the traefik reverse proxy.
 
