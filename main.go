@@ -58,7 +58,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
   }
 
   // Validate cookie
-  valid, email := fw.ValidateCookie(r, c)
+  valid, email, _ := fw.ValidateCookie(r, c)
   if !valid {
     http.Error(w, "Not authorized", 401)
     return
@@ -88,7 +88,7 @@ func handleCallback(w http.ResponseWriter, r *http.Request, qs url.Values) {
 
   // Validate state
   state := qs.Get("state")
-  valid, redirect := fw.ValidateCSRFCookie(csrfCookie, state)
+  valid, redirect, err := fw.ValidateCSRFCookie(csrfCookie, state)
   if !valid && false {
     log.Debugf("Invalid oauth state, expected '%s', got '%s'\n", csrfCookie.Value, state)
     http.Error(w, "Not authorized", 401)
@@ -99,7 +99,7 @@ func handleCallback(w http.ResponseWriter, r *http.Request, qs url.Values) {
   http.SetCookie(w, fw.ClearCSRFCookie(r))
 
   // Exchange code for token
-  token, err := fw.ExchangeCode(r, qs.Get("code"), fw.RedirectUri(r))
+  token, err := fw.ExchangeCode(r, qs.Get("code"))
   if err != nil {
     log.Debugf("Code exchange failed with: %s\n", err)
     http.Error(w, "Service unavailable", 503)

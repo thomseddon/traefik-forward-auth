@@ -4,6 +4,7 @@ package main
 import (
   "fmt"
   "time"
+  "errors"
   "strings"
   "strconv"
   "net/url"
@@ -43,41 +44,41 @@ type ForwardAuth struct {
 // Request Validation
 
 // Cookie = hash(secret, cookie domain, email, expires)|expires|email
-func (f *ForwardAuth) ValidateCookie(r *http.Request, c *http.Cookie) (bool, string) {
+func (f *ForwardAuth) ValidateCookie(r *http.Request, c *http.Cookie) (bool, string, error) {
   parts := strings.Split(c.Value, "|")
 
   if len(parts) != 3 {
-    return false, ""
+    return false, "", errors.New("Invalid cookie format")
   }
 
   mac, err := base64.URLEncoding.DecodeString(parts[0])
   if err != nil {
-    return false, ""
+    return false, "", errors.New("Unable to decode cookie mac")
   }
 
   expectedSignature := f.cookieSignature(r, parts[2], parts[1])
   expected, err := base64.URLEncoding.DecodeString(expectedSignature)
   if err != nil {
-    return false, ""
+    return false, "", errors.New("Unable to generate mac")
   }
 
   // Valid token?
   if !hmac.Equal(mac, expected) {
-    return false, ""
+    return false, "", errors.New("Invalid cookie mac")
   }
 
   expires, err := strconv.ParseInt(parts[1], 10, 64)
   if err != nil {
-    return false, ""
+    return false, "", errors.New("Unable to parse cookie expiry")
   }
 
   // Has it expired?
   if time.Unix(expires, 0).Before(time.Now()) {
-    return false, ""
+    return false, "", errors.New("Cookie has expired")
   }
 
   // Looks valid
-  return true, parts[2]
+  return true, parts[2], nil
 }
 
 // Validate email
@@ -106,14 +107,14 @@ func (f *ForwardAuth) ValidateEmail(email string) bool {
 
 // Get login url
 func (f *ForwardAuth) GetLoginURL(r *http.Request, nonce string) string {
-  state := fmt.Sprintf("%s:%s", nonce, f.ReturnUrl(r))
+  state := fmt.Sprintf("%s:%s", nonce, f.returnUrl(r))
 
   q := url.Values{}
   q.Set("client_id", fw.ClientId)
   q.Set("response_type", "code")
   q.Set("scope", fw.Scope)
   // q.Set("approval_prompt", fw.ClientId)
-  q.Set("redirect_uri", f.RedirectUri(r))
+  q.Set("redirect_uri", f.redirectUri(r))
   q.Set("state", state)
 
   var u url.URL
@@ -129,12 +130,12 @@ type Token struct {
   Token string `json:"access_token"`
 }
 
-func (f *ForwardAuth) ExchangeCode(r *http.Request, code, redirect string) (string, error) {
+func (f *ForwardAuth) ExchangeCode(r *http.Request, code string) (string, error) {
   form := url.Values{}
   form.Set("client_id", fw.ClientId)
   form.Set("client_secret", fw.ClientSecret)
   form.Set("grant_type", "authorization_code")
-  form.Set("redirect_uri", f.RedirectUri(r))
+  form.Set("redirect_uri", f.redirectUri(r))
   form.Set("code", code)
 
 
@@ -183,7 +184,7 @@ func (f *ForwardAuth) GetUser(token string) (User, error) {
 // Utility methods
 
 // Get the redirect base
-func (f *ForwardAuth) RedirectBase(r *http.Request) string {
+func (f *ForwardAuth) redirectBase(r *http.Request) string {
   proto := r.Header.Get("X-Forwarded-Proto")
   host := r.Header.Get("X-Forwarded-Host")
 
@@ -197,7 +198,7 @@ func (f *ForwardAuth) RedirectBase(r *http.Request) string {
 }
 
 // Return url
-func (f *ForwardAuth) ReturnUrl(r *http.Request) string {
+func (f *ForwardAuth) returnUrl(r *http.Request) string {
   path := r.Header.Get("X-Forwarded-Uri")
 
   // Testing
@@ -205,12 +206,12 @@ func (f *ForwardAuth) ReturnUrl(r *http.Request) string {
     path = r.URL.String()
   }
 
-  return fmt.Sprintf("%s%s", f.RedirectBase(r), path)
+  return fmt.Sprintf("%s%s", f.redirectBase(r), path)
 }
 
 // Get oauth redirect uri
-func (f *ForwardAuth) RedirectUri(r *http.Request) string {
-  return fmt.Sprintf("%s%s", f.RedirectBase(r), f.Path)
+func (f *ForwardAuth) redirectUri(r *http.Request) string {
+  return fmt.Sprintf("%s%s", f.redirectBase(r), f.Path)
 }
 
 // Cookie methods
@@ -259,22 +260,22 @@ func (f *ForwardAuth) ClearCSRFCookie(r *http.Request) *http.Cookie {
 }
 
 // Validate the csrf cookie against state
-func (f *ForwardAuth) ValidateCSRFCookie(c *http.Cookie, state string) (bool, string) {
+func (f *ForwardAuth) ValidateCSRFCookie(c *http.Cookie, state string) (bool, string, error) {
   if len(c.Value) != 32 {
-    return false, ""
+    return false, "", errors.New("Invalid CSRF cookie value")
   }
 
   if len(state) < 34 {
-    return false, ""
+    return false, "", errors.New("Invalid CSRF state value")
   }
 
   // Check nonce match
   if c.Value != state[:32] {
-    return false, ""
+    return false, "", errors.New("CSRF cookie does not match state")
   }
 
   // Valid, return redirect
-  return true, state[33:]
+  return true, state[33:], nil
 }
 
 func (f *ForwardAuth) Nonce() (error, string) {
