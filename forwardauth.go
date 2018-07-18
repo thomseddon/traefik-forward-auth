@@ -19,7 +19,6 @@ import (
 // Forward Auth
 type ForwardAuth struct {
   Path string
-  PathLen int
   Lifetime time.Duration
 
   ClientId string

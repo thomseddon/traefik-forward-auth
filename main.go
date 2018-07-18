@@ -175,7 +175,6 @@ func main() {
   // Setup
   fw = &ForwardAuth{
     Path: fmt.Sprintf("/%s", *path),
-    PathLen: len(*path) + 1,
     Lifetime: time.Second * time.Duration(*lifetime),
 
     ClientId: *clientId,
