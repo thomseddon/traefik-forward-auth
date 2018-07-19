@@ -58,8 +58,9 @@ func handler(w http.ResponseWriter, r *http.Request) {
   }
 
   // Validate cookie
-  valid, email, _ := fw.ValidateCookie(r, c)
+  valid, email, err := fw.ValidateCookie(r, c)
   if !valid {
+    log.Debugf("Invlaid cookie: %s", err)
     http.Error(w, "Not authorized", 401)
     return
   }
@@ -67,6 +68,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
   // Validate user
   valid = fw.ValidateEmail(email)
   if !valid {
+    log.Debugf("Invalid email: %s", email)
     http.Error(w, "Not authorized", 401)
     return
   }
@@ -89,7 +91,7 @@ func handleCallback(w http.ResponseWriter, r *http.Request, qs url.Values) {
   // Validate state
   state := qs.Get("state")
   valid, redirect, err := fw.ValidateCSRFCookie(csrfCookie, state)
-  if !valid && false {
+  if !valid {
     log.Debugf("Invalid oauth state, expected '%s', got '%s'\n", csrfCookie.Value, state)
     http.Error(w, "Not authorized", 401)
     return
