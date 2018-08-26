@@ -81,6 +81,20 @@ func TestValidateEmail(t *testing.T) {
   if !fw.ValidateEmail("test@test.com") {
     t.Error("Should allow user from allowed domain")
   }
+
+  // Should block non whitelisted email address
+  fw.Domain = []string{}
+  fw.Whitelist = []string{"test@test.com"}
+  if fw.ValidateEmail("one@two.com") {
+    t.Error("Should not allow user not in whitelist.")
+  }
+
+  // Should allow matching whitelisted email address
+  fw.Domain = []string{}
+  fw.Whitelist = []string{"test@test.com"}
+  if !fw.ValidateEmail("test@test.com") {
+    t.Error("Should allow user in whitelist.")
+  }
 }
 
 func TestGetLoginURL(t *testing.T) {
