@@ -18,17 +18,17 @@ var log = logging.MustGetLogger("traefik-forward-auth")
 
 // Primary handler
 func handler(w http.ResponseWriter, r *http.Request) {
+  if !fw.ShouldValidate(r.Header.Get("X-Forwarded-Host")) {
+    // Valid request
+    w.WriteHeader(200)
+    return
+  }
+
   // Parse uri
   uri, err := url.Parse(r.Header.Get("X-Forwarded-Uri"))
   if err != nil {
     log.Error("Error parsing url")
     http.Error(w, "Service unavailable", 503)
-    return
-  }
-
-  if !fw.ShouldValidate(uri.Hostname()) {
-    // Valid request
-    w.WriteHeader(200)
     return
   }
 
