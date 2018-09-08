@@ -31,6 +31,7 @@ The following configuration is supported:
 |-cookie-secure|bool|Use secure cookies (default true)|
 |-csrf-cookie-name|string|CSRF Cookie Name (default "_forward_auth_csrf")|
 |-direct|bool|Run in direct mode (use own hostname as oppose to <br>X-Forwarded-Host, used for testing/development)
+|-auth-domain|string|Comma separated list of domains to check auth on (optional, defaults to all)|
 |-domain|string|Comma separated list of email domains to allow|
 |-lifetime|int|Session length in seconds (default 43200)|
 |-url-path|string|Callback URL (default "_oauth")|

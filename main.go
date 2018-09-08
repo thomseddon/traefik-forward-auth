@@ -26,6 +26,12 @@ func handler(w http.ResponseWriter, r *http.Request) {
     return
   }
 
+  if !fw.ShouldValidate(uri.Hostname()) {
+    // Valid request
+    w.WriteHeader(200)
+    return
+  }
+
   // Direct mode
   if fw.Direct {
     uri = r.URL
@@ -137,6 +143,7 @@ func main() {
   cookieDomainList := flag.String("cookie-domains", "", "Comma separated list of cookie domains") //todo
   cookieSecret := flag.String("cookie-secret", "", "*Cookie secret (required)")
   cookieSecure := flag.Bool("cookie-secure", true, "Use secure cookies")
+  authDomainList := flag.String("auth-domain", "", "Comma separated list of domains to forward auth for")
   domainList := flag.String("domain", "", "Comma separated list of email domains to allow")
   direct := flag.Bool("direct", false, "Run in direct mode (use own hostname as oppose to X-Forwarded-Host, used for testing/development)")
 
@@ -167,6 +174,11 @@ func main() {
       cookieDomain := NewCookieDomain(d)
       cookieDomains = append(cookieDomains, *cookieDomain)
     }
+  }
+
+  var authDomain []string
+  if *authDomainList != "" {
+    authDomain = strings.Split(*authDomainList, ",")
   }
 
   var domain []string
@@ -203,6 +215,8 @@ func main() {
     CookieDomains: cookieDomains,
     CookieSecret: []byte(*cookieSecret),
     CookieSecure: *cookieSecure,
+
+    AuthDomain: authDomain,
 
     Domain: domain,
 
