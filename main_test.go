@@ -101,7 +101,7 @@ func TestHandler(t *testing.T) {
     t.Error("Request with invalid cookie shound't be authorised", res.StatusCode)
   }
 
-  // Should validate email
+  // Should validate email against domain
   req = newHttpRequest("foo")
 
   c = fw.MakeCookie(req, "test@example.com")
@@ -109,7 +109,42 @@ func TestHandler(t *testing.T) {
 
   res, _ = httpRequest(req, c)
   if res.StatusCode != 401 {
-    t.Error("Request with invalid cookie shound't be authorised", res.StatusCode)
+    t.Error("Request with invalid domain shound't be authorised", res.StatusCode)
+  }
+
+  // Should validate email
+  req = newHttpRequest("foo")
+
+  c = fw.MakeCookie(req, "fail@example.com")
+  fw.Email = []string{"test@example.com"}
+
+  res, _ = httpRequest(req, c)
+  if res.StatusCode != 401 {
+    t.Error("Request with invalid email shound't be authorised", res.StatusCode)
+  }
+
+  // Should validate email domain even with email also set
+  req = newHttpRequest("foo")
+
+  c = fw.MakeCookie(req, "pass@example.com")
+  fw.Domain = []string{"example.com"}
+  fw.Email = []string{"ignored@ignored.com"}
+
+  res, _ = httpRequest(req, c)
+  if res.StatusCode != 200 {
+    t.Error("Request with valid email domain shound be authorised", res.StatusCode)
+  }
+
+  // Should validate email and even if it doesnt match domain also set
+  req = newHttpRequest("foo")
+
+  c = fw.MakeCookie(req, "bypass@bypass.com")
+  fw.Domain = []string{"example.com"}
+  fw.Email = []string{"bypass@bypass.com"}
+
+  res, _ = httpRequest(req, c)
+  if res.StatusCode != 200 {
+    t.Error("Request with valid email shound be authorised", res.StatusCode)
   }
 
   // Should allow valid request email
@@ -117,6 +152,7 @@ func TestHandler(t *testing.T) {
 
   c = fw.MakeCookie(req, "test@example.com")
   fw.Domain = []string{}
+  fw.Email = []string{}
 
   res, _ = httpRequest(req, c)
   if res.StatusCode != 200 {

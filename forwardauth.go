@@ -36,6 +36,7 @@ type ForwardAuth struct {
   CookieSecure bool
 
   Domain []string
+  Email []string
 
   Direct bool
 }
@@ -80,25 +81,31 @@ func (f *ForwardAuth) ValidateCookie(r *http.Request, c *http.Cookie) (bool, str
   return true, parts[2], nil
 }
 
-// Validate email
-func (f *ForwardAuth) ValidateEmail(email string) bool {
-  if len(f.Domain) > 0 {
-    parts := strings.Split(email, "@")
-    if len(parts) < 2 {
-      return false
-    }
-    found := false
-    for _, domain := range f.Domain {
-      if domain == parts[1] {
-        found = true
-      }
-    }
-    if !found {
-      return false
+// Validate email against domain
+func (f *ForwardAuth) ValidateEmailDomain(email string) bool {
+  parts := strings.Split(email, "@")
+  if len(parts) < 2 {
+    return false
+  }
+
+  for _, domain := range f.Domain {
+    if domain == parts[1] {
+      return true
     }
   }
 
-  return true
+  return false
+}
+
+// Validate email
+func (f *ForwardAuth) ValidateEmail(email string) bool {
+  for _, allowed := range f.Email {
+    if email == allowed {
+      return true
+    }
+  }
+
+  return false
 }
 
 

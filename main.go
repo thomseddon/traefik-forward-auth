@@ -65,8 +65,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
     return
   }
 
-  // Validate user
-  valid = fw.ValidateEmail(email)
+  // Validate email
+  valid = ( len(fw.Email) == 0 && len(fw.Domain) == 0 ) || fw.ValidateEmailDomain(email) || fw.ValidateEmail(email)
   if !valid {
     log.Debugf("Invalid email: %s", email)
     http.Error(w, "Not authorized", 401)
@@ -138,6 +138,7 @@ func main() {
   cookieSecret := flag.String("cookie-secret", "", "*Cookie secret (required)")
   cookieSecure := flag.Bool("cookie-secure", true, "Use secure cookies")
   domainList := flag.String("domain", "", "Comma separated list of email domains to allow")
+  emailList := flag.String("email", "", "Comma separated list of emails to allow")
   direct := flag.Bool("direct", false, "Run in direct mode (use own hostname as oppose to X-Forwarded-Host, used for testing/development)")
 
   flag.Parse()
@@ -174,6 +175,11 @@ func main() {
     domain = strings.Split(*domainList, ",")
   }
 
+  var email []string
+  if *emailList != "" {
+    email = strings.Split(*emailList, ",")
+  }
+
   // Setup
   fw = &ForwardAuth{
     Path: fmt.Sprintf("/%s", *path),
@@ -205,6 +211,7 @@ func main() {
     CookieSecure: *cookieSecure,
 
     Domain: domain,
+    Email: email,
 
     Direct: *direct,
   }
