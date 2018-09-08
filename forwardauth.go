@@ -82,7 +82,7 @@ func (f *ForwardAuth) ValidateCookie(r *http.Request, c *http.Cookie) (bool, str
 }
 
 // Validate email against domain
-func (f *ForwardAuth) ValidateEmailDomain(email string) bool {
+func (f *ForwardAuth) validEmailDomain(email string) bool {
   parts := strings.Split(email, "@")
   if len(parts) < 2 {
     return false
@@ -98,7 +98,7 @@ func (f *ForwardAuth) ValidateEmailDomain(email string) bool {
 }
 
 // Validate email
-func (f *ForwardAuth) ValidateEmail(email string) bool {
+func (f *ForwardAuth) validEmail(email string) bool {
   for _, allowed := range f.Email {
     if email == allowed {
       return true
@@ -106,6 +106,15 @@ func (f *ForwardAuth) ValidateEmail(email string) bool {
   }
 
   return false
+}
+
+func (f *ForwardAuth) ValidateEmail(email string) bool {
+  // valid if not configured
+  if len(fw.Email) == 0 && len(fw.Domain) == 0 {
+    return true
+  }
+
+  return fw.validEmailDomain(email) || fw.validEmail(email)
 }
 
 

@@ -66,19 +66,19 @@ func TestValidateEmailDomain(t *testing.T) {
   fw = &ForwardAuth{}
 
   // Should allow any
-  if fw.ValidateEmailDomain("test@test.com") || fw.ValidateEmailDomain("one@two.com") {
-    t.Error("Should not allow any domain if email domain is not defined")
+  if !fw.ValidateEmail("test@test.com") || !fw.ValidateEmail("one@two.com") {
+    t.Error("Should allow any domain if email domain is not defined")
   }
 
   // Should block non matching domain
   fw.Domain = []string{"test.com"}
-  if fw.ValidateEmailDomain("one@two.com") {
+  if fw.ValidateEmail("one@two.com") {
     t.Error("Should not allow user from another domain")
   }
 
   // Should allow matching domain
   fw.Domain = []string{"test.com"}
-  if !fw.ValidateEmailDomain("test@test.com") {
+  if !fw.ValidateEmail("test@test.com") {
     t.Error("Should allow user from allowed domain")
   }
 }
@@ -87,8 +87,8 @@ func TestValidateEmail(t *testing.T) {
   fw = &ForwardAuth{}
 
   // Should allow any
-  if fw.ValidateEmail("test@test.com") || fw.ValidateEmail("one@two.com") {
-    t.Error("Should not allow any email if email is not defined")
+  if !fw.ValidateEmail("test@test.com") || !fw.ValidateEmail("one@two.com") {
+    t.Error("Should allow any email if email is not defined")
   }
 
   // Should block non matching email

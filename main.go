@@ -66,7 +66,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
   }
 
   // Validate email
-  valid = ( len(fw.Email) == 0 && len(fw.Domain) == 0 ) || fw.ValidateEmailDomain(email) || fw.ValidateEmail(email)
+  valid = fw.ValidateEmail(email)
   if !valid {
     log.Debugf("Invalid email: %s", email)
     http.Error(w, "Not authorized", 401)
