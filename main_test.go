@@ -60,6 +60,7 @@ func httpRequest(r *http.Request, c *http.Cookie) (*http.Response, string) {
 func newHttpRequest(uri string) *http.Request {
   r := httptest.NewRequest("", "http://example.com", nil)
   r.Header.Add("X-Forwarded-Uri", uri)
+  r.Header.Add("X-Forwarded-Host", "example.com")
   return r
 }
 
@@ -121,6 +122,40 @@ func TestHandler(t *testing.T) {
   res, _ = httpRequest(req, c)
   if res.StatusCode != 200 {
     t.Error("Valid request should be allowed, got:", res.StatusCode)
+  }
+
+  // Should validate against domain
+  req = newHttpRequest("foo")
+
+  // Restricts only example.com
+  fw.AuthDomain = []string{"example.com"}
+
+  // Restricts emails to come with @example.com
+  fw.Domain = []string{"example.com"}
+
+  // Request with user using not-example email domain (should fail validation)
+  c = fw.MakeCookie(req, "test@not-example.com")
+  res, _ = httpRequest(req, c)
+
+  if res.StatusCode != 401 {
+    t.Error("Request with restricted domain should be validated", res.StatusCode)
+  }
+
+  // Should ignore non restricted domain
+  req = newHttpRequest("foo") // to example.com/foo
+
+  // Restricts only not-example.com
+  fw.AuthDomain = []string{"not-example.com"}
+
+  // Restricts emails to @example.com
+  fw.Domain = []string{"example.com"}
+
+  // Cookie from another-example.com should fail but be irrelevant against example.com
+  c = fw.MakeCookie(req, "test@another-example.com")
+  res, _ = httpRequest(req, c)
+
+  if res.StatusCode != 200 {
+    t.Error("Request for non-restricted domain should not be validated", res.StatusCode)
   }
 }
 

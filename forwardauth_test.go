@@ -240,3 +240,45 @@ func TestCookieDomainMatch(t *testing.T) {
     t.Error("Other domain should not match")
   }
 }
+
+func TestShouldValidate(t *testing.T) {
+  fw = &ForwardAuth{
+    Path: "/_oauth",
+    ClientId: "idtest",
+    ClientSecret: "sectest",
+    Scope: "scopetest",
+    LoginURL: &url.URL{
+      Scheme: "https",
+      Host: "test.com",
+      Path: "/auth",
+    },
+    AuthDomain: []string{"example.com", "other-example.com"},
+  }
+
+  r, _ := http.NewRequest("GET", "http://example.com", nil)
+  r.Header.Add("X-Forwarded-Proto", "http")
+  r.Header.Add("X-Forwarded-Host", "example.com")
+  r.Header.Add("X-Forwarded-Uri", "/hello")
+
+  if !fw.ShouldValidate(r) {
+    t.Error("example.com should be validated against")
+  }
+
+  r, _ = http.NewRequest("GET", "http://other-example.com", nil)
+  r.Header.Add("X-Forwarded-Proto", "http")
+  r.Header.Add("X-Forwarded-Host", "other-example.com")
+  r.Header.Add("X-Forwarded-Uri", "/hello")
+
+  if !fw.ShouldValidate(r) {
+    t.Error("other-example.com should be validated against")
+  }
+
+  r, _ = http.NewRequest("GET", "http://test.com", nil)
+  r.Header.Add("X-Forwarded-Proto", "http")
+  r.Header.Add("X-Forwarded-Host", "test.com")
+  r.Header.Add("X-Forwarded-Uri", "/hello")
+
+  if fw.ShouldValidate(r) {
+    t.Error("test.com should not be validated against")
+  }
+}

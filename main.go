@@ -18,7 +18,7 @@ var log = logging.MustGetLogger("traefik-forward-auth")
 
 // Primary handler
 func handler(w http.ResponseWriter, r *http.Request) {
-  if !fw.ShouldValidate(r.Header.Get("X-Forwarded-Host")) {
+  if !fw.ShouldValidate(r) {
     // Valid request
     w.WriteHeader(200)
     return

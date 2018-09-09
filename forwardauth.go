@@ -82,8 +82,9 @@ func (f *ForwardAuth) ValidateCookie(r *http.Request, c *http.Cookie) (bool, str
   return true, parts[2], nil
 }
 
-func (f *ForwardAuth) ShouldValidate(hostname string) bool {
+func (f *ForwardAuth) ShouldValidate(r *http.Request) bool {
   if len(f.AuthDomain) > 0 {
+    hostname := r.Header.Get("X-Forwarded-Host")
     for _, domain := range f.AuthDomain {
       if domain == hostname {
         return true
