@@ -24,10 +24,11 @@ The following configuration is supported:
 |-----------------------|------|-----------|
 |-client-id|string|*Google Client ID (required)|
 |-client-secret|string|*Google Client Secret (required)|
+|-secret|string|*Secret used for signing (required)|
 |-config|string|Path to config file|
-|-cookie-domains|string|Comma separated list of cookie domains|
+|-auth-host|string|Central auth login (see below)|
+|-cookie-domains|string|Comma separated list of cookie domains (see below)|
 |-cookie-name|string|Cookie Name (default "_forward_auth")|
-|-cookie-secret|string|*Cookie secret (required)|
 |-cookie-secure|bool|Use secure cookies (default true)|
 |-csrf-cookie-name|string|CSRF Cookie Name (default "_forward_auth_csrf")|
 |-direct|bool|Run in direct mode (use own hostname as oppose to <br>X-Forwarded-Host, used for testing/development)
@@ -54,6 +55,39 @@ You can supply a comma separated list of cookie domains, if the host of the orig
 For example, if cookie domain is `test.com` and a request comes in on `app1.test.com`, the cookie will be set for the whole `test.com` domain. As such, if another request is forwarded for authentication from `app2.test.com`, the original cookie will be sent and so the request will be allowed without further authentication.
 
 Beware however, if using cookie domains whilst running multiple instances of traefik/traefik-forward-auth for the same domain, the cookies will clash. You can fix this by using the same `cookie-secret` in both instances, or using a different `cookie-name` on each.
+
+## Operation Modes
+
+#### Overlay
+
+Overlay is the default operation mode, in this mode the authorisation endpoint is overlayed onto any domain. By default the `/_oauth` path is used, this can be customised using the `-url-path` option.
+
+If a request comes in for `www.myapp.com/home` then the user will be redirected to the google login, following this they will be sent back to `www.myapp.com/_oauth`, where their token will be validated (this request will not be forwarded to your application). Following successful authoristion, the user will return to their originally requested url of `www.myapp.com/home`.
+
+As the hostname in the `redirect_uri` is dynamically generated based on the orignal request, every hostname must be permitted in the Google OAuth console (e.g. `www.myappp.com` would need to be added in the above example)
+
+#### Auth Host
+
+This is an optional mode of operation that is useful when dealing with a large number of subdomains, it is activated by using the `-auth-host` config option.
+
+For example, if you have a few applications: `app1.test.com`, `app2.test.com`, `appN.test.com`, adding every domain to Google's console can become laborious.
+To utilise an auth host, permit domain level cookies by setting the cookie domain to `test.com` then set the `auth-host` to: `auth.test.com`.
+
+The user flow will then be:
+
+1. Request to `app10.test.com/home/page`
+2. User redirected to Google login
+3. After Google login, user is redirected to `auth.test.com/_oauth`
+4. Token, user and CSRF cookie is validated, auth cookie is set to `test.com`
+5. User is redirected to `app10.test.com/home/page`
+6. Request is allowed
+
+With this setup, only `auth.test.com` must be permitted in the Google console.
+
+Two criteria must be met for an `auth-host` to be used:
+
+1. Request matches given `cookie-domain`
+2. `auth-host` is also subdomain of same `cookie-domain`
 
 ## Copyright
 

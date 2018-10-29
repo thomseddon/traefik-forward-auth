@@ -37,6 +37,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
     return
   }
 
+  // Get auth cookie
   c, err := r.Cookie(fw.CookieName)
   if err != nil {
     // Error indicates no cookie, generate nonce
@@ -130,33 +131,40 @@ func main() {
   flag.String(flag.DefaultConfigFlagname, "", "Path to config file")
   path := flag.String("url-path", "_oauth", "Callback URL")
   lifetime := flag.Int("lifetime", 43200, "Session length in seconds")
+  secret := flag.String("secret", "", "*Secret used for signing (required)")
+  authHost := flag.String("auth-host", "", "Central auth login")
   clientId := flag.String("client-id", "", "*Google Client ID (required)")
   clientSecret := flag.String("client-secret", "", "*Google Client Secret (required)")
   cookieName := flag.String("cookie-name", "_forward_auth", "Cookie Name")
   cSRFCookieName := flag.String("csrf-cookie-name", "_forward_auth_csrf", "CSRF Cookie Name")
   cookieDomainList := flag.String("cookie-domains", "", "Comma separated list of cookie domains") //todo
-  cookieSecret := flag.String("cookie-secret", "", "*Cookie secret (required)")
+  cookieSecret := flag.String("cookie-secret", "", "depreciated")
   cookieSecure := flag.Bool("cookie-secure", true, "Use secure cookies")
   domainList := flag.String("domain", "", "Comma separated list of email domains to allow")
   direct := flag.Bool("direct", false, "Run in direct mode (use own hostname as oppose to X-Forwarded-Host, used for testing/development)")
 
   flag.Parse()
 
+  // Backwards compatability
+  if *secret == "" && *cookieSecret != "" {
+    *secret = *cookieSecret
+  }
+
   // Check for show stopper errors
-  err := false
+  stop := false
   if *clientId == "" {
-    err = true
+    stop = true
     log.Critical("client-id must be set")
   }
   if *clientSecret == "" {
-    err = true
+    stop = true
     log.Critical("client-secret must be set")
   }
-  if *cookieSecret == "" {
-    err = true
-    log.Critical("cookie-secret must be set")
+  if *secret == "" {
+    stop = true
+    log.Critical("secret must be set")
   }
-  if err {
+  if stop {
     return
   }
 
@@ -178,6 +186,8 @@ func main() {
   fw = &ForwardAuth{
     Path: fmt.Sprintf("/%s", *path),
     Lifetime: time.Second * time.Duration(*lifetime),
+    Secret: []byte(*secret),
+    AuthHost: *authHost,
 
     ClientId: *clientId,
     ClientSecret: *clientSecret,
@@ -201,7 +211,6 @@ func main() {
     CookieName: *cookieName,
     CSRFCookieName: *cSRFCookieName,
     CookieDomains: cookieDomains,
-    CookieSecret: []byte(*cookieSecret),
     CookieSecure: *cookieSecure,
 
     Domain: domain,
@@ -212,6 +221,7 @@ func main() {
   // Attach handler
   http.HandleFunc("/", handler)
 
+  log.Debugf("Staring with options: %#v", fw)
   log.Notice("Litening on :4181")
   log.Notice(http.ListenAndServe(":4181", nil))
 }

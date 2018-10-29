@@ -20,6 +20,7 @@ import (
 type ForwardAuth struct {
   Path string
   Lifetime time.Duration
+  Secret []byte
 
   ClientId string
   ClientSecret string
@@ -29,10 +30,11 @@ type ForwardAuth struct {
   TokenURL *url.URL
   UserURL *url.URL
 
+  AuthHost string
+
   CookieName string
   CookieDomains []CookieDomain
   CSRFCookieName string
-  CookieSecret []byte
   CookieSecure bool
 
   Domain []string
@@ -210,7 +212,28 @@ func (f *ForwardAuth) returnUrl(r *http.Request) string {
 
 // Get oauth redirect uri
 func (f *ForwardAuth) redirectUri(r *http.Request) string {
+  if use, _ := f.useAuthDomain(r); use {
+    proto := r.Header.Get("X-Forwarded-Proto")
+    return fmt.Sprintf("%s://%s%s", proto, f.AuthHost, f.Path)
+  }
+
   return fmt.Sprintf("%s%s", f.redirectBase(r), f.Path)
+}
+
+// Should we use auth host + what it is
+func (f *ForwardAuth) useAuthDomain(r *http.Request) (bool, string) {
+  if f.AuthHost == "" {
+    return false, ""
+  }
+
+  // Does the request match a given cookie domain?
+  reqMatch, reqHost := f.matchCookieDomains(r.Header.Get("X-Forwarded-Host"))
+
+  // Do any of the auth hosts match a cookie domain?
+  authMatch, authHost := f.matchCookieDomains(f.AuthHost)
+
+  // We need both to match the same domain
+  return reqMatch && authMatch && reqHost == authHost, reqHost
 }
 
 // Cookie methods
@@ -238,7 +261,7 @@ func (f *ForwardAuth) MakeCSRFCookie(r *http.Request, nonce string) *http.Cookie
     Name: f.CSRFCookieName,
     Value: nonce,
     Path: "/",
-    Domain: f.cookieDomain(r),
+    Domain: f.csrfCookieDomain(r),
     HttpOnly: true,
     Secure: f.CookieSecure,
     Expires: f.cookieExpiry(),
@@ -251,7 +274,7 @@ func (f *ForwardAuth) ClearCSRFCookie(r *http.Request) *http.Cookie {
     Name: f.CSRFCookieName,
     Value: "",
     Path: "/",
-    Domain: f.cookieDomain(r),
+    Domain: f.csrfCookieDomain(r),
     HttpOnly: true,
     Secure: f.CookieSecure,
     Expires: time.Now().Local().Add(time.Hour * -1),
@@ -297,22 +320,44 @@ func (f *ForwardAuth) cookieDomain(r *http.Request) string {
     host = r.Host
   }
 
-  // Remove port for matching
-  p := strings.Split(host, ":")
-
   // Check if any of the given cookie domains matches
-  for _, domain := range f.CookieDomains {
-    if domain.Match(p[0]) {
-      return domain.Domain
+  _, domain := f.matchCookieDomains(host)
+  return domain
+}
+
+// Cookie domain
+func (f *ForwardAuth) csrfCookieDomain(r *http.Request) string {
+  var host string
+  if use, domain := f.useAuthDomain(r); use {
+    host = domain
+  } else if f.Direct {
+    host = r.Host
+  } else {
+    host = r.Header.Get("X-Forwarded-Host")
+  }
+
+  // Remove port
+  p := strings.Split(host, ":")
+  return p[0]
+}
+
+// Return matching cookie domain if exists
+func (f *ForwardAuth) matchCookieDomains(domain string) (bool, string) {
+  // Remove port
+  p := strings.Split(domain, ":")
+
+  for _, d := range f.CookieDomains {
+    if d.Match(p[0]) {
+      return true, d.Domain
     }
   }
 
-  return p[0]
+  return false, p[0]
 }
 
 // Create cookie hmac
 func (f *ForwardAuth) cookieSignature(r *http.Request, email, expires string) string {
-  hash := hmac.New(sha256.New, f.CookieSecret)
+  hash := hmac.New(sha256.New, f.Secret)
   hash.Write([]byte(f.cookieDomain(r)))
   hash.Write([]byte(email))
   hash.Write([]byte(expires))

@@ -84,6 +84,11 @@ func TestValidateEmail(t *testing.T) {
 }
 
 func TestGetLoginURL(t *testing.T) {
+  r, _ := http.NewRequest("GET", "http://example.com", nil)
+  r.Header.Add("X-Forwarded-Proto", "http")
+  r.Header.Add("X-Forwarded-Host", "example.com")
+  r.Header.Add("X-Forwarded-Uri", "/hello")
+
   fw = &ForwardAuth{
     Path: "/_oauth",
     ClientId: "idtest",
@@ -95,10 +100,6 @@ func TestGetLoginURL(t *testing.T) {
       Path: "/auth",
     },
   }
-  r, _ := http.NewRequest("GET", "http://example.com", nil)
-  r.Header.Add("X-Forwarded-Proto", "http")
-  r.Header.Add("X-Forwarded-Host", "example.com")
-  r.Header.Add("X-Forwarded-Uri", "/hello")
 
   // Check url
   uri, err := url.Parse(fw.GetLoginURL(r, "nonce"))
@@ -125,13 +126,144 @@ func TestGetLoginURL(t *testing.T) {
     "state": []string{"nonce:http://example.com/hello"},
   }
   if !reflect.DeepEqual(qs, expectedQs) {
-    t.Error("Incorrect login query string, expected:")
-    t.Error(expectedQs)
-    t.Error("Got:")
-    t.Error(qs)
+    t.Error("Incorrect login query string:")
+    qsDiff(expectedQs, qs)
+  }
+
+
+  //
+  // With Auth URL but no matching cookie domain
+  // - will not use auth host
+  //
+  fw = &ForwardAuth{
+    Path: "/_oauth",
+    AuthHost: "auth.example.com",
+    ClientId: "idtest",
+    ClientSecret: "sectest",
+    Scope: "scopetest",
+    LoginURL: &url.URL{
+      Scheme: "https",
+      Host: "test.com",
+      Path: "/auth",
+    },
+  }
+
+  // Check url
+  uri, err = url.Parse(fw.GetLoginURL(r, "nonce"))
+  if err != nil {
+    t.Error("Error parsing login url:", err)
+  }
+  if uri.Scheme != "https" {
+    t.Error("Expected login Scheme to be \"https\", got:", uri.Scheme)
+  }
+  if uri.Host != "test.com" {
+    t.Error("Expected login Host to be \"test.com\", got:", uri.Host)
+  }
+  if uri.Path != "/auth" {
+    t.Error("Expected login Path to be \"/auth\", got:", uri.Path)
+  }
+
+  // Check query string
+  qs = uri.Query()
+  expectedQs = url.Values{
+    "client_id": []string{"idtest"},
+    "redirect_uri": []string{"http://example.com/_oauth"},
+    "response_type": []string{"code"},
+    "scope": []string{"scopetest"},
+    "state": []string{"nonce:http://example.com/hello"},
+  }
+  if !reflect.DeepEqual(qs, expectedQs) {
+    t.Error("Incorrect login query string:")
+    qsDiff(expectedQs, qs)
+  }
+
+  //
+  // With correct Auth URL + cookie domain
+  //
+  cookieDomain := NewCookieDomain("example.com")
+  fw = &ForwardAuth{
+    Path: "/_oauth",
+    AuthHost: "auth.example.com",
+    ClientId: "idtest",
+    ClientSecret: "sectest",
+    Scope: "scopetest",
+    LoginURL: &url.URL{
+      Scheme: "https",
+      Host: "test.com",
+      Path: "/auth",
+    },
+    CookieDomains: []CookieDomain{*cookieDomain},
+  }
+
+  // Check url
+  uri, err = url.Parse(fw.GetLoginURL(r, "nonce"))
+  if err != nil {
+    t.Error("Error parsing login url:", err)
+  }
+  if uri.Scheme != "https" {
+    t.Error("Expected login Scheme to be \"https\", got:", uri.Scheme)
+  }
+  if uri.Host != "test.com" {
+    t.Error("Expected login Host to be \"test.com\", got:", uri.Host)
+  }
+  if uri.Path != "/auth" {
+    t.Error("Expected login Path to be \"/auth\", got:", uri.Path)
+  }
+
+  // Check query string
+  qs = uri.Query()
+  expectedQs = url.Values{
+    "client_id": []string{"idtest"},
+    "redirect_uri": []string{"http://auth.example.com/_oauth"},
+    "response_type": []string{"code"},
+    "scope": []string{"scopetest"},
+    "state": []string{"nonce:http://example.com/hello"},
+  }
+  qsDiff(expectedQs, qs)
+  if !reflect.DeepEqual(qs, expectedQs) {
+    t.Error("Incorrect login query string:")
+    qsDiff(expectedQs, qs)
+  }
+
+  //
+  // With Auth URL + cookie domain, but from different domain
+  // - will not use auth host
+  //
+  r, _ = http.NewRequest("GET", "http://another.com", nil)
+  r.Header.Add("X-Forwarded-Proto", "http")
+  r.Header.Add("X-Forwarded-Host", "another.com")
+  r.Header.Add("X-Forwarded-Uri", "/hello")
+
+  // Check url
+  uri, err = url.Parse(fw.GetLoginURL(r, "nonce"))
+  if err != nil {
+    t.Error("Error parsing login url:", err)
+  }
+  if uri.Scheme != "https" {
+    t.Error("Expected login Scheme to be \"https\", got:", uri.Scheme)
+  }
+  if uri.Host != "test.com" {
+    t.Error("Expected login Host to be \"test.com\", got:", uri.Host)
+  }
+  if uri.Path != "/auth" {
+    t.Error("Expected login Path to be \"/auth\", got:", uri.Path)
+  }
+
+  // Check query string
+  qs = uri.Query()
+  expectedQs = url.Values{
+    "client_id": []string{"idtest"},
+    "redirect_uri": []string{"http://another.com/_oauth"},
+    "response_type": []string{"code"},
+    "scope": []string{"scopetest"},
+    "state": []string{"nonce:http://another.com/hello"},
+  }
+  qsDiff(expectedQs, qs)
+  if !reflect.DeepEqual(qs, expectedQs) {
+    t.Error("Incorrect login query string:")
+    qsDiff(expectedQs, qs)
   }
 }
-
 
 // TODO
 // func TestExchangeCode(t *testing.T) {
@@ -145,9 +277,35 @@ func TestGetLoginURL(t *testing.T) {
 // func TestMakeCookie(t *testing.T) {
 // }
 
-// func TestMakeCSRFCookie(t *testing.T) {
-//   t.Log("TODO")
-// }
+func TestMakeCSRFCookie(t *testing.T) {
+  r, _ := http.NewRequest("GET", "http://app.example.com", nil)
+  r.Header.Add("X-Forwarded-Host", "app.example.com")
+
+  // No cookie domain or auth url
+  fw = &ForwardAuth{}
+  c := fw.MakeCSRFCookie(r, "12345678901234567890123456789012")
+  if c.Domain != "app.example.com" {
+    t.Error("Cookie Domain should match request domain, got:", c.Domain)
+  }
+
+  // With cookie domain but no auth url
+  cookieDomain := NewCookieDomain("example.com")
+  fw = &ForwardAuth{CookieDomains: []CookieDomain{*cookieDomain},}
+  c = fw.MakeCSRFCookie(r, "12345678901234567890123456789012")
+  if c.Domain != "app.example.com" {
+    t.Error("Cookie Domain should match request domain, got:", c.Domain)
+  }
+
+  // With cookie domain and auth url
+  fw = &ForwardAuth{
+    AuthHost: "auth.example.com",
+    CookieDomains: []CookieDomain{*cookieDomain},
+  }
+  c = fw.MakeCSRFCookie(r, "12345678901234567890123456789012")
+  if c.Domain != "example.com" {
+    t.Error("Cookie Domain should match request domain, got:", c.Domain)
+  }
+}
 
 func TestClearCSRFCookie(t *testing.T) {
   fw = &ForwardAuth{}

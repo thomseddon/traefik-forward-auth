@@ -63,6 +63,22 @@ func newHttpRequest(uri string) *http.Request {
   return r
 }
 
+func qsDiff(one, two url.Values) {
+  for k, _ := range one {
+    if two.Get(k) == "" {
+      fmt.Printf("Key missing: %s\n", k)
+    }
+    if one.Get(k) != two.Get(k) {
+      fmt.Printf("Value different for %s: expected: '%s' got: '%s'\n", k, one.Get(k), two.Get(k))
+    }
+  }
+  for k, _ := range two {
+    if one.Get(k) == "" {
+      fmt.Printf("Extra key: %s\n", k)
+    }
+  }
+}
+
 func TestHandler(t *testing.T) {
   fw = &ForwardAuth{
     Path: "_oauth",
