@@ -27,7 +27,7 @@ services:
     environment:
       - CLIENT_ID=your-client-id
       - CLIENT_SECRET=your-client-secret
-      - COOKIE_SECRET=something-random
+      - SECRET=something-random
       - COOKIE_SECURE=false
       - DOMAIN=yourcompany.com
     networks:
