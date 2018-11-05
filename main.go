@@ -142,6 +142,7 @@ func main() {
   cookieSecure := flag.Bool("cookie-secure", true, "Use secure cookies")
   domainList := flag.String("domain", "", "Comma separated list of email domains to allow")
   direct := flag.Bool("direct", false, "Run in direct mode (use own hostname as oppose to X-Forwarded-Host, used for testing/development)")
+  prompt := flag.String("prompt", "", "Space separated list of OpenID prompt options")
 
   flag.Parse()
 
@@ -216,6 +217,8 @@ func main() {
     Domain: domain,
 
     Direct: *direct,
+
+    Prompt: *prompt,
   }
 
   // Attach handler
