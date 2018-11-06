@@ -88,7 +88,13 @@ func (f *ForwardAuth) ValidateCookie(r *http.Request, c *http.Cookie) (bool, str
 // Validate email
 func (f *ForwardAuth) ValidateEmail(email string) bool {
   found := false
-  if len(f.Domain) > 0 {
+  if len(f.Whitelist) > 0 {
+    for _, whitelist := range f.Whitelist {
+      if email == whitelist {
+        found = true
+      }
+    }
+  } else if len(f.Domain) > 0 {
     parts := strings.Split(email, "@")
     if len(parts) < 2 {
       return false
@@ -98,21 +104,11 @@ func (f *ForwardAuth) ValidateEmail(email string) bool {
         found = true
       }
     }
-    if !found {
-      return false
-    }
-  } else if len(f.Whitelist) > 0 {
-    for _, wlEmail := range f.Whitelist {
-      if wlEmail == email {
-        found = true
-      }
-    }
-    if !found {
-      return false
-    }
+  } else {
+    return true
   }
 
-  return true
+  return found
 }
 
 

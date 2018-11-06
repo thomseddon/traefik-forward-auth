@@ -33,7 +33,7 @@ The following configuration is supported:
 |-csrf-cookie-name|string|CSRF Cookie Name (default "_forward_auth_csrf")|
 |-direct|bool|Run in direct mode (use own hostname as oppose to <br>X-Forwarded-Host, used for testing/development)
 |-domain|string|Comma separated list of email domains to allow|
-|-whitelist|string|Comma separated list of email addresses to allow (Omit -domain)|
+|-whitelist|string|Comma separated list of email addresses to allow|
 |-lifetime|int|Session length in seconds (default 43200)|
 |-url-path|string|Callback URL (default "_oauth")|
 |-prompt|string|Space separated list of [OpenID prompt options](https://developers.google.com/identity/protocols/OpenIDConnect#prompt)|
@@ -49,6 +49,15 @@ Head to https://console.developers.google.com & make sure you've switched to the
 Create a new project then search for and select "Credentials" in the search bar. Fill out the "OAuth Consent Screen" tab.
 
 Click, "Create Credentials" > "OAuth client ID". Select "Web Application", fill in the name of your app, skip "Authorized JavaScript origins" and fill "Authorized redirect URIs" with all the domains you will allow authentication from, appended with the `url-path` (e.g. https://app.test.com/_oauth)
+
+## User Restriction
+
+You can restrict who can login with the following parameters:
+
+* `-domain` - Use this to limit logins to a specific domain, e.g. test.com only
+* `-whitelist` - Use this to only allow specific users to login e.g. thom@test.com only
+
+Note, if you pass `whitelist` then only this is checked and `domain` is effectively ignored.
 
 ## Cookie Domains
 
