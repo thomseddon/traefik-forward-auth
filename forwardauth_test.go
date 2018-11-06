@@ -146,6 +146,7 @@ func TestGetLoginURL(t *testing.T) {
       Host: "test.com",
       Path: "/auth",
     },
+    Prompt: "consent select_account",
   }
 
   // Check url
@@ -170,6 +171,7 @@ func TestGetLoginURL(t *testing.T) {
     "redirect_uri": []string{"http://example.com/_oauth"},
     "response_type": []string{"code"},
     "scope": []string{"scopetest"},
+    "prompt": []string{"consent select_account"},
     "state": []string{"nonce:http://example.com/hello"},
   }
   if !reflect.DeepEqual(qs, expectedQs) {

@@ -40,6 +40,8 @@ type ForwardAuth struct {
   Domain []string
 
   Direct bool
+
+  Prompt string
 }
 
 // Request Validation
@@ -114,7 +116,9 @@ func (f *ForwardAuth) GetLoginURL(r *http.Request, nonce string) string {
   q.Set("client_id", fw.ClientId)
   q.Set("response_type", "code")
   q.Set("scope", fw.Scope)
-  // q.Set("approval_prompt", fw.ClientId)
+  if fw.Prompt != "" {
+    q.Set("prompt", fw.Prompt)
+  }
   q.Set("redirect_uri", f.redirectUri(r))
   q.Set("state", state)
 
