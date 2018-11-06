@@ -40,8 +40,6 @@ type ForwardAuth struct {
   Domain []string
   Whitelist []string
 
-  Direct bool
-
   Prompt string
 }
 
@@ -199,23 +197,12 @@ func (f *ForwardAuth) redirectBase(r *http.Request) string {
   proto := r.Header.Get("X-Forwarded-Proto")
   host := r.Header.Get("X-Forwarded-Host")
 
-  // Direct mode
-  if f.Direct {
-    proto = "http"
-    host = r.Host
-  }
-
   return fmt.Sprintf("%s://%s", proto, host)
 }
 
 // Return url
 func (f *ForwardAuth) returnUrl(r *http.Request) string {
   path := r.Header.Get("X-Forwarded-Uri")
-
-  // Testing
-  if f.Direct {
-    path = r.URL.String()
-  }
 
   return fmt.Sprintf("%s%s", f.redirectBase(r), path)
 }
@@ -325,11 +312,6 @@ func (f *ForwardAuth) Nonce() (error, string) {
 func (f *ForwardAuth) cookieDomain(r *http.Request) string {
   host := r.Header.Get("X-Forwarded-Host")
 
-  // Direct mode
-  if f.Direct {
-    host = r.Host
-  }
-
   // Check if any of the given cookie domains matches
   _, domain := f.matchCookieDomains(host)
   return domain
@@ -340,8 +322,6 @@ func (f *ForwardAuth) csrfCookieDomain(r *http.Request) string {
   var host string
   if use, domain := f.useAuthDomain(r); use {
     host = domain
-  } else if f.Direct {
-    host = r.Host
   } else {
     host = r.Header.Get("X-Forwarded-Host")
   }

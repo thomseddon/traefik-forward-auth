@@ -1,0 +1,48 @@
+version: '3'
+
+services:
+  traefik:
+    image: traefik
+    command: -c /traefik.toml
+    # command: -c /traefik.toml --logLevel=DEBUG
+    ports:
+      - "8085:80"
+      - "8086:8080"
+    networks:
+      - traefik
+    volumes:
+      - ./traefik.toml:/traefik.toml
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  whoami1:
+    image: emilevauge/whoami
+    networks:
+      - traefik
+    labels:
+      - "traefik.backend=whoami1"
+      - "traefik.enable=true"
+      - "traefik.frontend.rule=Host:whoami.localhost.com"
+
+  whoami2:
+    image: emilevauge/whoami
+    networks:
+      - traefik
+    labels:
+      - "traefik.backend=whoami2"
+      - "traefik.enable=true"
+      - "traefik.frontend.rule=Host:whoami.localhost.org"
+
+  forward-oauth:
+    build: ../
+    environment:
+      - CLIENT_ID=test
+      - CLIENT_SECRET=test
+      - COOKIE_SECRET=something-random
+      - COOKIE_SECURE=false
+      - COOKIE_DOMAINS=localhost.com
+      - AUTH_URL=http://auth.localhost.com:8085/_oauth
+    networks:
+      - traefik
+
+networks:
+  traefik:
