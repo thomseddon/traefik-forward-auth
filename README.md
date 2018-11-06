@@ -78,7 +78,7 @@ As the hostname in the `redirect_uri` is dynamically generated based on the orig
 
 #### Auth Host
 
-This is an optional mode of operation that is useful when dealing with a large number of subdomains, it is activated by using the `-auth-host` config option.
+This is an optional mode of operation that is useful when dealing with a large number of subdomains, it is activated by using the `-auth-host` config option (see [this example docker-compose.yml](https://github.com/thomseddon/traefik-forward-auth/blob/master/example/docker-compose-auth-host.yml)).
 
 For example, if you have a few applications: `app1.test.com`, `app2.test.com`, `appN.test.com`, adding every domain to Google's console can become laborious.
 To utilise an auth host, permit domain level cookies by setting the cookie domain to `test.com` then set the `auth-host` to: `auth.test.com`.

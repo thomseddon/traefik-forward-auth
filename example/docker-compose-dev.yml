@@ -32,7 +32,7 @@ services:
       - "traefik.enable=true"
       - "traefik.frontend.rule=Host:whoami.localhost.org"
 
-  forward-oauth:
+  traefik-forward-auth:
     build: ../
     environment:
       - CLIENT_ID=test
