@@ -56,7 +56,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
   // Validate cookie
   valid, email, err := fw.ValidateCookie(r, c)
   if !valid {
-    log.Debugf("Invlaid cookie: %s", err)
+    log.Debugf("Invalid cookie: %s", err)
     http.Error(w, "Not authorized", 401)
     return
   }
@@ -133,7 +133,7 @@ func main() {
   cookieName := flag.String("cookie-name", "_forward_auth", "Cookie Name")
   cSRFCookieName := flag.String("csrf-cookie-name", "_forward_auth_csrf", "CSRF Cookie Name")
   cookieDomainList := flag.String("cookie-domains", "", "Comma separated list of cookie domains") //todo
-  cookieSecret := flag.String("cookie-secret", "", "depreciated")
+  cookieSecret := flag.String("cookie-secret", "", "Deprecated")
   cookieSecure := flag.Bool("cookie-secure", true, "Use secure cookies")
   domainList := flag.String("domain", "", "Comma separated list of email domains to allow")
   emailWhitelist := flag.String("whitelist", "", "Comma separated list of emails to allow")
@@ -222,7 +222,7 @@ func main() {
   // Attach handler
   http.HandleFunc("/", handler)
 
-  log.Debugf("Staring with options: %#v", fw)
-  log.Notice("Litening on :4181")
+  log.Debugf("Starting with options: %#v", fw)
+  log.Notice("Listening on :4181")
   log.Notice(http.ListenAndServe(":4181", nil))
 }
