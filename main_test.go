@@ -195,3 +195,18 @@ func TestCallback(t *testing.T) {
     t.Error("Valid request should be redirected to return url, got:", fwd)
   }
 }
+
+func TestIpWhitelisted(t *testing.T) {
+    // Setup user server
+
+  // Should pass auth response request to callback
+  req := newHttpRequest("_oauth")
+  req.Header.Add("CF-Connecting-IP","192.168.1.111")
+  ipWhitelist.Set("192.168.1.110")
+  ipWhitelist.Set("192.168.1.111")
+  ipWhitelist.Set("192.168.1.112")
+  res, _ := httpRequest(req, nil)
+  if res.StatusCode != 200 {
+    t.Error("Whitelisted ip not allowed")
+  }
+}
