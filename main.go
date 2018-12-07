@@ -22,11 +22,10 @@ var log = logging.MustGetLogger("traefik-forward-auth")
 func handler(w http.ResponseWriter, r *http.Request) {
 
 	ip := realip.RealIP(r)
-	if ipWhitelist.Whitelisted(ip) {
+	if netWhitelist.Whitelisted(ip) {
 		w.WriteHeader(200)
 		return;
 	}
-
 	// Parse uri
 	uri, err := url.Parse(r.Header.Get("X-Forwarded-Uri"))
 	if err != nil {
@@ -127,30 +126,38 @@ func handleCallback(w http.ResponseWriter, r *http.Request, qs url.Values) {
 	http.Redirect(w, r, redirect, http.StatusTemporaryRedirect)
 }
 
-type arrayFlags []net.IP
+type arrayFlagNet []net.IPNet
 
-func (i *arrayFlags) String() string {
-	return "IP"
+func (n *arrayFlagNet) String() string {
+	return "Net"
 }
-
-func (i *arrayFlags) Whitelisted(ip net.IP) bool {
-	for _, a := range *i {
-		if a.Equal(ip) {
-			return true;
+func (n *arrayFlagNet) Set(network string) error {
+	_, nw, err := net.ParseCIDR(network)
+	if err != nil {
+		ip := net.ParseIP(network)
+		if ip == nil {
+			log.Warning("Invalid CIDR Whitelist: " + network)
+			return nil
+		}
+		nw = &net.IPNet{
+			IP: ip,
+			Mask:net.CIDRMask(len(ip)*2,len(ip)*2),
 		}
 	}
-	return false;
-}
-func (i *arrayFlags) Set(value string) error {
-	ip := net.ParseIP(value)
-	if ip != nil {
-		log.Info("Whitelisting IP: "+value)
-		*i = append(*i, ip)
-	}
+	log.Info("Whitelisting CIDR: " + nw.String())
+	*n = append(*n, *nw)
 	return nil
 }
+func (n *arrayFlagNet) Whitelisted(ip net.IP) bool {
+	for _, nw := range *n {
+		if nw.Contains(ip) {
+			return true
+		}
+	}
+	return false
+}
 
-var ipWhitelist arrayFlags;
+var netWhitelist arrayFlagNet
 // Main
 func main() {
 	// Parse options
@@ -169,7 +176,7 @@ func main() {
 	domainList := flag.String("domain", "", "Comma separated list of email domains to allow")
 	emailWhitelist := flag.String("whitelist", "", "Comma separated list of emails to allow")
 	prompt := flag.String("prompt", "", "Space separated list of OpenID prompt options")
-	flag.Var(&ipWhitelist, "ip", "Ip Whitelist")
+	flag.Var(&netWhitelist, "ip", "Ip/CIDR Whitelist")
 	flag.Parse()
 
 	// Backwards compatability

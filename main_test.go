@@ -13,6 +13,7 @@ import (
   "net/http/httptest"
 
   "github.com/op/go-logging"
+  "os"
 )
 
 
@@ -197,14 +198,30 @@ func TestCallback(t *testing.T) {
 }
 
 func TestIpWhitelisted(t *testing.T) {
-    // Setup user server
-
+  logBackend := logging.NewLogBackend(os.Stderr, "", 0)
+  logLeveled := logging.AddModuleLevel(logBackend)
+  logLeveled.SetLevel(logging.WARNING,"")
+  log.SetBackend(logLeveled)
   // Should pass auth response request to callback
   req := newHttpRequest("_oauth")
   req.Header.Add("CF-Connecting-IP","192.168.1.111")
-  ipWhitelist.Set("192.168.1.110")
-  ipWhitelist.Set("192.168.1.111")
-  ipWhitelist.Set("192.168.1.112")
+  netWhitelist.Set("192.168.1.110")
+  netWhitelist.Set("192.168.1.111")
+  netWhitelist.Set("192.168.1.112")
+  res, _ := httpRequest(req, nil)
+  if res.StatusCode != 200 {
+    t.Error("Whitelisted ip not allowed")
+  }
+}
+func TestCIDRWhitelisted(t *testing.T) {
+    // Setup user server
+  // Should pass auth response request to callback
+  req := newHttpRequest("_oauth")
+  req.Header.Add("CF-Connecting-IP","172.20.22.120")
+  netWhitelist.Set("192.168.1.110")
+  netWhitelist.Set("192.168.1.111")
+  netWhitelist.Set("192.168.1.112")
+  netWhitelist.Set("172.20.22.12/24")
   res, _ := httpRequest(req, nil)
   if res.StatusCode != 200 {
     t.Error("Whitelisted ip not allowed")
