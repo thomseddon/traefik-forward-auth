@@ -196,7 +196,6 @@ func (f *ForwardAuth) GetUser(token string) (User, error) {
 func (f *ForwardAuth) redirectBase(r *http.Request) string {
   proto := r.Header.Get("X-Forwarded-Proto")
   host := r.Header.Get("X-Forwarded-Host")
-
   return fmt.Sprintf("%s://%s", proto, host)
 }
 
