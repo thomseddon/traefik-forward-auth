@@ -32,6 +32,7 @@ The following configuration is supported:
 |-cookie-secure|bool|Use secure cookies (default true)|
 |-csrf-cookie-name|string|CSRF Cookie Name (default "_forward_auth_csrf")|
 |-domain|string|Comma separated list of email domains to allow|
+|-ip|string|Ip whitelist, can be added multiple times|
 |-whitelist|string|Comma separated list of email addresses to allow|
 |-lifetime|int|Session length in seconds (default 43200)|
 |-url-path|string|Callback URL (default "_oauth")|
@@ -48,6 +49,16 @@ Head to https://console.developers.google.com & make sure you've switched to the
 Create a new project then search for and select "Credentials" in the search bar. Fill out the "OAuth Consent Screen" tab.
 
 Click, "Create Credentials" > "OAuth client ID". Select "Web Application", fill in the name of your app, skip "Authorized JavaScript origins" and fill "Authorized redirect URIs" with all the domains you will allow authentication from, appended with the `url-path` (e.g. https://app.test.com/_oauth)
+
+## IP Whitelist
+
+You can whitelist one or more Ips that skip Oauth login using the parameter:
+
+* `-ip`
+
+example:
+```traefik-forward-auth -ip 192.168.1.11 -ip 172.21.200.3```
+When a request comes from one of the whitelisted ips, it will avoid all authentication.
 
 ## User Restriction
 
