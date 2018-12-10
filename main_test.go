@@ -15,6 +15,9 @@ import (
   "github.com/op/go-logging"
 )
 
+/**
+ * Utilities
+ */
 
 type TokenServerHandler struct {}
 func (t *TokenServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -79,6 +82,10 @@ func qsDiff(one, two url.Values) {
   }
 }
 
+/**
+ * Tests
+ */
+
 func TestHandler(t *testing.T) {
   fw = &ForwardAuth{
     Path: "_oauth",
@@ -137,6 +144,14 @@ func TestHandler(t *testing.T) {
   res, _ = httpRequest(req, c)
   if res.StatusCode != 200 {
     t.Error("Valid request should be allowed, got:", res.StatusCode)
+  }
+
+  // Should pass through user
+  users := res.Header["X-Forwarded-User"];
+  if len(users) != 1 {
+    t.Error("Valid request missing X-Forwarded-User header")
+  } else if users[0] != "test@example.com" {
+    t.Error("X-Forwarded-User should match user, got: ", users)
   }
 }
 

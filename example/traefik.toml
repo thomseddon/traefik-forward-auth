@@ -37,7 +37,8 @@
     address = ":80"
 
     [entryPoints.http.auth.forward]
-    address = "http://forward-oauth:4181"
+    address = "http://traefik-forward-auth:4181"
+    authResponseHeaders = ["X-Forwarded-User"]
 
 ################################################################
 # Traefik logs configuration

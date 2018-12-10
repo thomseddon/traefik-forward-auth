@@ -70,6 +70,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
   }
 
   // Valid request
+  w.Header().Set("X-Forwarded-User", email)
   w.WriteHeader(200)
 }
 
