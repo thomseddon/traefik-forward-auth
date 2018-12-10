@@ -49,6 +49,10 @@ Create a new project then search for and select "Credentials" in the search bar.
 
 Click, "Create Credentials" > "OAuth client ID". Select "Web Application", fill in the name of your app, skip "Authorized JavaScript origins" and fill "Authorized redirect URIs" with all the domains you will allow authentication from, appended with the `url-path` (e.g. https://app.test.com/_oauth)
 
+## Usage
+
+The authenticated user is set in the `X-Forwarded-User` header, to pass this on add this to the `authResponseHeaders` as shown [here](https://github.com/thomseddon/traefik-forward-auth/blob/master/example/docker-compose-dev.yml).
+
 ## User Restriction
 
 You can restrict who can login with the following parameters:
