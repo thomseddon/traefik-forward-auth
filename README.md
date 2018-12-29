@@ -50,9 +50,10 @@ Create a new project then search for and select "Credentials" in the search bar.
 Click, "Create Credentials" > "OAuth client ID". Select "Web Application", fill in the name of your app, skip "Authorized JavaScript origins" and fill "Authorized redirect URIs" with all the domains you will allow authentication from, appended with the `url-path` (e.g. https://app.domain.com/_oauth)
 
 A. The subdomain/container name that is being added
+
 B. The name of the selected domain
 
-NOTE: The user is required to put each subdomain, but can be bypassed by using the AUTH label which centralizes the use of one subdomain to authenticate all of your container names. Please see ```auth label``` label information below!
+##NOTE:## The user is required to put each subdomain, but can be bypassed by using the AUTH label which centralizes the use of one subdomain to authenticate all of your container names. Please see ```auth label``` label information below!##
 
 <p align="center">
 <a href="https://plexguide.com" target="_blank"><img src="https://plexguide.com/wikipics/auth-a.png" width="600"/>
