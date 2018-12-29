@@ -47,7 +47,11 @@ Head to https://console.developers.google.com & make sure you've switched to the
 
 Create a new project then search for and select "Credentials" in the search bar. Fill out the "OAuth Consent Screen" tab.
 
-Click, "Create Credentials" > "OAuth client ID". Select "Web Application", fill in the name of your app, skip "Authorized JavaScript origins" and fill "Authorized redirect URIs" with all the domains you will allow authentication from, appended with the `url-path` (e.g. https://app.test.com/_oauth)
+Click, "Create Credentials" > "OAuth client ID". Select "Web Application", fill in the name of your app, skip "Authorized JavaScript origins" and fill "Authorized redirect URIs" with all the domains you will allow authentication from, appended with the `url-path` (e.g. https://app.domain.com/_oauth)
+
+<p align="center">
+<a href="https://plexguide.com" target="_blank"><img src="https://plexguide.com/wikipics/auth-a.png" width="600"/>
+</p>
 
 ## Usage
 
