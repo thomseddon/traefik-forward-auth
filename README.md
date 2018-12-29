@@ -31,8 +31,8 @@ The following configuration is supported:
 |-cookie-name|string|Cookie Name (default "_forward_auth")|
 |-cookie-secure|bool|Use secure cookies (default true)|
 |-csrf-cookie-name|string|CSRF Cookie Name (default "_forward_auth_csrf")|
-|-domain|string|Comma separated list of email domains - Example: user1@domaincom,user2@domain.com,user3@domanin.com|
-|-whitelist|string|Comma separated list of email addresses to allow|
+|-domain|string|Comma separated list of email domains|
+|-whitelist|string|Comma separated list of email addresses to allow (see below)|
 |-lifetime|int|Session length in seconds (default 43200)|
 |-url-path|string|Callback URL (default "_oauth")|
 |-prompt|string|Space separated list of [OpenID prompt options](https://developers.google.com/identity/protocols/OpenIDConnect#prompt)|
@@ -69,6 +69,12 @@ You can supply a comma separated list of cookie domains, if the host of the orig
 For example, if cookie domain is `test.com` and a request comes in on `app1.test.com`, the cookie will be set for the whole `test.com` domain. As such, if another request is forwarded for authentication from `app2.test.com`, the original cookie will be sent and so the request will be allowed without further authentication.
 
 Beware however, if using cookie domains whilst running multiple instances of traefik/traefik-forward-auth for the same domain, the cookies will clash. You can fix this by using the same `cookie-secret` in both instances, or using a different `cookie-name` on each.
+
+## Whitelist
+
+Useful to enable only specific email users to access your containers. To enable, type a the user(s) seperated with no whitespace.
+
+Example: ```user@traefik.com,bob@foward.com,auth@netstat.com```
 
 ## Operation Modes
 
