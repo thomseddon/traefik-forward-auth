@@ -31,7 +31,7 @@ The following configuration is supported:
 |-cookie-name|string|Cookie Name (default "_forward_auth")|
 |-cookie-secure|bool|Use secure cookies (default true)|
 |-csrf-cookie-name|string|CSRF Cookie Name (default "_forward_auth_csrf")|
-|-domain|string|Comma separated list of email domains to allow|
+|-domain|string|Comma separated list of email domains to allow i.e. user1@domaincom,user2@domain.com,user3@domanin.com|
 |-whitelist|string|Comma separated list of email addresses to allow|
 |-lifetime|int|Session length in seconds (default 43200)|
 |-url-path|string|Callback URL (default "_oauth")|
