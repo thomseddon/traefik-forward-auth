@@ -52,7 +52,7 @@ Click, "Create Credentials" > "OAuth client ID". Select "Web Application", fill 
 A. The subdomain/container name that is being added
 B. The name of the selected domain
 
-NOTE: The user is required to put each subdomain, but can be bypassed by using the AUTH label which centralizes the use of one subdomain to authenticate all of your container names. Please see ## Auth Host ## label information below!
+NOTE: The user is required to put each subdomain, but can be bypassed by using the AUTH label which centralizes the use of one subdomain to authenticate all of your container names. Please see ```auth label``` label information below!
 
 <p align="center">
 <a href="https://plexguide.com" target="_blank"><img src="https://plexguide.com/wikipics/auth-a.png" width="600"/>
