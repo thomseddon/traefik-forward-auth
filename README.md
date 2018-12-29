@@ -56,7 +56,7 @@ B. The name of the selected domain
 NOTE: The user is required to put each subdomain, but can be bypassed by using the AUTH label which centralizes the use of one subdomain to authenticate all of your container names. Please see ```auth label``` label information below!
 
 <p align="center">
-<a href="https://plexguide.com" target="_blank"><img src="https://plexguide.com/wikipics/auth-a.png" width="600"/>
+<a href="" target="_blank"><img src="https://plexguide.com/wikipics/auth-a.png" width="600"/>
 </p>
 
 ## Usage
