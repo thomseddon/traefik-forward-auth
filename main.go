@@ -104,7 +104,7 @@ func handleCallback(w http.ResponseWriter, r *http.Request, qs url.Values,
 		logger.WithFields(logrus.Fields{
 			"csrf":  csrfCookie.Value,
 			"state": state,
-		}).Warnf("CSRF cookie does not match state")
+		}).Warnf("Error validating csrf cookie: %v", err)
 		http.Error(w, "Not authorized", 401)
 		return
 	}
@@ -163,7 +163,7 @@ func main() {
 	// Setup logger
 	log = CreateLogger(*logLevel, *logFormat)
 
-	// Backwards compatability
+	// Backwards compatibility
 	if *secret == "" && *cookieSecret != "" {
 		*secret = *cookieSecret
 	}
