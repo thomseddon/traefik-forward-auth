@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -8,26 +9,37 @@ import (
 	"time"
 
 	"github.com/namsral/flag"
-	"github.com/op/go-logging"
+	"github.com/sirupsen/logrus"
 )
 
 // Vars
 var fw *ForwardAuth
-var log = logging.MustGetLogger("traefik-forward-auth")
+var log logrus.FieldLogger
 
 // Primary handler
 func handler(w http.ResponseWriter, r *http.Request) {
+	logger := log
+	if logrus.GetLevel() >= logrus.DebugLevel {
+		logger = log.WithFields(logrus.Fields{
+			"RemoteAddr":      r.RemoteAddr,
+			"X-Forwarded-Uri": r.Header.Get("X-Forwarded-Uri"),
+		})
+	}
+
+	logger.Debugf("Handling request")
+
 	// Parse uri
 	uri, err := url.Parse(r.Header.Get("X-Forwarded-Uri"))
 	if err != nil {
-		log.Error("Error parsing url")
+		logger.Errorf("Error parsing X-Forwarded-Uri, %v", err)
 		http.Error(w, "Service unavailable", 503)
 		return
 	}
 
 	// Handle callback
 	if uri.Path == fw.Path {
-		handleCallback(w, r, uri.Query())
+		logger.Debugf("Passing request to auth callback")
+		handleCallback(w, r, uri.Query(), logger)
 		return
 	}
 
@@ -37,14 +49,14 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		// Error indicates no cookie, generate nonce
 		err, nonce := fw.Nonce()
 		if err != nil {
-			log.Error("Error generating nonce")
+			logger.Errorf("Error generating nonce, %v", err)
 			http.Error(w, "Service unavailable", 503)
 			return
 		}
 
 		// Set the CSRF cookie
 		http.SetCookie(w, fw.MakeCSRFCookie(r, nonce))
-		log.Debug("Set CSRF cookie and redirecting to google login")
+		logger.Debug("Set CSRF cookie and redirecting to google login")
 
 		// Forward them on
 		http.Redirect(w, r, fw.GetLoginURL(r, nonce), http.StatusTemporaryRedirect)
@@ -55,7 +67,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	// Validate cookie
 	valid, email, err := fw.ValidateCookie(r, c)
 	if !valid {
-		log.Debugf("Invalid cookie: %s", err)
+		logger.Errorf("Invalid cookie: %v", err)
 		http.Error(w, "Not authorized", 401)
 		return
 	}
@@ -63,22 +75,26 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	// Validate user
 	valid = fw.ValidateEmail(email)
 	if !valid {
-		log.Debugf("Invalid email: %s", email)
+		logger.WithFields(logrus.Fields{
+			"email": email,
+		}).Errorf("Invalid email")
 		http.Error(w, "Not authorized", 401)
 		return
 	}
 
 	// Valid request
+	logger.Debugf("Allowing valid request ")
 	w.Header().Set("X-Forwarded-User", email)
 	w.WriteHeader(200)
 }
 
 // Authenticate user after they have come back from google
-func handleCallback(w http.ResponseWriter, r *http.Request, qs url.Values) {
+func handleCallback(w http.ResponseWriter, r *http.Request, qs url.Values,
+	logger logrus.FieldLogger) {
 	// Check for CSRF cookie
 	csrfCookie, err := r.Cookie(fw.CSRFCookieName)
 	if err != nil {
-		log.Debug("Missing csrf cookie")
+		logger.Warn("Missing csrf cookie")
 		http.Error(w, "Not authorized", 401)
 		return
 	}
@@ -87,7 +103,10 @@ func handleCallback(w http.ResponseWriter, r *http.Request, qs url.Values) {
 	state := qs.Get("state")
 	valid, redirect, err := fw.ValidateCSRFCookie(csrfCookie, state)
 	if !valid {
-		log.Debugf("Invalid oauth state, expected '%s', got '%s'\n", csrfCookie.Value, state)
+		logger.WithFields(logrus.Fields{
+			"csrf":  csrfCookie.Value,
+			"state": state,
+		}).Warnf("CSRF cookie does not match state")
 		http.Error(w, "Not authorized", 401)
 		return
 	}
@@ -98,7 +117,7 @@ func handleCallback(w http.ResponseWriter, r *http.Request, qs url.Values) {
 	// Exchange code for token
 	token, err := fw.ExchangeCode(r, qs.Get("code"))
 	if err != nil {
-		log.Debugf("Code exchange failed with: %s\n", err)
+		logger.Errorf("Code exchange failed with: %v", err)
 		http.Error(w, "Service unavailable", 503)
 		return
 	}
@@ -106,13 +125,15 @@ func handleCallback(w http.ResponseWriter, r *http.Request, qs url.Values) {
 	// Get user
 	user, err := fw.GetUser(token)
 	if err != nil {
-		log.Debugf("Error getting user: %s\n", err)
+		logger.Errorf("Error getting user: %s", err)
 		return
 	}
 
 	// Generate cookie
 	http.SetCookie(w, fw.MakeCookie(r, user.Email))
-	log.Debugf("Generated auth cookie for %s\n", user.Email)
+	logger.WithFields(logrus.Fields{
+		"user": user.Email,
+	}).Infof("Generated auth cookie")
 
 	// Redirect
 	http.Redirect(w, r, redirect, http.StatusTemporaryRedirect)
@@ -136,8 +157,13 @@ func main() {
 	domainList := flag.String("domain", "", "Comma separated list of email domains to allow")
 	emailWhitelist := flag.String("whitelist", "", "Comma separated list of emails to allow")
 	prompt := flag.String("prompt", "", "Space separated list of OpenID prompt options")
+	logLevel := flag.String("log-level", "warn", "Log level: trace, debug, info, warn, error, fatal, panic")
+	logFormat := flag.String("log-format", "text", "Log format: text, json, pretty")
 
 	flag.Parse()
+
+	// Setup logger
+	log = CreateLogger(*logLevel, *logFormat)
 
 	// Backwards compatability
 	if *secret == "" && *cookieSecret != "" {
@@ -145,21 +171,8 @@ func main() {
 	}
 
 	// Check for show stopper errors
-	stop := false
-	if *clientId == "" {
-		stop = true
-		log.Critical("client-id must be set")
-	}
-	if *clientSecret == "" {
-		stop = true
-		log.Critical("client-secret must be set")
-	}
-	if *secret == "" {
-		stop = true
-		log.Critical("secret must be set")
-	}
-	if stop {
-		return
+	if *clientId == "" || *clientSecret == "" || *secret == "" {
+		log.Fatal("client-id, client-secret and secret must all be set")
 	}
 
 	// Parse lists
@@ -220,7 +233,9 @@ func main() {
 	// Attach handler
 	http.HandleFunc("/", handler)
 
-	log.Debugf("Starting with options: %#v", fw)
-	log.Notice("Listening on :4181")
-	log.Notice(http.ListenAndServe(":4181", nil))
+	// Start
+	jsonConf, _ := json.Marshal(fw)
+	log.Debugf("Starting with options: %s", string(jsonConf))
+	log.Info("Listening on :4181")
+	log.Info(http.ListenAndServe(":4181", nil))
 }

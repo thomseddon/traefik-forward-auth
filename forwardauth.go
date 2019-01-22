@@ -22,7 +22,7 @@ type ForwardAuth struct {
 	Secret   []byte
 
 	ClientId     string
-	ClientSecret string
+	ClientSecret string `json:"-"`
 	Scope        string
 
 	LoginURL *url.URL
