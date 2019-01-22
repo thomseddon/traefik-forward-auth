@@ -18,15 +18,13 @@ var log logrus.FieldLogger
 
 // Primary handler
 func handler(w http.ResponseWriter, r *http.Request) {
-	logger := log
-	if logrus.GetLevel() >= logrus.DebugLevel {
-		logger = log.WithFields(logrus.Fields{
-			"RemoteAddr":      r.RemoteAddr,
-			"X-Forwarded-Uri": r.Header.Get("X-Forwarded-Uri"),
-		})
-	}
-
-	logger.Debugf("Handling request")
+	// Logging setup
+	logger := log.WithFields(logrus.Fields{
+		"RemoteAddr": r.RemoteAddr,
+	})
+	logger.WithFields(logrus.Fields{
+		"Headers": r.Header,
+	}).Debugf("Handling request")
 
 	// Parse uri
 	uri, err := url.Parse(r.Header.Get("X-Forwarded-Uri"))
