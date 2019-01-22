@@ -10,8 +10,6 @@ import (
 	"net/url"
 	"strings"
 	"testing"
-
-	"github.com/op/go-logging"
 )
 
 /**
@@ -36,8 +34,7 @@ func (t *UserServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func init() {
-	// Remove for debugging
-	logging.SetLevel(logging.INFO, "traefik-forward-auth")
+	log = CreateLogger("panic", "")
 }
 
 func httpRequest(r *http.Request, c *http.Cookie) (*http.Response, string) {
