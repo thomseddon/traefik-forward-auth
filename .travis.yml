@@ -4,4 +4,5 @@ go:
   - "1.10"
 install:
   - go get github.com/namsral/flag
-  - go get github.com/op/go-logging
+  - go get github.com/sirupsen/logrus
+script: go test -v ./...
