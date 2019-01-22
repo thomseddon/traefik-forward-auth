@@ -7,7 +7,7 @@ WORKDIR /app
 # Add libraries
 RUN apk add --no-cache git && \
   go get "github.com/namsral/flag" && \
-  go get "github.com/op/go-logging" && \
+  go get "github.com/sirupsen/logrus" && \
   apk del git
 
 # Copy & build
