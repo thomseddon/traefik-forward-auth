@@ -18,4 +18,5 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix nocgo -o /traefik-forwar
 FROM scratch
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /traefik-forward-auth ./
-ENTRYPOINT ["./traefik-forward-auth"]
+COPY entrypoint.sh /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
