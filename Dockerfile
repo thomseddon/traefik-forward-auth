@@ -15,7 +15,7 @@ ADD . /app/
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix nocgo -o /traefik-forward-auth .
 
 # Copy into scratch container
-FROM scratch
+FROM alpine:3.8
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /traefik-forward-auth ./
 COPY entrypoint.sh /entrypoint.sh
