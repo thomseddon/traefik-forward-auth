@@ -1,16 +1,30 @@
 package main
 
 import (
-	// "fmt"
+	"fmt"
 	"net/http"
 	"net/url"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/thomseddon/traefik-forward-auth/provider"
 )
 
-func TestValidateCookie(t *testing.T) {
+/**
+ * Setup
+ */
+
+func init() {
 	fw = &ForwardAuth{}
+}
+
+/**
+ * Tests
+ */
+
+func TestValidateCookie(t *testing.T) {
+	config = &Config{}
 	r, _ := http.NewRequest("GET", "http://example.com", nil)
 	c := &http.Cookie{}
 
@@ -39,7 +53,7 @@ func TestValidateCookie(t *testing.T) {
 	}
 
 	// Should catch expired
-	fw.Lifetime = time.Second * time.Duration(-1)
+	config.Lifetime = time.Second * time.Duration(-1)
 	c = fw.MakeCookie(r, "test@test.com")
 	valid, _, err = fw.ValidateCookie(r, c)
 	if valid || err.Error() != "Cookie has expired" {
@@ -47,7 +61,7 @@ func TestValidateCookie(t *testing.T) {
 	}
 
 	// Should accept valid cookie
-	fw.Lifetime = time.Second * time.Duration(10)
+	config.Lifetime = time.Second * time.Duration(10)
 	c = fw.MakeCookie(r, "test@test.com")
 	valid, email, err := fw.ValidateCookie(r, c)
 	if !valid {
@@ -62,7 +76,7 @@ func TestValidateCookie(t *testing.T) {
 }
 
 func TestValidateEmail(t *testing.T) {
-	fw = &ForwardAuth{}
+	config = &Config{}
 
 	// Should allow any
 	if !fw.ValidateEmail("test@test.com") || !fw.ValidateEmail("one@two.com") {
@@ -70,27 +84,27 @@ func TestValidateEmail(t *testing.T) {
 	}
 
 	// Should block non matching domain
-	fw.Domain = []string{"test.com"}
+	config.Domain = []string{"test.com"}
 	if fw.ValidateEmail("one@two.com") {
 		t.Error("Should not allow user from another domain")
 	}
 
 	// Should allow matching domain
-	fw.Domain = []string{"test.com"}
+	config.Domain = []string{"test.com"}
 	if !fw.ValidateEmail("test@test.com") {
 		t.Error("Should allow user from allowed domain")
 	}
 
 	// Should block non whitelisted email address
-	fw.Domain = []string{}
-	fw.Whitelist = []string{"test@test.com"}
+	config.Domain = []string{}
+	config.Whitelist = []string{"test@test.com"}
 	if fw.ValidateEmail("one@two.com") {
 		t.Error("Should not allow user not in whitelist.")
 	}
 
 	// Should allow matching whitelisted email address
-	fw.Domain = []string{}
-	fw.Whitelist = []string{"test@test.com"}
+	config.Domain = []string{}
+	config.Whitelist = []string{"test@test.com"}
 	if !fw.ValidateEmail("test@test.com") {
 		t.Error("Should allow user in whitelist.")
 	}
@@ -102,15 +116,19 @@ func TestGetLoginURL(t *testing.T) {
 	r.Header.Add("X-Forwarded-Host", "example.com")
 	r.Header.Add("X-Forwarded-Uri", "/hello")
 
-	fw = &ForwardAuth{
-		Path:         "/_oauth",
-		ClientId:     "idtest",
-		ClientSecret: "sectest",
-		Scope:        "scopetest",
-		LoginURL: &url.URL{
-			Scheme: "https",
-			Host:   "test.com",
-			Path:   "/auth",
+	config = &Config{
+		Path: "/_oauth",
+		Providers: provider.Providers{
+			Google: provider.Google{
+				ClientId:     "idtest",
+				ClientSecret: "sectest",
+				Scope:        "scopetest",
+				LoginURL: &url.URL{
+					Scheme: "https",
+					Host:   "test.com",
+					Path:   "/auth",
+				},
+			},
 		},
 	}
 
@@ -147,18 +165,22 @@ func TestGetLoginURL(t *testing.T) {
 	// With Auth URL but no matching cookie domain
 	// - will not use auth host
 	//
-	fw = &ForwardAuth{
-		Path:         "/_oauth",
-		AuthHost:     "auth.example.com",
-		ClientId:     "idtest",
-		ClientSecret: "sectest",
-		Scope:        "scopetest",
-		LoginURL: &url.URL{
-			Scheme: "https",
-			Host:   "test.com",
-			Path:   "/auth",
+	config = &Config{
+		Path:     "/_oauth",
+		AuthHost: "auth.example.com",
+		Providers: provider.Providers{
+			Google: provider.Google{
+				ClientId:     "idtest",
+				ClientSecret: "sectest",
+				Scope:        "scopetest",
+				Prompt:       "consent select_account",
+				LoginURL: &url.URL{
+					Scheme: "https",
+					Host:   "test.com",
+					Path:   "/auth",
+				},
+			},
 		},
-		Prompt: "consent select_account",
 	}
 
 	// Check url
@@ -195,18 +217,23 @@ func TestGetLoginURL(t *testing.T) {
 	// With correct Auth URL + cookie domain
 	//
 	cookieDomain := NewCookieDomain("example.com")
-	fw = &ForwardAuth{
-		Path:         "/_oauth",
-		AuthHost:     "auth.example.com",
-		ClientId:     "idtest",
-		ClientSecret: "sectest",
-		Scope:        "scopetest",
-		LoginURL: &url.URL{
-			Scheme: "https",
-			Host:   "test.com",
-			Path:   "/auth",
-		},
+	config = &Config{
+		Path:          "/_oauth",
+		AuthHost:      "auth.example.com",
 		CookieDomains: []CookieDomain{*cookieDomain},
+		Providers: provider.Providers{
+			Google: provider.Google{
+				ClientId:     "idtest",
+				ClientSecret: "sectest",
+				Scope:        "scopetest",
+				Prompt:       "consent select_account",
+				LoginURL: &url.URL{
+					Scheme: "https",
+					Host:   "test.com",
+					Path:   "/auth",
+				},
+			},
+		},
 	}
 
 	// Check url
@@ -232,6 +259,7 @@ func TestGetLoginURL(t *testing.T) {
 		"response_type": []string{"code"},
 		"scope":         []string{"scopetest"},
 		"state":         []string{"nonce:http://example.com/hello"},
+		"prompt":        []string{"consent select_account"},
 	}
 	qsDiff(expectedQs, qs)
 	if !reflect.DeepEqual(qs, expectedQs) {
@@ -271,6 +299,7 @@ func TestGetLoginURL(t *testing.T) {
 		"response_type": []string{"code"},
 		"scope":         []string{"scopetest"},
 		"state":         []string{"nonce:http://another.com/hello"},
+		"prompt":        []string{"consent select_account"},
 	}
 	qsDiff(expectedQs, qs)
 	if !reflect.DeepEqual(qs, expectedQs) {
@@ -292,11 +321,11 @@ func TestGetLoginURL(t *testing.T) {
 // }
 
 func TestMakeCSRFCookie(t *testing.T) {
+	config = &Config{}
 	r, _ := http.NewRequest("GET", "http://app.example.com", nil)
 	r.Header.Add("X-Forwarded-Host", "app.example.com")
 
 	// No cookie domain or auth url
-	fw = &ForwardAuth{}
 	c := fw.MakeCSRFCookie(r, "12345678901234567890123456789012")
 	if c.Domain != "app.example.com" {
 		t.Error("Cookie Domain should match request domain, got:", c.Domain)
@@ -304,14 +333,16 @@ func TestMakeCSRFCookie(t *testing.T) {
 
 	// With cookie domain but no auth url
 	cookieDomain := NewCookieDomain("example.com")
-	fw = &ForwardAuth{CookieDomains: []CookieDomain{*cookieDomain}}
+	config = &Config{
+		CookieDomains: []CookieDomain{*cookieDomain},
+	}
 	c = fw.MakeCSRFCookie(r, "12345678901234567890123456789012")
 	if c.Domain != "app.example.com" {
 		t.Error("Cookie Domain should match request domain, got:", c.Domain)
 	}
 
 	// With cookie domain and auth url
-	fw = &ForwardAuth{
+	config = &Config{
 		AuthHost:      "auth.example.com",
 		CookieDomains: []CookieDomain{*cookieDomain},
 	}
@@ -322,7 +353,7 @@ func TestMakeCSRFCookie(t *testing.T) {
 }
 
 func TestClearCSRFCookie(t *testing.T) {
-	fw = &ForwardAuth{}
+	config = &Config{}
 	r, _ := http.NewRequest("GET", "http://example.com", nil)
 
 	c := fw.ClearCSRFCookie(r)
@@ -332,31 +363,40 @@ func TestClearCSRFCookie(t *testing.T) {
 }
 
 func TestValidateCSRFCookie(t *testing.T) {
-	fw = &ForwardAuth{}
+	config = &Config{}
 	c := &http.Cookie{}
 
+	newCsrfRequest := func(state string) *http.Request {
+		u := fmt.Sprintf("http://example.com?state=%s", state)
+		r, _ := http.NewRequest("GET", u, nil)
+		return r
+	}
+
 	// Should require 32 char string
+	r := newCsrfRequest("")
 	c.Value = ""
-	valid, _, err := fw.ValidateCSRFCookie(c, "")
+	valid, _, err := fw.ValidateCSRFCookie(r, c)
 	if valid || err.Error() != "Invalid CSRF cookie value" {
 		t.Error("Should get \"Invalid CSRF cookie value\", got:", err)
 	}
 	c.Value = "123456789012345678901234567890123"
-	valid, _, err = fw.ValidateCSRFCookie(c, "")
+	valid, _, err = fw.ValidateCSRFCookie(r, c)
 	if valid || err.Error() != "Invalid CSRF cookie value" {
 		t.Error("Should get \"Invalid CSRF cookie value\", got:", err)
 	}
 
 	// Should require valid state
+	r = newCsrfRequest("12345678901234567890123456789012:")
 	c.Value = "12345678901234567890123456789012"
-	valid, _, err = fw.ValidateCSRFCookie(c, "12345678901234567890123456789012:")
+	valid, _, err = fw.ValidateCSRFCookie(r, c)
 	if valid || err.Error() != "Invalid CSRF state value" {
 		t.Error("Should get \"Invalid CSRF state value\", got:", err)
 	}
 
 	// Should allow valid state
+	r = newCsrfRequest("12345678901234567890123456789012:99")
 	c.Value = "12345678901234567890123456789012"
-	valid, state, err := fw.ValidateCSRFCookie(c, "12345678901234567890123456789012:99")
+	valid, state, err := fw.ValidateCSRFCookie(r, c)
 	if !valid {
 		t.Error("Valid request should return as valid")
 	}
@@ -369,8 +409,6 @@ func TestValidateCSRFCookie(t *testing.T) {
 }
 
 func TestNonce(t *testing.T) {
-	fw = &ForwardAuth{}
-
 	err, nonce1 := fw.Nonce()
 	if err != nil {
 		t.Error("Error generation nonce:", err)

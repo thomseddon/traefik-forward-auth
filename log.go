@@ -6,13 +6,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func CreateLogger(logLevel, logFormat string) logrus.FieldLogger {
+func NewLogger() logrus.FieldLogger {
 	// Setup logger
 	log := logrus.StandardLogger()
 	logrus.SetOutput(os.Stdout)
 
 	// Set logger format
-	switch logFormat {
+	switch *config.LogFormat {
 	case "pretty":
 		break
 	case "json":
@@ -26,7 +26,7 @@ func CreateLogger(logLevel, logFormat string) logrus.FieldLogger {
 	}
 
 	// Set logger level
-	switch logLevel {
+	switch *config.LogLevel {
 	case "trace":
 		logrus.SetLevel(logrus.TraceLevel)
 	case "debug":

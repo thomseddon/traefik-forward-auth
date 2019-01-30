@@ -1,8 +1,8 @@
 package main
 
-// import (
-// 	"testing"
-// )
+import (
+	"testing"
+)
 
 /**
  * Tests
