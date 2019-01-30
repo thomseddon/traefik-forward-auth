@@ -21,7 +21,10 @@ import (
 func init() {
 	fw = &ForwardAuth{}
 	config = NewConfig()
-	log = NewLogger("panic", "pretty")
+
+	logLevel := "panic"
+	config.LogLevel = &logLevel
+	log = NewLogger()
 }
 
 /**
