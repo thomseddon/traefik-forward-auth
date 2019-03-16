@@ -56,6 +56,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		http.SetCookie(w, fw.MakeCSRFCookie(r, nonce))
 		logger.Debug("Set CSRF cookie and redirecting to google login")
 
+		if fw.HSTSHeader != "" {
+			// Set HSTS header
+			w.Header().Set("Strict-Transport-Security", fw.HSTSHeader)
+		}
+
 		// Forward them on
 		http.Redirect(w, r, fw.GetLoginURL(r, nonce), http.StatusTemporaryRedirect)
 
@@ -157,6 +162,10 @@ func main() {
 	prompt := flag.String("prompt", "", "Space separated list of OpenID prompt options")
 	logLevel := flag.String("log-level", "warn", "Log level: trace, debug, info, warn, error, fatal, panic")
 	logFormat := flag.String("log-format", "text", "Log format: text, json, pretty")
+	hstsEnable := flag.Bool("hsts-enable", false, "Enable HSTS header")
+	hstsDuration := flag.Int("hsts-duration", 315360000, "HSTS duration in seconds")
+	hstsIncludeSubdomains := flag.Bool("hsts-include-subdomains", false, "Enable HSTS includeSubdomains flag")
+	hstsPreload := flag.Bool("hsts-preload", false, "Enable HSTS preload flag")
 
 	flag.Parse()
 
@@ -189,6 +198,17 @@ func main() {
 	var whitelist []string
 	if *emailWhitelist != "" {
 		whitelist = strings.Split(*emailWhitelist, ",")
+	}
+
+	var hsts strings.Builder
+	if *hstsEnable {
+		hsts.WriteString(fmt.Sprintf("max-age=%d", *hstsDuration))
+		if *hstsIncludeSubdomains {
+			hsts.WriteString("; includeSubdomains")
+		}
+		if *hstsPreload {
+			hsts.WriteString("; preload")
+		}
 	}
 
 	// Setup
@@ -226,6 +246,8 @@ func main() {
 		Whitelist: whitelist,
 
 		Prompt: *prompt,
+
+		HSTSHeader: hsts.String(),
 	}
 
 	// Attach handler

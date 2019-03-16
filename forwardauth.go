@@ -40,6 +40,8 @@ type ForwardAuth struct {
 	Whitelist []string
 
 	Prompt string
+
+	HSTSHeader string
 }
 
 // Request Validation

@@ -38,6 +38,10 @@ The following configuration is supported:
 |-prompt|string|Space separated list of [OpenID prompt options](https://developers.google.com/identity/protocols/OpenIDConnect#prompt)|
 |-log-level|string|Log level: trace, debug, info, warn, error, fatal, panic (default "warn")|
 |-log-format|string|Log format: text, json, pretty (default "text")|
+|-hsts-enable|bool|Enable HTTP Strict-Stransport-Security (HSTS) (default false)|
+|-hsts-duration|int|HSTS duration in seconds (default 315360000)|
+|-hsts-hsts-include-subdomains|bool|Enable HSTS includeSubdomains flag (default false)|
+|-hsts-enable|bool|Enable HSTS preload flag (default false)|
 
 Configuration can also be supplied as environment variables (use upper case and swap `-`'s for `_`'s e.g. `-client-id` becomes `CLIENT_ID`)
 
