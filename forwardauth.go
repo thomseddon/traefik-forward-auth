@@ -36,6 +36,9 @@ type ForwardAuth struct {
 	CSRFCookieName string
 	CookieSecure   bool
 
+	ExceptionDomains []CookieDomain
+	MatchDomains     []CookieDomain
+
 	Domain    []string
 	Whitelist []string
 
@@ -328,18 +331,50 @@ func (f *ForwardAuth) csrfCookieDomain(r *http.Request) string {
 	return p[0]
 }
 
-// Return matching cookie domain if exists
-func (f *ForwardAuth) matchCookieDomains(domain string) (bool, string) {
+func (f *ForwardAuth) matchDomains(domain string, list []CookieDomain) (bool, string) {
 	// Remove port
 	p := strings.Split(domain, ":")
 
-	for _, d := range f.CookieDomains {
+	for _, d := range list {
 		if d.Match(p[0]) {
 			return true, d.Domain
 		}
 	}
 
 	return false, p[0]
+}
+
+// Return matching cookie domain if exists
+func (f *ForwardAuth) matchCookieDomains(domain string) (bool, string) {
+	return f.matchDomains(domain, f.CookieDomains)
+}
+
+// Return matching exception domain if exists
+func (f *ForwardAuth) matchExceptionDomains(domain string) (bool, string) {
+	return f.matchDomains(domain, f.ExceptionDomains)
+}
+
+// Return matching match domain if exists
+func (f *ForwardAuth) matchMatchDomains(domain string) (bool, string) {
+	return f.matchDomains(domain, f.MatchDomains)
+}
+
+// IsExceptionDomain checks if domain is not applicatable for forward auth
+func (f *ForwardAuth) IsExceptionDomain(r *http.Request) (bool, string) {
+	host := r.Header.Get("X-Forwarded-Host")
+
+	// Check if any of the given whitelist domains matches
+	if len(f.MatchDomains) > 0 {
+		b, _ := f.matchMatchDomains(host)
+		if b {
+			return false, host
+		}
+		return true, host
+	}
+
+	// Check if any of the given exception domains matches
+	b, domain := f.matchExceptionDomains(host)
+	return b, domain
 }
 
 // Create cookie hmac

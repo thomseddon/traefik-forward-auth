@@ -34,6 +34,13 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Handle whitelist
+	if b, domain := fw.IsExceptionDomain(r); b {
+		logger.Debugf("Allowing request for forward auth exception domain %s", domain)
+		w.WriteHeader(200)
+		return
+	}
+
 	// Handle callback
 	if uri.Path == fw.Path {
 		logger.Debugf("Passing request to auth callback")
@@ -154,6 +161,8 @@ func main() {
 	cookieSecure := flag.Bool("cookie-secure", true, "Use secure cookies")
 	domainList := flag.String("domain", "", "Comma separated list of email domains to allow")
 	emailWhitelist := flag.String("whitelist", "", "Comma separated list of emails to allow")
+	matchDomainList := flag.String("match-domains", "", "Comma separated list of domains to match for requiring auth")
+	exceptionDomainList := flag.String("exception-domains", "", "Comma separated list of domains to exempt from requiring auth")
 	prompt := flag.String("prompt", "", "Space separated list of OpenID prompt options")
 	logLevel := flag.String("log-level", "warn", "Log level: trace, debug, info, warn, error, fatal, panic")
 	logFormat := flag.String("log-format", "text", "Log format: text, json, pretty")
@@ -191,6 +200,25 @@ func main() {
 		whitelist = strings.Split(*emailWhitelist, ",")
 	}
 
+	// Parse domain match/except lists
+	var exceptionDomains []CookieDomain
+	if *exceptionDomainList != "" {
+		for _, d := range strings.Split(*exceptionDomainList, ",") {
+			exceptionDomain := NewCookieDomain(d)
+			exceptionDomains = append(exceptionDomains, *exceptionDomain)
+		}
+	}
+	var matchDomains []CookieDomain
+	if *matchDomainList != "" {
+		for _, d := range strings.Split(*matchDomainList, ",") {
+			matchDomain := NewCookieDomain(d)
+			matchDomains = append(matchDomains, *matchDomain)
+		}
+	}
+	if len(matchDomains) > 0 && len(exceptionDomains) > 0 {
+		log.Fatal("Cannot set exception-domains and match-domains both")
+	}
+
 	// Setup
 	fw = &ForwardAuth{
 		Path:     fmt.Sprintf("/%s", *path),
@@ -217,10 +245,12 @@ func main() {
 			Path:   "/oauth2/v2/userinfo",
 		},
 
-		CookieName:     *cookieName,
-		CSRFCookieName: *cSRFCookieName,
-		CookieDomains:  cookieDomains,
-		CookieSecure:   *cookieSecure,
+		CookieName:       *cookieName,
+		CSRFCookieName:   *cSRFCookieName,
+		CookieDomains:    cookieDomains,
+		ExceptionDomains: exceptionDomains,
+		MatchDomains:     matchDomains,
+		CookieSecure:     *cookieSecure,
 
 		Domain:    domain,
 		Whitelist: whitelist,
