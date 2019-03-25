@@ -199,9 +199,10 @@ func (f *ForwardAuth) redirectBase(r *http.Request) string {
 
 // Return url
 func (f *ForwardAuth) returnUrl(r *http.Request) string {
+	prefix := r.Header.Get("X-Forwarded-Prefix")
 	path := r.Header.Get("X-Forwarded-Uri")
 
-	return fmt.Sprintf("%s%s", f.redirectBase(r), path)
+	return fmt.Sprintf("%s%s%s", f.redirectBase(r), prefix, path)
 }
 
 // Get oauth redirect uri

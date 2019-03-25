@@ -100,6 +100,7 @@ func TestGetLoginURL(t *testing.T) {
 	r, _ := http.NewRequest("GET", "http://example.com", nil)
 	r.Header.Add("X-Forwarded-Proto", "http")
 	r.Header.Add("X-Forwarded-Host", "example.com")
+	r.Header.Add("X-Forwarded-Prefix", "/stripped-prefix")
 	r.Header.Add("X-Forwarded-Uri", "/hello")
 
 	fw = &ForwardAuth{
@@ -136,7 +137,7 @@ func TestGetLoginURL(t *testing.T) {
 		"redirect_uri":  []string{"http://example.com/_oauth"},
 		"response_type": []string{"code"},
 		"scope":         []string{"scopetest"},
-		"state":         []string{"nonce:http://example.com/hello"},
+		"state":         []string{"nonce:http://example.com/stripped-prefix/hello"},
 	}
 	if !reflect.DeepEqual(qs, expectedQs) {
 		t.Error("Incorrect login query string:")
@@ -184,7 +185,7 @@ func TestGetLoginURL(t *testing.T) {
 		"response_type": []string{"code"},
 		"scope":         []string{"scopetest"},
 		"prompt":        []string{"consent select_account"},
-		"state":         []string{"nonce:http://example.com/hello"},
+		"state":         []string{"nonce:http://example.com/stripped-prefix/hello"},
 	}
 	if !reflect.DeepEqual(qs, expectedQs) {
 		t.Error("Incorrect login query string:")
@@ -231,7 +232,7 @@ func TestGetLoginURL(t *testing.T) {
 		"redirect_uri":  []string{"http://auth.example.com/_oauth"},
 		"response_type": []string{"code"},
 		"scope":         []string{"scopetest"},
-		"state":         []string{"nonce:http://example.com/hello"},
+		"state":         []string{"nonce:http://example.com/stripped-prefix/hello"},
 	}
 	qsDiff(expectedQs, qs)
 	if !reflect.DeepEqual(qs, expectedQs) {
@@ -246,6 +247,7 @@ func TestGetLoginURL(t *testing.T) {
 	r, _ = http.NewRequest("GET", "http://another.com", nil)
 	r.Header.Add("X-Forwarded-Proto", "http")
 	r.Header.Add("X-Forwarded-Host", "another.com")
+	r.Header.Add("X-Forwarded-Prefix", "/stripped-prefix")
 	r.Header.Add("X-Forwarded-Uri", "/hello")
 
 	// Check url
@@ -270,7 +272,7 @@ func TestGetLoginURL(t *testing.T) {
 		"redirect_uri":  []string{"http://another.com/_oauth"},
 		"response_type": []string{"code"},
 		"scope":         []string{"scopetest"},
-		"state":         []string{"nonce:http://another.com/hello"},
+		"state":         []string{"nonce:http://another.com/stripped-prefix/hello"},
 	}
 	qsDiff(expectedQs, qs)
 	if !reflect.DeepEqual(qs, expectedQs) {
