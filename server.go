@@ -4,6 +4,7 @@ import (
 	// "fmt"
 	"net/http"
 	"net/url"
+	"sync"
 
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
@@ -11,6 +12,7 @@ import (
 
 type Server struct {
 	mux *mux.Router
+	mu  sync.Mutex
 }
 
 func NewServer() *Server {
@@ -20,7 +22,9 @@ func NewServer() *Server {
 }
 
 func (s *Server) buildRoutes() {
+	s.mu.Lock()
 	s.mux = mux.NewRouter()
+	s.mu.Unlock()
 
 	// Let's build a server
 	for _, rules := range config.Rules {
@@ -37,12 +41,19 @@ func (s *Server) buildRoutes() {
 	s.mux.NewRoute().Handler(s.AuthHandler())
 }
 
+// RebuildRoutes creates a new router and adds the configured routes
+func (s *Server) RebuildRoutes() {
+	s.buildRoutes()
+}
+
 func (s *Server) RootHandler(w http.ResponseWriter, r *http.Request) {
 	// Modify request
 	r.URL, _ = url.Parse(r.Header.Get("X-Forwarded-Uri"))
 
 	// Pass to mux
+	s.mu.Lock()
 	s.mux.ServeHTTP(w, r)
+	s.mu.Unlock()
 }
 
 // Handler that allows requests

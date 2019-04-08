@@ -19,6 +19,8 @@ type Config struct {
 	SecretBytes   []byte
 	AuthHost      string
 
+	DockerEnabled bool
+
 	LogLevel   *string
 	LogFormat  *string
 	TomlConfig *string // temp
@@ -127,6 +129,7 @@ func (c *Config) parseFlags() {
 	c.TomlConfig = flag.String("toml-config", "", "TEMP")
 
 	// Legacy?
+	dockerEnabled := flag.Bool("docker-enabled", false, "Watch docker containers")
 	path := flag.String("url-path", "_oauth", "Callback URL")
 	lifetime := flag.Int("lifetime", 43200, "Session length in seconds")
 	secret := flag.String("secret", "", "*Secret used for signing (required)")
@@ -145,6 +148,7 @@ func (c *Config) parseFlags() {
 	flag.Parse()
 
 	// Add to config
+	c.DockerEnabled = *dockerEnabled
 	c.Path = fmt.Sprintf("/%s", *path)
 	c.Lifetime = time.Second * time.Duration(*lifetime)
 	c.AuthHost = *authHost

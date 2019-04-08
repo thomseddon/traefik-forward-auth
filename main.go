@@ -29,6 +29,11 @@ func main() {
 	// Build server
 	server := NewServer()
 
+	// Create docker client
+	if config.DockerEnabled {
+		NewDockerClient(server)
+	}
+
 	// Attach router to default server
 	http.HandleFunc("/", server.RootHandler)
 
