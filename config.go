@@ -74,7 +74,6 @@ func NewParsedConfig() *Config {
 	if *c.TomlConfig != "" {
 		if _, err := toml.DecodeFile(*c.TomlConfig, &c); err != nil {
 			panic(err)
-			return c
 		}
 	}
 
