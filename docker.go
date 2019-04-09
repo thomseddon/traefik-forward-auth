@@ -27,11 +27,6 @@ func NewDockerClient(server *Server) *DockerClient {
 		server: server,
 	}
 
-	// add routes for existing containers
-	if err := dc.inspectContainers(); err != nil {
-		panic(err)
-	}
-
 	// dynamically manage routes for container events
 	messages, _ := dc.docker.Events(context.Background(), types.EventsOptions{})
 	go dc.handleEvents(messages)
@@ -44,57 +39,38 @@ func (dc *DockerClient) handleEvents(messages <-chan events.Message) {
 	for {
 		select {
 		case m := <-messages:
-			if m.Type == "container" {
-				log.Debug(m.Status)
-				if m.Status == "start" {
-					if dc.containerLabeled(m.Actor.Attributes) {
-						log.Debugf("Received %s event for labeled container %s", m.Status, m.Actor.ID[:10])
-						dc.addCountainerRoutes(m.Actor.ID, m.Actor.Attributes)
-					}
-				} else if m.Status == "destroy" {
-					// destroy event happens after die
-					// at this time inspectContainers will no longer find it
-					if dc.containerLabeled(m.Actor.Attributes) {
-						log.Debugf("Received %s event for labeled container %s", m.Status, m.Actor.ID[:10])
-						dc.removeCountainerRoutes()
-					}
-				}
+			if m.Type == "container" &&
+				(m.Status == "start" || m.Status == "destroy") &&
+				dc.containerLabeled(m.Actor.Attributes) {
+				log.Debugf("Received %s event for labeled container %s", m.Status, m.Actor.ID[:10])
+				dc.server.BuildRoutes()
 			}
 		}
 	}
 }
 
-// inspectContainers looks for containers wiht matching prefix.
-// If container has matching labels, a route is created
-func (dc *DockerClient) inspectContainers() error {
+func (dc *DockerClient) Rules() (rules []Rules) {
 	containers, err := dc.docker.ContainerList(context.Background(), types.ContainerListOptions{})
 	if err != nil {
-		return err
+		log.Error(err)
+		return rules
 	}
 
 	for _, container := range containers {
 		if dc.containerLabeled(container.Labels) {
 			log.Debugf("Found labeled container %s (%s)", container.ID[:10], container.Image)
-			dc.addCountainerRoutes(container.ID, container.Labels)
+			rule := dc.getCountainerRule(container.ID, container.Labels)
+			log.Debug(rule)
+			rules = append(rules, rule)
 		}
 	}
 
-	return nil
-}
-
-// containerLabeled checks if a container is labeled with the "forward-auth" prefix
-func (dc *DockerClient) containerLabeled(labels map[string]string) bool {
-	for label := range labels {
-		if strings.HasPrefix(label, labelPrefix) {
-			return true
-		}
-	}
-
-	return false
+	log.Debug(rules)
+	return rules
 }
 
 // AddCountainerRoutes creates routes according to the container's labels
-func (dc *DockerClient) addCountainerRoutes(id string, labels map[string]string) {
+func (dc *DockerClient) getCountainerRule(id string, labels map[string]string) Rules {
 	action := labels[labelPrefix+"action"]
 	if action == "" {
 		action = "auth"
@@ -114,13 +90,23 @@ func (dc *DockerClient) addCountainerRoutes(id string, labels map[string]string)
 	}
 
 	// TODO handle headers
-	dc.server.attachHandler(match, action)
+	log.Debugf("Container %s added action %s for route: %v", id[:10], action, match)
+
+	rule := Rules{
+		Action: action,
+		Match:  []Match{*match},
+	}
+
+	return rule
 }
 
-// removeCountainerRoutes removes routes by rebuilding the entire route configuration
-func (dc *DockerClient) removeCountainerRoutes() {
-	// since we cannot remove routes they need be created from scratch
-	dc.server.RebuildRoutes()
-	// re-add routes for labeled containers
-	dc.inspectContainers()
+// containerLabeled checks if a container is labeled with the "forward-auth" prefix
+func (dc *DockerClient) containerLabeled(labels map[string]string) bool {
+	for label := range labels {
+		if strings.HasPrefix(label, labelPrefix) {
+			return true
+		}
+	}
+
+	return false
 }

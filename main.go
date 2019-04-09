@@ -31,8 +31,12 @@ func main() {
 
 	// Create docker client
 	if config.DockerEnabled {
-		NewDockerClient(server)
+		docker := NewDockerClient(server)
+		server.addRulesProvider(docker)
 	}
+
+	// build routes after docker is setup
+	server.BuildRoutes()
 
 	// Attach router to default server
 	http.HandleFunc("/", server.RootHandler)

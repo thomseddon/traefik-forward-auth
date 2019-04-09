@@ -10,6 +10,8 @@ RUN apk add --no-cache git && \
   go get "github.com/gorilla/mux" && \
   go get "github.com/namsral/flag" && \
   go get "github.com/sirupsen/logrus" && \
+  go get "github.com/docker/docker/client" && \
+  go get "github.com/docker/docker/api/types" && \
   apk del git
 
 # Copy & build

@@ -2,6 +2,7 @@ package main
 
 import (
 	// "fmt"
+
 	"net/http"
 	"net/url"
 	"sync"
@@ -10,18 +11,26 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type RulesProvider interface {
+	Rules() []Rules
+}
+
 type Server struct {
-	mux *mux.Router
-	mu  sync.Mutex
+	mux            *mux.Router
+	mu             sync.Mutex
+	rulesProviders []RulesProvider
 }
 
 func NewServer() *Server {
 	s := &Server{}
-	s.buildRoutes()
 	return s
 }
 
-func (s *Server) buildRoutes() {
+func (s *Server) addRulesProvider(provider RulesProvider) {
+	s.rulesProviders = append(s.rulesProviders, provider)
+}
+
+func (s *Server) BuildRoutes() {
 	s.mu.Lock()
 	s.mux = mux.NewRouter()
 	s.mu.Unlock()
@@ -34,16 +43,21 @@ func (s *Server) buildRoutes() {
 		}
 	}
 
+	for _, provider := range s.rulesProviders {
+		for _, rules := range provider.Rules() {
+			// fmt.Printf("Rule: %s\n", name)
+			for _, match := range rules.Match {
+				log.Debugf("match: %v", match)
+				s.attachHandler(&match, rules.Action)
+			}
+		}
+	}
+
 	// Add callback handler
 	s.mux.Handle(config.Path, s.AuthCallbackHandler())
 
 	// Add a default handler
 	s.mux.NewRoute().Handler(s.AuthHandler())
-}
-
-// RebuildRoutes creates a new router and adds the configured routes
-func (s *Server) RebuildRoutes() {
-	s.buildRoutes()
 }
 
 func (s *Server) RootHandler(w http.ResponseWriter, r *http.Request) {
