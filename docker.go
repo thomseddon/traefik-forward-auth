@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/docker/docker/api/types"
@@ -59,22 +60,25 @@ func (dc *DockerClient) Rules() (rules []Rules) {
 	for _, container := range containers {
 		if dc.containerLabeled(container.Labels) {
 			log.Debugf("Found labeled container %s (%s)", container.ID[:10], container.Image)
-			rule := dc.getCountainerRule(container.ID, container.Labels)
-			log.Debug(rule)
+			rule, err := dc.getCountainerRule(container.ID, container.Labels)
+			if err != nil {
+				log.Error(err)
+				continue
+			}
+
 			rules = append(rules, rule)
 		}
 	}
 
-	log.Debug(rules)
 	return rules
 }
 
 // AddCountainerRoutes creates routes according to the container's labels
-func (dc *DockerClient) getCountainerRule(id string, labels map[string]string) Rules {
+func (dc *DockerClient) getCountainerRule(id string, labels map[string]string) (Rules, error) {
 	action := labels[labelPrefix+"action"]
 	if action == "" {
 		action = "auth"
-		log.Warnf("Container %s is missing action label - assuming \"%s\"", id[:10], action)
+		log.Warnf("Container %s is missing action label, assuming \"%s\"", id[:10], action)
 	}
 
 	match := &Match{}
@@ -82,6 +86,8 @@ func (dc *DockerClient) getCountainerRule(id string, labels map[string]string) R
 	// TODO allow multiple hosts
 	if host, ok := labels[labelPrefix+"host"]; ok {
 		match.Host = append(match.Host, host)
+	} else {
+		return Rules{}, fmt.Errorf("Container %s is missing host label, ignoring", id[:10])
 	}
 
 	// TODO allow multiple hosts
@@ -97,7 +103,7 @@ func (dc *DockerClient) getCountainerRule(id string, labels map[string]string) R
 		Match:  []Match{*match},
 	}
 
-	return rule
+	return rule, nil
 }
 
 // containerLabeled checks if a container is labeled with the "forward-auth" prefix

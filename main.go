@@ -33,10 +33,8 @@ func main() {
 	if config.DockerEnabled {
 		docker := NewDockerClient(server)
 		server.addRulesProvider(docker)
+		server.BuildRoutes() // rebuild
 	}
-
-	// build routes after docker is setup
-	server.BuildRoutes()
 
 	// Attach router to default server
 	http.HandleFunc("/", server.RootHandler)

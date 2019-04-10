@@ -23,6 +23,7 @@ type Server struct {
 
 func NewServer() *Server {
 	s := &Server{}
+	s.BuildRoutes()
 	return s
 }
 
@@ -37,7 +38,6 @@ func (s *Server) BuildRoutes() {
 
 	// Let's build a server
 	for _, rules := range config.Rules {
-		// fmt.Printf("Rule: %s\n", name)
 		for _, match := range rules.Match {
 			s.attachHandler(&match, rules.Action)
 		}
@@ -45,9 +45,7 @@ func (s *Server) BuildRoutes() {
 
 	for _, provider := range s.rulesProviders {
 		for _, rules := range provider.Rules() {
-			// fmt.Printf("Rule: %s\n", name)
 			for _, match := range rules.Match {
-				log.Debugf("match: %v", match)
 				s.attachHandler(&match, rules.Action)
 			}
 		}
@@ -63,6 +61,7 @@ func (s *Server) BuildRoutes() {
 func (s *Server) RootHandler(w http.ResponseWriter, r *http.Request) {
 	// Modify request
 	r.URL, _ = url.Parse(r.Header.Get("X-Forwarded-Uri"))
+	r.Host = r.Header.Get("X-Forwarded-Host")
 
 	// Pass to mux
 	s.mu.Lock()

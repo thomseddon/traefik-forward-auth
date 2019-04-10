@@ -34,6 +34,7 @@ services:
       - "traefik.enable=true"
       - "traefik.frontend.rule=Host:whoami.localhost.org"
       - "forward-auth.action=auth"
+      - "forward-auth.host=whoami.localhost.org"
 
   traefik-forward-auth:
     build: ../
