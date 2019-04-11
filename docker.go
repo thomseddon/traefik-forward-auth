@@ -14,10 +14,10 @@ const labelPrefix = "forward-auth."
 
 type DockerClient struct {
 	docker *client.Client
-	server *Server
+	rules  chan<- []Rules
 }
 
-func NewDockerClient(server *Server) *DockerClient {
+func NewDockerClient(rulesChan chan<- []Rules) *DockerClient {
 	cli, err := client.NewEnvClient()
 	if err != nil {
 		panic(err)
@@ -25,8 +25,11 @@ func NewDockerClient(server *Server) *DockerClient {
 
 	dc := &DockerClient{
 		docker: cli,
-		server: server,
+		rules:  rulesChan,
 	}
+
+	// initial rules
+	dc.updateRules()
 
 	// dynamically manage routes for container events
 	messages, _ := dc.docker.Events(context.Background(), types.EventsOptions{})
@@ -44,13 +47,17 @@ func (dc *DockerClient) handleEvents(messages <-chan events.Message) {
 				(m.Status == "start" || m.Status == "destroy") &&
 				dc.containerLabeled(m.Actor.Attributes) {
 				log.Debugf("Received %s event for labeled container %s", m.Status, m.Actor.ID[:10])
-				dc.server.BuildRoutes()
+				dc.updateRules()
 			}
 		}
 	}
 }
 
-func (dc *DockerClient) Rules() (rules []Rules) {
+func (dc *DockerClient) updateRules() {
+	dc.rules <- dc.buildRules()
+}
+
+func (dc *DockerClient) buildRules() (rules []Rules) {
 	containers, err := dc.docker.ContainerList(context.Background(), types.ContainerListOptions{})
 	if err != nil {
 		log.Error(err)

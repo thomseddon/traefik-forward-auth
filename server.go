@@ -11,27 +11,36 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type RulesProvider interface {
-	Rules() []Rules
-}
-
 type Server struct {
-	mux            *mux.Router
-	mu             sync.Mutex
-	rulesProviders []RulesProvider
+	mux       *mux.Router
+	mu        sync.Mutex
+	rulesChan chan []Rules
 }
 
 func NewServer() *Server {
-	s := &Server{}
+	s := &Server{
+		rulesChan: make(chan []Rules),
+	}
 	s.BuildRoutes()
+
+	// listen for route changes
+	go func() {
+		for {
+			select {
+			case rules := <-s.rulesChan:
+				s.BuildRoutes(rules...)
+			}
+		}
+	}()
+
 	return s
 }
 
-func (s *Server) addRulesProvider(provider RulesProvider) {
-	s.rulesProviders = append(s.rulesProviders, provider)
+func (s *Server) Rules() chan<- []Rules {
+	return s.rulesChan
 }
 
-func (s *Server) BuildRoutes() {
+func (s *Server) BuildRoutes(rules ...Rules) {
 	s.mu.Lock()
 	s.mux = mux.NewRouter()
 	s.mu.Unlock()
@@ -43,11 +52,9 @@ func (s *Server) BuildRoutes() {
 		}
 	}
 
-	for _, provider := range s.rulesProviders {
-		for _, rules := range provider.Rules() {
-			for _, match := range rules.Match {
-				s.attachHandler(&match, rules.Action)
-			}
+	for _, rules := range rules {
+		for _, match := range rules.Match {
+			s.attachHandler(&match, rules.Action)
 		}
 	}
 
