@@ -199,6 +199,12 @@ func (f *ForwardAuth) redirectBase(r *http.Request) string {
 
 // Return url
 func (f *ForwardAuth) returnUrl(r *http.Request) string {
+	replacedPath := r.Header.Get("X-Replaced-Path")
+	if replacedPath != "" {
+		// request-modifier and path-related matchers cannot be used at the same time
+		// so if X-Replaced-Path is set that means X-Forwarded-Prefix et al. are not
+		return fmt.Sprintf("%s%s", f.redirectBase(r), replacedPath)
+	}
 	prefix := r.Header.Get("X-Forwarded-Prefix")
 	path := r.Header.Get("X-Forwarded-Uri")
 

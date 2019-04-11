@@ -243,11 +243,12 @@ func TestGetLoginURL(t *testing.T) {
 	//
 	// With Auth URL + cookie domain, but from different domain
 	// - will not use auth host
+	// Also piggybacking a test for X-Replaced-Path
 	//
 	r, _ = http.NewRequest("GET", "http://another.com", nil)
 	r.Header.Add("X-Forwarded-Proto", "http")
 	r.Header.Add("X-Forwarded-Host", "another.com")
-	r.Header.Add("X-Forwarded-Prefix", "/stripped-prefix")
+	r.Header.Add("X-Replaced-Path", "/replaced-path/")
 	r.Header.Add("X-Forwarded-Uri", "/hello")
 
 	// Check url
@@ -272,7 +273,7 @@ func TestGetLoginURL(t *testing.T) {
 		"redirect_uri":  []string{"http://another.com/_oauth"},
 		"response_type": []string{"code"},
 		"scope":         []string{"scopetest"},
-		"state":         []string{"nonce:http://another.com/stripped-prefix/hello"},
+		"state":         []string{"nonce:http://another.com/replaced-path/"},
 	}
 	qsDiff(expectedQs, qs)
 	if !reflect.DeepEqual(qs, expectedQs) {
