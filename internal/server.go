@@ -1,16 +1,15 @@
-package main
+package tfa
 
 import (
-	// "fmt"
 	"net/http"
 	"net/url"
 
-	"github.com/gorilla/mux"
+	"github.com/containous/traefik/pkg/rules"
 	"github.com/sirupsen/logrus"
 )
 
 type Server struct {
-	mux *mux.Router
+	router *rules.Router
 }
 
 func NewServer() *Server {
@@ -20,21 +19,26 @@ func NewServer() *Server {
 }
 
 func (s *Server) buildRoutes() {
-	s.mux = mux.NewRouter()
+	var err error
+	s.router, err = rules.NewRouter()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	// Let's build a server
-	for _, rules := range config.Rules {
-		// fmt.Printf("Rule: %s\n", name)
-		for _, match := range rules.Match {
-			s.attachHandler(&match, rules.Action)
+	// Let's build a router
+	for _, rule := range config.Rules {
+		if rule.Action == "allow" {
+			s.router.AddRoute(rule.Rule, 1, s.AllowHandler())
+		} else {
+			s.router.AddRoute(rule.Rule, 1, s.AuthHandler())
 		}
 	}
 
 	// Add callback handler
-	s.mux.Handle(config.Path, s.AuthCallbackHandler())
+	s.router.Handle(config.Path, s.AuthCallbackHandler())
 
 	// Add a default handler
-	s.mux.NewRoute().Handler(s.AuthHandler())
+	s.router.NewRoute().Handler(s.AuthHandler())
 }
 
 func (s *Server) RootHandler(w http.ResponseWriter, r *http.Request) {
@@ -42,7 +46,7 @@ func (s *Server) RootHandler(w http.ResponseWriter, r *http.Request) {
 	r.URL, _ = url.Parse(r.Header.Get("X-Forwarded-Uri"))
 
 	// Pass to mux
-	s.mux.ServeHTTP(w, r)
+	s.router.ServeHTTP(w, r)
 }
 
 // Handler that allows requests
@@ -63,7 +67,7 @@ func (s *Server) AuthHandler() http.HandlerFunc {
 		c, err := r.Cookie(config.CookieName)
 		if err != nil {
 			// Error indicates no cookie, generate nonce
-			err, nonce := fw.Nonce()
+			err, nonce := Nonce()
 			if err != nil {
 				logger.Errorf("Error generating nonce, %v", err)
 				http.Error(w, "Service unavailable", 503)
@@ -71,17 +75,17 @@ func (s *Server) AuthHandler() http.HandlerFunc {
 			}
 
 			// Set the CSRF cookie
-			http.SetCookie(w, fw.MakeCSRFCookie(r, nonce))
+			http.SetCookie(w, MakeCSRFCookie(r, nonce))
 			logger.Debug("Set CSRF cookie and redirecting to google login")
 
 			// Forward them on
-			http.Redirect(w, r, fw.GetLoginURL(r, nonce), http.StatusTemporaryRedirect)
+			http.Redirect(w, r, GetLoginURL(r, nonce), http.StatusTemporaryRedirect)
 
 			return
 		}
 
 		// Validate cookie
-		valid, email, err := fw.ValidateCookie(r, c)
+		valid, email, err := ValidateCookie(r, c)
 		if !valid {
 			logger.Errorf("Invalid cookie: %v", err)
 			http.Error(w, "Not authorized", 401)
@@ -89,7 +93,7 @@ func (s *Server) AuthHandler() http.HandlerFunc {
 		}
 
 		// Validate user
-		valid = fw.ValidateEmail(email)
+		valid = ValidateEmail(email)
 		if !valid {
 			logger.WithFields(logrus.Fields{
 				"email": email,
@@ -120,7 +124,7 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 		}
 
 		// Validate state
-		valid, redirect, err := fw.ValidateCSRFCookie(r, c)
+		valid, redirect, err := ValidateCSRFCookie(r, c)
 		if !valid {
 			logger.Warnf("Error validating csrf cookie: %v", err)
 			http.Error(w, "Not authorized", 401)
@@ -128,10 +132,10 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 		}
 
 		// Clear CSRF cookie
-		http.SetCookie(w, fw.ClearCSRFCookie(r))
+		http.SetCookie(w, ClearCSRFCookie(r))
 
 		// Exchange code for token
-		token, err := fw.ExchangeCode(r)
+		token, err := ExchangeCode(r)
 		if err != nil {
 			logger.Errorf("Code exchange failed with: %v", err)
 			http.Error(w, "Service unavailable", 503)
@@ -139,49 +143,20 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 		}
 
 		// Get user
-		user, err := fw.GetUser(token)
+		user, err := GetUser(token)
 		if err != nil {
 			logger.Errorf("Error getting user: %s", err)
 			return
 		}
 
 		// Generate cookie
-		http.SetCookie(w, fw.MakeCookie(r, user.Email))
+		http.SetCookie(w, MakeCookie(r, user.Email))
 		logger.WithFields(logrus.Fields{
 			"user": user.Email,
 		}).Infof("Generated auth cookie")
 
 		// Redirect
 		http.Redirect(w, r, redirect, http.StatusTemporaryRedirect)
-	}
-}
-
-// Build a handler for a given matcher
-func (s *Server) attachHandler(m *Match, action string) {
-	// Build a new route matcher
-	route := s.mux.NewRoute()
-
-	for _, host := range m.Host {
-		route.Host(host)
-	}
-
-	for _, pathPrefix := range m.PathPrefix {
-		route.PathPrefix(pathPrefix)
-	}
-
-	for _, header := range m.Header {
-		if len(header) != 2 {
-			panic("todo")
-		}
-
-		route.Headers(header[0], header[1])
-	}
-
-	// Add handler to new route
-	if action == "allow" {
-		route.Handler(s.AllowHandler())
-	} else {
-		route.Handler(s.AuthHandler())
 	}
 }
 

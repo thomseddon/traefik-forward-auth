@@ -1,4 +1,4 @@
-package main
+package tfa
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/thomseddon/traefik-forward-auth/provider"
+	"github.com/thomseddon/traefik-forward-auth/internal/provider"
 )
 
 /**
@@ -19,12 +19,8 @@ import (
  */
 
 func init() {
-	fw = &ForwardAuth{}
-	config = NewConfig()
-
-	logLevel := "panic"
-	config.LogLevel = &logLevel
-	log = NewLogger()
+	config.LogLevel = "panic"
+	log = NewDefaultLogger()
 }
 
 /**
@@ -102,7 +98,7 @@ func qsDiff(one, two url.Values) {
 func TestServerHandler(t *testing.T) {
 	server := NewServer()
 
-	config = &Config{
+	config = Config{
 		Path:       "/_oauth",
 		CookieName: "cookie_test",
 		Lifetime:   time.Second * time.Duration(10),
@@ -134,7 +130,7 @@ func TestServerHandler(t *testing.T) {
 	// Should catch invalid cookie
 	req = newHttpRequest("/foo")
 
-	c := fw.MakeCookie(req, "test@example.com")
+	c := MakeCookie(req, "test@example.com")
 	parts := strings.Split(c.Value, "|")
 	c.Value = fmt.Sprintf("bad|%s|%s", parts[1], parts[2])
 
@@ -146,8 +142,8 @@ func TestServerHandler(t *testing.T) {
 	// Should validate email
 	req = newHttpRequest("/foo")
 
-	c = fw.MakeCookie(req, "test@example.com")
-	config.Domain = []string{"test.com"}
+	c = MakeCookie(req, "test@example.com")
+	config.Domains = []string{"test.com"}
 
 	res, _ = httpRequest(server, req, c)
 	if res.StatusCode != 401 {
@@ -157,8 +153,8 @@ func TestServerHandler(t *testing.T) {
 	// Should allow valid request email
 	req = newHttpRequest("/foo")
 
-	c = fw.MakeCookie(req, "test@example.com")
-	config.Domain = []string{}
+	c = MakeCookie(req, "test@example.com")
+	config.Domains = []string{}
 
 	res, _ = httpRequest(server, req, c)
 	if res.StatusCode != 200 {
@@ -176,7 +172,7 @@ func TestServerHandler(t *testing.T) {
 
 func TestServerAuthCallback(t *testing.T) {
 	server := NewServer()
-	config = &Config{
+	config = Config{
 		Path:           "/_oauth",
 		CookieName:     "cookie_test",
 		Lifetime:       time.Second * time.Duration(10),
@@ -218,7 +214,7 @@ func TestServerAuthCallback(t *testing.T) {
 
 	// Should catch invalid csrf cookie
 	req = newHttpRequest("/_oauth?state=12345678901234567890123456789012:http://redirect")
-	c := fw.MakeCSRFCookie(req, "nononononononononononononononono")
+	c := MakeCSRFCookie(req, "nononononononononononononononono")
 	res, _ = httpRequest(server, req, c)
 	if res.StatusCode != 401 {
 		t.Error("Auth callback with invalid cookie shound't be authorised, got:", res.StatusCode)
@@ -226,7 +222,7 @@ func TestServerAuthCallback(t *testing.T) {
 
 	// Should redirect valid request
 	req = newHttpRequest("/_oauth?state=12345678901234567890123456789012:http://redirect")
-	c = fw.MakeCSRFCookie(req, "12345678901234567890123456789012")
+	c = MakeCSRFCookie(req, "12345678901234567890123456789012")
 	res, _ = httpRequest(server, req, c)
 	if res.StatusCode != 307 {
 		t.Error("Valid callback should be allowed, got:", res.StatusCode)
@@ -237,9 +233,9 @@ func TestServerAuthCallback(t *testing.T) {
 	}
 }
 
-func TestServerMatcherPathPrefix(t *testing.T) {
+func TestServerRoutePathPrefix(t *testing.T) {
 	server := NewServer()
-	config = &Config{
+	config = Config{
 		Path:       "/_oauth",
 		CookieName: "cookie_test",
 		Lifetime:   time.Second * time.Duration(10),
@@ -255,21 +251,17 @@ func TestServerMatcherPathPrefix(t *testing.T) {
 				},
 			},
 		},
-		Rules: map[string]Rules{
-			"rule1": {
+		Rules: []Rule{
+			{
 				Action: "allow",
-				Match: []Match{
-					{
-						PathPrefix: []string{"/api"},
-					},
-				},
+				Rule:   "PathPrefix(`/api`)",
 			},
 		},
 	}
 
 	// Should allow /api request
 	req := newHttpRequest("/api")
-	c := fw.MakeCookie(req, "test@example.com")
+	c := MakeCookie(req, "test@example.com")
 	res, _ := httpRequest(server, req, c)
 	if res.StatusCode != 200 {
 		t.Error("Request matching allowed rule should be allowed, got:", res.StatusCode)
