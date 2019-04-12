@@ -1,5 +1,5 @@
 
 format:
-	gofmt -w -s *.go provider/*.go
+	gofmt -w -s internal/*.go cmd/*.go
 
 .PHONY: format

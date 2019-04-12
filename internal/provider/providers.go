@@ -1,7 +1,7 @@
 package provider
 
 type Providers struct {
-	Google Google
+	Google Google `group:"Google Provider"`
 }
 
 type Token struct {

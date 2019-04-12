@@ -1,10 +1,5 @@
 language: go
 sudo: false
 go:
-  - "1.10"
-install:
-  - go get github.com/BurntSushi/toml
-  - go get github.com/gorilla/mux
-  - go get github.com/namsral/flag
-  - go get github.com/sirupsen/logrus
-script: go test -v ./...
+  - "1.12"
+script: env GO111MODULE=on go test -v ./...

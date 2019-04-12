@@ -8,14 +8,32 @@ import (
 )
 
 type Google struct {
-	ClientId     string
-	ClientSecret string `json:"-"`
+	ClientId     string `long:"providers.google.client-id" description:"Client ID"`
+	ClientSecret string `long:"providers.google.client-secret" description:"Client Secret" json:"-"`
 	Scope        string
-	Prompt       string
+	Prompt       string `long:"providers.google.prompt" description:"Space separated list of OpenID prompt options"`
 
 	LoginURL *url.URL
 	TokenURL *url.URL
 	UserURL  *url.URL
+}
+
+func (g *Google) Build() {
+	g.LoginURL = &url.URL{
+		Scheme: "https",
+		Host:   "accounts.google.com",
+		Path:   "/o/oauth2/auth",
+	}
+	g.TokenURL = &url.URL{
+		Scheme: "https",
+		Host:   "www.googleapis.com",
+		Path:   "/oauth2/v3/token",
+	}
+	g.UserURL = &url.URL{
+		Scheme: "https",
+		Host:   "www.googleapis.com",
+		Path:   "/oauth2/v2/userinfo",
+	}
 }
 
 func (g *Google) GetLoginURL(redirectUri, state string) string {

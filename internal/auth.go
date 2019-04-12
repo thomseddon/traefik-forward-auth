@@ -1,41 +1,24 @@
-package main
+package tfa
 
 import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
-	// "encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
-	// "net/url"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/thomseddon/traefik-forward-auth/provider"
+	"github.com/thomseddon/traefik-forward-auth/internal/provider"
 )
-
-type ForwardAuthContext int
-
-const (
-	Nonce ForwardAuthContext = iota
-	Request
-)
-
-// Forward Auth
-type ForwardAuth struct {
-}
-
-func NewForwardAuth() *ForwardAuth {
-	return &ForwardAuth{}
-}
 
 // Request Validation
 
 // Cookie = hash(secret, cookie domain, email, expires)|expires|email
-func (f *ForwardAuth) ValidateCookie(r *http.Request, c *http.Cookie) (bool, string, error) {
+func ValidateCookie(r *http.Request, c *http.Cookie) (bool, string, error) {
 	parts := strings.Split(c.Value, "|")
 
 	if len(parts) != 3 {
@@ -47,7 +30,7 @@ func (f *ForwardAuth) ValidateCookie(r *http.Request, c *http.Cookie) (bool, str
 		return false, "", errors.New("Unable to decode cookie mac")
 	}
 
-	expectedSignature := f.cookieSignature(r, parts[2], parts[1])
+	expectedSignature := cookieSignature(r, parts[2], parts[1])
 	expected, err := base64.URLEncoding.DecodeString(expectedSignature)
 	if err != nil {
 		return false, "", errors.New("Unable to generate mac")
@@ -73,7 +56,7 @@ func (f *ForwardAuth) ValidateCookie(r *http.Request, c *http.Cookie) (bool, str
 }
 
 // Validate email
-func (f *ForwardAuth) ValidateEmail(email string) bool {
+func ValidateEmail(email string) bool {
 	found := false
 	if len(config.Whitelist) > 0 {
 		for _, whitelist := range config.Whitelist {
@@ -81,12 +64,12 @@ func (f *ForwardAuth) ValidateEmail(email string) bool {
 				found = true
 			}
 		}
-	} else if len(config.Domain) > 0 {
+	} else if len(config.Domains) > 0 {
 		parts := strings.Split(email, "@")
 		if len(parts) < 2 {
 			return false
 		}
-		for _, domain := range config.Domain {
+		for _, domain := range config.Domains {
 			if domain == parts[1] {
 				found = true
 			}
@@ -101,25 +84,25 @@ func (f *ForwardAuth) ValidateEmail(email string) bool {
 // OAuth Methods
 
 // Get login url
-func (f *ForwardAuth) GetLoginURL(r *http.Request, nonce string) string {
-	state := fmt.Sprintf("%s:%s", nonce, f.returnUrl(r))
+func GetLoginURL(r *http.Request, nonce string) string {
+	state := fmt.Sprintf("%s:%s", nonce, returnUrl(r))
 
 	// TODO: Support multiple providers
-	return config.Providers.Google.GetLoginURL(f.redirectUri(r), state)
+	return config.Providers.Google.GetLoginURL(redirectUri(r), state)
 }
 
 // Exchange code for token
 
-func (f *ForwardAuth) ExchangeCode(r *http.Request) (string, error) {
+func ExchangeCode(r *http.Request) (string, error) {
 	code := r.URL.Query().Get("code")
 
 	// TODO: Support multiple providers
-	return config.Providers.Google.ExchangeCode(f.redirectUri(r), code)
+	return config.Providers.Google.ExchangeCode(redirectUri(r), code)
 }
 
 // Get user with token
 
-func (f *ForwardAuth) GetUser(token string) (provider.User, error) {
+func GetUser(token string) (provider.User, error) {
 	// TODO: Support multiple providers
 	return config.Providers.Google.GetUser(token)
 }
@@ -127,7 +110,7 @@ func (f *ForwardAuth) GetUser(token string) (provider.User, error) {
 // Utility methods
 
 // Get the redirect base
-func (f *ForwardAuth) redirectBase(r *http.Request) string {
+func redirectBase(r *http.Request) string {
 	proto := r.Header.Get("X-Forwarded-Proto")
 	host := r.Header.Get("X-Forwarded-Host")
 
@@ -135,33 +118,33 @@ func (f *ForwardAuth) redirectBase(r *http.Request) string {
 }
 
 // // Return url
-func (f *ForwardAuth) returnUrl(r *http.Request) string {
+func returnUrl(r *http.Request) string {
 	path := r.Header.Get("X-Forwarded-Uri")
 
-	return fmt.Sprintf("%s%s", f.redirectBase(r), path)
+	return fmt.Sprintf("%s%s", redirectBase(r), path)
 }
 
 // Get oauth redirect uri
-func (f *ForwardAuth) redirectUri(r *http.Request) string {
-	if use, _ := f.useAuthDomain(r); use {
+func redirectUri(r *http.Request) string {
+	if use, _ := useAuthDomain(r); use {
 		proto := r.Header.Get("X-Forwarded-Proto")
 		return fmt.Sprintf("%s://%s%s", proto, config.AuthHost, config.Path)
 	}
 
-	return fmt.Sprintf("%s%s", f.redirectBase(r), config.Path)
+	return fmt.Sprintf("%s%s", redirectBase(r), config.Path)
 }
 
 // Should we use auth host + what it is
-func (f *ForwardAuth) useAuthDomain(r *http.Request) (bool, string) {
+func useAuthDomain(r *http.Request) (bool, string) {
 	if config.AuthHost == "" {
 		return false, ""
 	}
 
 	// Does the request match a given cookie domain?
-	reqMatch, reqHost := f.matchCookieDomains(r.Header.Get("X-Forwarded-Host"))
+	reqMatch, reqHost := matchCookieDomains(r.Header.Get("X-Forwarded-Host"))
 
 	// Do any of the auth hosts match a cookie domain?
-	authMatch, authHost := f.matchCookieDomains(config.AuthHost)
+	authMatch, authHost := matchCookieDomains(config.AuthHost)
 
 	// We need both to match the same domain
 	return reqMatch && authMatch && reqHost == authHost, reqHost
@@ -170,50 +153,50 @@ func (f *ForwardAuth) useAuthDomain(r *http.Request) (bool, string) {
 // Cookie methods
 
 // Create an auth cookie
-func (f *ForwardAuth) MakeCookie(r *http.Request, email string) *http.Cookie {
-	expires := f.cookieExpiry()
-	mac := f.cookieSignature(r, email, fmt.Sprintf("%d", expires.Unix()))
+func MakeCookie(r *http.Request, email string) *http.Cookie {
+	expires := cookieExpiry()
+	mac := cookieSignature(r, email, fmt.Sprintf("%d", expires.Unix()))
 	value := fmt.Sprintf("%s|%d|%s", mac, expires.Unix(), email)
 
 	return &http.Cookie{
 		Name:     config.CookieName,
 		Value:    value,
 		Path:     "/",
-		Domain:   f.cookieDomain(r),
+		Domain:   cookieDomain(r),
 		HttpOnly: true,
-		Secure:   config.CookieSecure,
+		Secure:   !config.CookieInsecure,
 		Expires:  expires,
 	}
 }
 
 // Make a CSRF cookie (used during login only)
-func (f *ForwardAuth) MakeCSRFCookie(r *http.Request, nonce string) *http.Cookie {
+func MakeCSRFCookie(r *http.Request, nonce string) *http.Cookie {
 	return &http.Cookie{
 		Name:     config.CSRFCookieName,
 		Value:    nonce,
 		Path:     "/",
-		Domain:   f.csrfCookieDomain(r),
+		Domain:   csrfCookieDomain(r),
 		HttpOnly: true,
-		Secure:   config.CookieSecure,
-		Expires:  f.cookieExpiry(),
+		Secure:   !config.CookieInsecure,
+		Expires:  cookieExpiry(),
 	}
 }
 
 // Create a cookie to clear csrf cookie
-func (f *ForwardAuth) ClearCSRFCookie(r *http.Request) *http.Cookie {
+func ClearCSRFCookie(r *http.Request) *http.Cookie {
 	return &http.Cookie{
 		Name:     config.CSRFCookieName,
 		Value:    "",
 		Path:     "/",
-		Domain:   f.csrfCookieDomain(r),
+		Domain:   csrfCookieDomain(r),
 		HttpOnly: true,
-		Secure:   config.CookieSecure,
+		Secure:   !config.CookieInsecure,
 		Expires:  time.Now().Local().Add(time.Hour * -1),
 	}
 }
 
-// // Validate the csrf cookie against state
-func (f *ForwardAuth) ValidateCSRFCookie(r *http.Request, c *http.Cookie) (bool, string, error) {
+// Validate the csrf cookie against state
+func ValidateCSRFCookie(r *http.Request, c *http.Cookie) (bool, string, error) {
 	state := r.URL.Query().Get("state")
 
 	if len(c.Value) != 32 {
@@ -233,7 +216,7 @@ func (f *ForwardAuth) ValidateCSRFCookie(r *http.Request, c *http.Cookie) (bool,
 	return true, state[33:], nil
 }
 
-func (f *ForwardAuth) Nonce() (error, string) {
+func Nonce() (error, string) {
 	// Make nonce
 	nonce := make([]byte, 16)
 	_, err := rand.Read(nonce)
@@ -245,18 +228,18 @@ func (f *ForwardAuth) Nonce() (error, string) {
 }
 
 // Cookie domain
-func (f *ForwardAuth) cookieDomain(r *http.Request) string {
+func cookieDomain(r *http.Request) string {
 	host := r.Header.Get("X-Forwarded-Host")
 
 	// Check if any of the given cookie domains matches
-	_, domain := f.matchCookieDomains(host)
+	_, domain := matchCookieDomains(host)
 	return domain
 }
 
 // Cookie domain
-func (f *ForwardAuth) csrfCookieDomain(r *http.Request) string {
+func csrfCookieDomain(r *http.Request) string {
 	var host string
-	if use, domain := f.useAuthDomain(r); use {
+	if use, domain := useAuthDomain(r); use {
 		host = domain
 	} else {
 		host = r.Header.Get("X-Forwarded-Host")
@@ -268,7 +251,7 @@ func (f *ForwardAuth) csrfCookieDomain(r *http.Request) string {
 }
 
 // Return matching cookie domain if exists
-func (f *ForwardAuth) matchCookieDomains(domain string) (bool, string) {
+func matchCookieDomains(domain string) (bool, string) {
 	// Remove port
 	p := strings.Split(domain, ":")
 
@@ -282,16 +265,16 @@ func (f *ForwardAuth) matchCookieDomains(domain string) (bool, string) {
 }
 
 // Create cookie hmac
-func (f *ForwardAuth) cookieSignature(r *http.Request, email, expires string) string {
-	hash := hmac.New(sha256.New, config.SecretBytes)
-	hash.Write([]byte(f.cookieDomain(r)))
+func cookieSignature(r *http.Request, email, expires string) string {
+	hash := hmac.New(sha256.New, config.Secret)
+	hash.Write([]byte(cookieDomain(r)))
 	hash.Write([]byte(email))
 	hash.Write([]byte(expires))
 	return base64.URLEncoding.EncodeToString(hash.Sum(nil))
 }
 
 // Get cookie expirary
-func (f *ForwardAuth) cookieExpiry() time.Time {
+func cookieExpiry() time.Time {
 	return time.Now().Local().Add(config.Lifetime)
 }
 
@@ -299,10 +282,10 @@ func (f *ForwardAuth) cookieExpiry() time.Time {
 
 // Cookie Domain
 type CookieDomain struct {
-	Domain       string
-	DomainLen    int
-	SubDomain    string
-	SubDomainLen int
+	Domain       string `description:"TEST1"`
+	DomainLen    int    `description:"TEST2"`
+	SubDomain    string `description:"TEST3"`
+	SubDomainLen int    `description:"TEST4"`
 }
 
 func NewCookieDomain(domain string) *CookieDomain {
@@ -326,4 +309,21 @@ func (c *CookieDomain) Match(host string) bool {
 	}
 
 	return false
+}
+
+type CookieDomains []CookieDomain
+
+func (c *CookieDomains) UnmarshalFlag(value string) error {
+	// TODO: test
+	if len(value) > 0 {
+		for _, d := range strings.Split(value, ",") {
+			cookieDomain := NewCookieDomain(d)
+			*c = append(*c, *cookieDomain)
+		}
+	}
+	return nil
+}
+
+func (c *CookieDomains) MarshalFlag() (string, error) {
+	return fmt.Sprintf("%+v", *c), nil
 }
