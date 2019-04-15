@@ -75,20 +75,22 @@ func newHttpRequest(uri string) *http.Request {
 	return r
 }
 
-func qsDiff(one, two url.Values) {
+func qsDiff(t *testing.T, one, two url.Values) []string {
+	errs := make([]string, 0)
 	for k := range one {
 		if two.Get(k) == "" {
-			fmt.Printf("Key missing: %s\n", k)
+			errs = append(errs, fmt.Sprintf("Key missing: %s", k))
 		}
 		if one.Get(k) != two.Get(k) {
-			fmt.Printf("Value different for %s: expected: '%s' got: '%s'\n", k, one.Get(k), two.Get(k))
+			errs = append(errs, fmt.Sprintf("Value different for %s: expected: '%s' got: '%s'", k, one.Get(k), two.Get(k)))
 		}
 	}
 	for k := range two {
 		if one.Get(k) == "" {
-			fmt.Printf("Extra key: %s\n", k)
+			errs = append(errs, fmt.Sprintf("Extra key: %s", k))
 		}
 	}
+	return errs
 }
 
 /**

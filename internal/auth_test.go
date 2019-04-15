@@ -157,8 +157,9 @@ func TestGetLoginURL(t *testing.T) {
 		"state":         []string{"nonce:http://example.com/hello"},
 	}
 	if !reflect.DeepEqual(qs, expectedQs) {
-		t.Error("Incorrect login query string:")
-		qsDiff(expectedQs, qs)
+		for _, err := range qsDiff(t, expectedQs, qs) {
+			t.Error(err)
+		}
 	}
 
 	//
@@ -209,8 +210,9 @@ func TestGetLoginURL(t *testing.T) {
 		"state":         []string{"nonce:http://example.com/hello"},
 	}
 	if !reflect.DeepEqual(qs, expectedQs) {
-		t.Error("Incorrect login query string:")
-		qsDiff(expectedQs, qs)
+		for _, err := range qsDiff(t, expectedQs, qs) {
+			t.Error(err)
+		}
 	}
 
 	//
@@ -261,10 +263,13 @@ func TestGetLoginURL(t *testing.T) {
 		"state":         []string{"nonce:http://example.com/hello"},
 		"prompt":        []string{"consent select_account"},
 	}
-	qsDiff(expectedQs, qs)
+	for _, err := range qsDiff(t, expectedQs, qs) {
+		t.Error(err)
+	}
 	if !reflect.DeepEqual(qs, expectedQs) {
-		t.Error("Incorrect login query string:")
-		qsDiff(expectedQs, qs)
+		for _, err := range qsDiff(t, expectedQs, qs) {
+			t.Error(err)
+		}
 	}
 
 	//
@@ -301,10 +306,13 @@ func TestGetLoginURL(t *testing.T) {
 		"state":         []string{"nonce:http://another.com/hello"},
 		"prompt":        []string{"consent select_account"},
 	}
-	qsDiff(expectedQs, qs)
+	for _, err := range qsDiff(t, expectedQs, qs) {
+		t.Error(err)
+	}
 	if !reflect.DeepEqual(qs, expectedQs) {
-		t.Error("Incorrect login query string:")
-		qsDiff(expectedQs, qs)
+		for _, err := range qsDiff(t, expectedQs, qs) {
+			t.Error(err)
+		}
 	}
 }
 
