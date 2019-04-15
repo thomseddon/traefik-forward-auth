@@ -26,12 +26,16 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		"Headers": r.Header,
 	}).Debugf("Handling request")
 
-	// Parse uri
-	uri, err := url.Parse(r.Header.Get("X-Forwarded-Uri"))
-	if err != nil {
-		logger.Errorf("Error parsing X-Forwarded-Uri, %v", err)
-		http.Error(w, "Service unavailable", 503)
-		return
+	// Parse URI
+	uri := r.URL
+	if forwardedUri := r.Header.Get("X-Forwarded-Uri"); forwardedUri != "" {
+		var err error
+		uri, err = url.Parse(forwardedUri)
+		if err != nil {
+			logger.Errorf("Error parsing X-Forwarded-Uri, %v", err)
+			http.Error(w, "Service unavailable", 503)
+			return
+		}
 	}
 
 	// Handle callback
