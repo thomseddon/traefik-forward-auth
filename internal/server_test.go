@@ -236,7 +236,6 @@ func TestServerAuthCallback(t *testing.T) {
 }
 
 func TestServerRoutePathPrefix(t *testing.T) {
-	server := NewServer()
 	config = Config{
 		Path:       "/_oauth",
 		CookieName: "cookie_test",
@@ -253,18 +252,25 @@ func TestServerRoutePathPrefix(t *testing.T) {
 				},
 			},
 		},
-		Rules: []Rule{
-			{
+		Rules: map[string]*Rule{
+			"web1": &Rule{
 				Action: "allow",
 				Rule:   "PathPrefix(`/api`)",
 			},
 		},
 	}
+	server := NewServer()
+
+	// Should block any request
+	req := newHttpRequest("/random")
+	res, _ := httpRequest(server, req, nil)
+	if res.StatusCode != 307 {
+		t.Error("Request not matching any rule should require auth, got:", res.StatusCode)
+	}
 
 	// Should allow /api request
-	req := newHttpRequest("/api")
-	c := MakeCookie(req, "test@example.com")
-	res, _ := httpRequest(server, req, c)
+	req = newHttpRequest("/api")
+	res, _ = httpRequest(server, req, nil)
 	if res.StatusCode != 200 {
 		t.Error("Request matching allowed rule should be allowed, got:", res.StatusCode)
 	}

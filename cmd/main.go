@@ -14,8 +14,8 @@ func main() {
 	// Setup logger
 	log := internal.NewDefaultLogger()
 
-	// Perform config checks
-	config.Checks()
+	// Perform config validation
+	config.Validate()
 
 	// Build server
 	server := internal.NewServer()
@@ -24,7 +24,7 @@ func main() {
 	http.HandleFunc("/", server.RootHandler)
 
 	// Start
-	log.Debugf("Starting with options: %s", config.Serialise())
+	log.Debugf("Starting with options: %s", config)
 	log.Info("Listening on :4181")
 	log.Info(http.ListenAndServe(":4181", nil))
 }
