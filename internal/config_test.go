@@ -3,8 +3,6 @@ package tfa
 import (
 	"testing"
 	"time"
-	// "github.com/jessevdk/go-flags"
-	// "github.com/sirupsen/logrus"
 )
 
 /**
@@ -13,7 +11,10 @@ import (
 
 func TestConfigDefaults(t *testing.T) {
 	// Check defaults
-	c := NewGlobalConfigWithArgs([]string{})
+	c, err := NewConfig([]string{})
+	if err != nil {
+		t.Error(err)
+	}
 
 	if c.LogLevel != "warn" {
 		t.Error("LogLevel default should be warn, got", c.LogLevel)
@@ -46,7 +47,7 @@ func TestConfigDefaults(t *testing.T) {
 	if len(c.Domains) != 0 {
 		t.Error("Domain default should be empty, got", c.Domains)
 	}
-	if c.Lifetime != time.Second*time.Duration(43200) {
+	if c.Lifetime != time.Second * time.Duration(43200) {
 		t.Error("Lifetime default should be 43200, got", c.Lifetime)
 	}
 	if c.Path != "/_oauth" {
@@ -65,6 +66,70 @@ func TestConfigDefaults(t *testing.T) {
 		t.Error("CookieSecure default should be true, got", c.CookieSecure)
 	}
 }
+
+func TestConfigParseFlags(t *testing.T) {
+	c, err := NewConfig([]string{
+		"--path=_oauthpath",
+		"--cookie-name", "\"cookiename\"",
+		"--rule.1.action=allow",
+		"--rule.1.rule=PathPrefix(`/one`)",
+		"--rule.two.action=auth",
+		"--rule.two.rule=\"Host(`two.com`) && Path(`/two`)\"",
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Check normal flags
+	if c.Path != "/_oauthpath" {
+		t.Error("Path default should be /_oauthpath, got", c.Path)
+	}
+	if c.CookieName != "cookiename" {
+		t.Error("CookieName default should be cookiename, got", c.CookieName)
+	}
+
+	// Check rules
+	if len(c.Rules) != 2 {
+		t.Error("Should create 2 rules, got:", len(c.Rules))
+	}
+
+	// First rule
+	if rule, ok := c.Rules["1"]; !ok {
+		t.Error("Could not find rule key '1'")
+	} else {
+		if rule.Action != "allow" {
+			t.Error("First rule action should be allow, got:", rule.Action)
+		}
+		if rule.Rule != "PathPrefix(`/one`)" {
+			t.Error("First rule rule should be PathPrefix(`/one`), got:", rule.Rule)
+		}
+		if rule.Provider != "google" {
+			t.Error("First rule provider should be google, got:", rule.Provider)
+		}
+	}
+
+	// Second rule
+	if rule, ok := c.Rules["two"]; !ok {
+		t.Error("Could not find rule key '1'")
+	} else {
+		if rule.Action != "auth" {
+			t.Error("Second rule action should be auth, got:", rule.Action)
+		}
+		if rule.Rule != "Host(`two.com`) && Path(`/two`)" {
+			t.Error("Second rule rule should be Host(`two.com`) && Path(`/two`), got:", rule.Rule)
+		}
+		if rule.Provider != "google" {
+			t.Error("Second rule provider should be google, got:", rule.Provider)
+		}
+	}
+}
+
+// func TestConfigParseUnknownFlags(t *testing.T) {
+// 	c := NewConfig([]string{
+// 		"--unknown=_oauthpath",
+// 	})
+
+// }
 
 // func TestConfigToml(t *testing.T) {
 //   logrus.SetLevel(logrus.DebugLevel)
