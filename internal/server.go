@@ -167,7 +167,7 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 func (s *Server) logger(r *http.Request, msg string) *logrus.Entry {
 	// Create logger
 	logger := log.WithFields(logrus.Fields{
-		"RemoteAddr": r.RemoteAddr,
+		"SourceIP": r.Header.Get("X-Forwarded-For"),
 	})
 
 	// Log request
