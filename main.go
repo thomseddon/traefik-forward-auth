@@ -20,7 +20,7 @@ var log logrus.FieldLogger
 func handler(w http.ResponseWriter, r *http.Request) {
 	// Logging setup
 	logger := log.WithFields(logrus.Fields{
-		"RemoteAddr": r.RemoteAddr,
+		"SourceIP": r.Header.Get("X-Forwarded-For"),
 	})
 	logger.WithFields(logrus.Fields{
 		"Headers": r.Header,
