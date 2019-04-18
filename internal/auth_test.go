@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -12,19 +13,11 @@ import (
 )
 
 /**
- * Setup
- */
-
-func init() {
-	// fw = &ForwardAuth{}
-}
-
-/**
  * Tests
  */
 
-func TestValidateCookie(t *testing.T) {
-	config = Config{}
+func TestAuthValidateCookie(t *testing.T) {
+	config, _ = NewConfig([]string{})
 	r, _ := http.NewRequest("GET", "http://example.com", nil)
 	c := &http.Cookie{}
 
@@ -75,8 +68,8 @@ func TestValidateCookie(t *testing.T) {
 	}
 }
 
-func TestValidateEmail(t *testing.T) {
-	config = Config{}
+func TestAuthValidateEmail(t *testing.T) {
+	config, _ = NewConfig([]string{})
 
 	// Should allow any
 	if !ValidateEmail("test@test.com") || !ValidateEmail("one@two.com") {
@@ -110,27 +103,27 @@ func TestValidateEmail(t *testing.T) {
 	}
 }
 
-func TestGetLoginURL(t *testing.T) {
+// TODO: Split google tests out
+func TestAuthGetLoginURL(t *testing.T) {
+	google := provider.Google{
+		ClientId:     "idtest",
+		ClientSecret: "sectest",
+		Scope:        "scopetest",
+		Prompt:       "consent select_account",
+		LoginURL: &url.URL{
+			Scheme: "https",
+			Host:   "test.com",
+			Path:   "/auth",
+		},
+	}
+
+	config, _ = NewConfig([]string{})
+	config.Providers.Google = google
+
 	r, _ := http.NewRequest("GET", "http://example.com", nil)
 	r.Header.Add("X-Forwarded-Proto", "http")
 	r.Header.Add("X-Forwarded-Host", "example.com")
 	r.Header.Add("X-Forwarded-Uri", "/hello")
-
-	config = Config{
-		Path: "/_oauth",
-		Providers: provider.Providers{
-			Google: provider.Google{
-				ClientId:     "idtest",
-				ClientSecret: "sectest",
-				Scope:        "scopetest",
-				LoginURL: &url.URL{
-					Scheme: "https",
-					Host:   "test.com",
-					Path:   "/auth",
-				},
-			},
-		},
-	}
 
 	// Check url
 	uri, err := url.Parse(GetLoginURL(r, "nonce"))
@@ -154,6 +147,7 @@ func TestGetLoginURL(t *testing.T) {
 		"redirect_uri":  []string{"http://example.com/_oauth"},
 		"response_type": []string{"code"},
 		"scope":         []string{"scopetest"},
+		"prompt":        []string{"consent select_account"},
 		"state":         []string{"nonce:http://example.com/hello"},
 	}
 	if !reflect.DeepEqual(qs, expectedQs) {
@@ -166,23 +160,9 @@ func TestGetLoginURL(t *testing.T) {
 	// With Auth URL but no matching cookie domain
 	// - will not use auth host
 	//
-	config = Config{
-		Path:     "/_oauth",
-		AuthHost: "auth.example.com",
-		Providers: provider.Providers{
-			Google: provider.Google{
-				ClientId:     "idtest",
-				ClientSecret: "sectest",
-				Scope:        "scopetest",
-				Prompt:       "consent select_account",
-				LoginURL: &url.URL{
-					Scheme: "https",
-					Host:   "test.com",
-					Path:   "/auth",
-				},
-			},
-		},
-	}
+	config, _ = NewConfig([]string{})
+	config.AuthHost = "auth.example.com"
+	config.Providers.Google = google
 
 	// Check url
 	uri, err = url.Parse(GetLoginURL(r, "nonce"))
@@ -218,25 +198,10 @@ func TestGetLoginURL(t *testing.T) {
 	//
 	// With correct Auth URL + cookie domain
 	//
-	cookieDomain := NewCookieDomain("example.com")
-	config = Config{
-		Path:          "/_oauth",
-		AuthHost:      "auth.example.com",
-		CookieDomains: []CookieDomain{*cookieDomain},
-		Providers: provider.Providers{
-			Google: provider.Google{
-				ClientId:     "idtest",
-				ClientSecret: "sectest",
-				Scope:        "scopetest",
-				Prompt:       "consent select_account",
-				LoginURL: &url.URL{
-					Scheme: "https",
-					Host:   "test.com",
-					Path:   "/auth",
-				},
-			},
-		},
-	}
+	config, _ = NewConfig([]string{})
+	config.AuthHost = "auth.example.com"
+	config.CookieDomains = []CookieDomain{*NewCookieDomain("example.com")}
+	config.Providers.Google = google
 
 	// Check url
 	uri, err = url.Parse(GetLoginURL(r, "nonce"))
@@ -317,19 +282,59 @@ func TestGetLoginURL(t *testing.T) {
 }
 
 // TODO
-// func TestExchangeCode(t *testing.T) {
+// func TestAuthExchangeCode(t *testing.T) {
 // }
 
 // TODO
-// func TestGetUser(t *testing.T) {
+// func TestAuthGetUser(t *testing.T) {
 // }
 
-// TODO? Tested in TestValidateCookie
-// func TestMakeCookie(t *testing.T) {
-// }
+func TestAuthMakeCookie(t *testing.T) {
+	config, _ = NewConfig([]string{})
+	r, _ := http.NewRequest("GET", "http://app.example.com", nil)
+	r.Header.Add("X-Forwarded-Host", "app.example.com")
 
-func TestMakeCSRFCookie(t *testing.T) {
-	config = Config{}
+	c := MakeCookie(r, "test@example.com")
+	if c.Name != "_forward_auth" {
+		t.Error("Cookie name should be \"_forward_auth\", got:", c.Name)
+	}
+	parts := strings.Split(c.Value, "|")
+	if len(parts) != 3 {
+		t.Error("Cookie should be in 3 parts, got:", c.Value)
+	}
+	valid, _, _ := ValidateCookie(r, c)
+	if !valid {
+		t.Error("Should generate valid cookie:", c.Value)
+	}
+	if c.Path != "/" {
+		t.Error("Cookie path should be \"/\", got:", c.Path)
+	}
+	if c.Domain != "app.example.com" {
+		t.Error("Cookie domain should be \"app.example.com\", got:", c.Domain)
+	}
+	if c.Secure != true {
+		t.Error("Cookie domain should be true, got:", c.Secure)
+	}
+	if !c.Expires.After(time.Now().Local()) {
+		t.Error("Expires should be after now, got:", c.Expires)
+	}
+	if !c.Expires.Before(time.Now().Local().Add(config.Lifetime).Add(10 * time.Second)) {
+		t.Error("Expires should be before lifetime + 10 seconds, got:", c.Expires)
+	}
+
+	config.CookieName = "testname"
+	config.InsecureCookie = true
+	c = MakeCookie(r, "test@example.com")
+	if c.Name != "testname" {
+		t.Error("Cookie name should be \"testname\", got:", c.Name)
+	}
+	if c.Secure != false {
+		t.Error("Cookie domain should be false, got:", c.Secure)
+	}
+}
+
+func TestAuthMakeCSRFCookie(t *testing.T) {
+	config, _ = NewConfig([]string{})
 	r, _ := http.NewRequest("GET", "http://app.example.com", nil)
 	r.Header.Add("X-Forwarded-Host", "app.example.com")
 
@@ -340,9 +345,8 @@ func TestMakeCSRFCookie(t *testing.T) {
 	}
 
 	// With cookie domain but no auth url
-	cookieDomain := NewCookieDomain("example.com")
 	config = Config{
-		CookieDomains: []CookieDomain{*cookieDomain},
+		CookieDomains: []CookieDomain{*NewCookieDomain("example.com")},
 	}
 	c = MakeCSRFCookie(r, "12345678901234567890123456789012")
 	if c.Domain != "app.example.com" {
@@ -352,7 +356,7 @@ func TestMakeCSRFCookie(t *testing.T) {
 	// With cookie domain and auth url
 	config = Config{
 		AuthHost:      "auth.example.com",
-		CookieDomains: []CookieDomain{*cookieDomain},
+		CookieDomains: []CookieDomain{*NewCookieDomain("example.com")},
 	}
 	c = MakeCSRFCookie(r, "12345678901234567890123456789012")
 	if c.Domain != "example.com" {
@@ -360,8 +364,8 @@ func TestMakeCSRFCookie(t *testing.T) {
 	}
 }
 
-func TestClearCSRFCookie(t *testing.T) {
-	config = Config{}
+func TestAuthClearCSRFCookie(t *testing.T) {
+	config, _ = NewConfig([]string{})
 	r, _ := http.NewRequest("GET", "http://example.com", nil)
 
 	c := ClearCSRFCookie(r)
@@ -370,8 +374,8 @@ func TestClearCSRFCookie(t *testing.T) {
 	}
 }
 
-func TestValidateCSRFCookie(t *testing.T) {
-	config = Config{}
+func TestAuthValidateCSRFCookie(t *testing.T) {
+	config, _ = NewConfig([]string{})
 	c := &http.Cookie{}
 
 	newCsrfRequest := func(state string) *http.Request {
@@ -416,7 +420,7 @@ func TestValidateCSRFCookie(t *testing.T) {
 	}
 }
 
-func TestNonce(t *testing.T) {
+func TestAuthNonce(t *testing.T) {
 	err, nonce1 := Nonce()
 	if err != nil {
 		t.Error("Error generation nonce:", err)
@@ -435,7 +439,7 @@ func TestNonce(t *testing.T) {
 	}
 }
 
-func TestCookieDomainMatch(t *testing.T) {
+func TestAuthCookieDomainMatch(t *testing.T) {
 	cd := NewCookieDomain("example.com")
 
 	// Exact should match
@@ -456,5 +460,31 @@ func TestCookieDomainMatch(t *testing.T) {
 	// Other domain should not match
 	if cd.Match("test.com") {
 		t.Error("Other domain should not match")
+	}
+}
+
+func TestAuthCookieDomains(t *testing.T) {
+	cds := CookieDomains{}
+
+	err := cds.UnmarshalFlag("one.com,two.org")
+	if err != nil {
+		t.Error(err)
+	}
+	if len(cds) != 2 {
+		t.Error("Expected UnmarshalFlag to provide 2 CookieDomains, got", cds)
+	}
+	if cds[0].Domain != "one.com" || cds[0].SubDomain != ".one.com" {
+		t.Error("Expected UnmarshalFlag to provide one.com, got", cds[0])
+	}
+	if cds[1].Domain != "two.org" || cds[1].SubDomain != ".two.org" {
+		t.Error("Expected UnmarshalFlag to provide two.org, got", cds[1])
+	}
+
+	marshal, err := cds.MarshalFlag()
+	if err != nil {
+		t.Error(err)
+	}
+	if marshal != "one.com,two.org" {
+		t.Error("Expected MarshalFlag to provide \"one.com,two.org\", got", cds)
 	}
 }
