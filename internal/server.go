@@ -38,7 +38,11 @@ func (s *Server) buildRoutes() {
 	s.router.Handle(config.Path, s.AuthCallbackHandler())
 
 	// Add a default handler
-	s.router.NewRoute().Handler(s.AuthHandler())
+	if config.DefaultAction == "allow" {
+		s.router.NewRoute().Handler(s.AllowHandler())
+	} else {
+		s.router.NewRoute().Handler(s.AuthHandler())
+	}
 }
 
 func (s *Server) RootHandler(w http.ResponseWriter, r *http.Request) {

@@ -8,10 +8,10 @@ import (
 )
 
 type Google struct {
-	ClientId     string `long:"providers.google.client-id" description:"Client ID"`
-	ClientSecret string `long:"providers.google.client-secret" description:"Client Secret" json:"-"`
+	ClientId     string `long:"client-id" env:"CLIENT_ID" description:"Client ID"`
+	ClientSecret string `long:"client-secret" env:"CLIENT_SECRET" description:"Client Secret" json:"-"`
 	Scope        string
-	Prompt       string `long:"providers.google.prompt" description:"Space separated list of OpenID prompt options"`
+	Prompt       string `long:"prompt" env:"PROMPT" description:"Space separated list of OpenID prompt options"`
 
 	LoginURL *url.URL
 	TokenURL *url.URL

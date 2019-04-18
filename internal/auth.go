@@ -164,7 +164,7 @@ func MakeCookie(r *http.Request, email string) *http.Cookie {
 		Path:     "/",
 		Domain:   cookieDomain(r),
 		HttpOnly: true,
-		Secure:   !config.CookieInsecure,
+		Secure:   !config.InsecureCookie,
 		Expires:  expires,
 	}
 }
@@ -177,7 +177,7 @@ func MakeCSRFCookie(r *http.Request, nonce string) *http.Cookie {
 		Path:     "/",
 		Domain:   csrfCookieDomain(r),
 		HttpOnly: true,
-		Secure:   !config.CookieInsecure,
+		Secure:   !config.InsecureCookie,
 		Expires:  cookieExpiry(),
 	}
 }
@@ -190,7 +190,7 @@ func ClearCSRFCookie(r *http.Request) *http.Cookie {
 		Path:     "/",
 		Domain:   csrfCookieDomain(r),
 		HttpOnly: true,
-		Secure:   !config.CookieInsecure,
+		Secure:   !config.InsecureCookie,
 		Expires:  time.Now().Local().Add(time.Hour * -1),
 	}
 }
@@ -325,5 +325,9 @@ func (c *CookieDomains) UnmarshalFlag(value string) error {
 }
 
 func (c *CookieDomains) MarshalFlag() (string, error) {
-	return fmt.Sprintf("%+v", *c), nil
+	var domains []string
+	for _, d := range *c {
+		domains = append(domains, d.Domain)
+	}
+	return strings.Join(domains, ","), nil
 }
