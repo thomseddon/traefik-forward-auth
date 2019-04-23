@@ -104,6 +104,7 @@ func TestConfigFlagBackwardsCompatability(t *testing.T) {
 		"--client-id=clientid",
 		"--client-secret=verysecret",
 		"--prompt=prompt",
+		"--cookie-secret=veryverysecret",
 		"--lifetime=200",
 		"--cookie-secure=false",
 		"--cookie-domains=test1.com,example.org",
@@ -128,6 +129,9 @@ func TestConfigFlagBackwardsCompatability(t *testing.T) {
 
 	expected3 := CommaSeparatedList{"test3.com", "example.org", "another3.net"}
 	assert.Equal(expected3, c.Whitelist, "should read legacy comma separated list whitelist")
+
+	// Name changed
+	assert.Equal([]byte("veryverysecret"), c.Secret)
 
 	// Google provider params used to be top level
 	assert.Equal("clientid", c.ClientIdLegacy)
@@ -170,7 +174,8 @@ func TestConfigFileBackwardsCompatability(t *testing.T) {
 	})
 	require.Nil(t, err)
 
-	assert.Equal("/two", c.Path, "Variable in legacy config file should be read")
+	assert.Equal("/two", c.Path, "variable in legacy config file should be read")
+	assert.Equal("auth.legacy.com", c.AuthHost, "variable in legacy config file should be read")
 }
 
 func TestConfigParseEnvironment(t *testing.T) {

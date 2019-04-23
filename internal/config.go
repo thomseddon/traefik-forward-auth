@@ -46,6 +46,7 @@ type Config struct {
 
 	// Legacy
 	CookieDomainsLegacy CookieDomains      `long:"cookie-domains" env:"COOKIE_DOMAINS" description:"DEPRECATED - Use \"cookie-domain\""`
+	CookieSecretLegacy  string             `long:"cookie-secret" env:"COOKIE_SECRET" description:"DEPRECATED - Use \"secret\""`
 	CookieSecureLegacy  string             `long:"cookie-secure" env:"COOKIE_SECURE" description:"DEPRECATED - Use \"insecure-cookie\""`
 	DomainsLegacy       CommaSeparatedList `long:"domains" env:"DOMAINS" description:"DEPRECATED - Use \"domain\""`
 	ClientIdLegacy      string             `long:"client-id" env:"CLIENT_ID" group:"DEPs" description:"DEPRECATED - Use \"providers.google.client-id\""`
@@ -98,6 +99,9 @@ func NewConfig(args []string) (Config, error) {
 	// any further errors can be logged via logrus instead of printed?
 
 	// Backwards compatability
+	if c.CookieSecretLegacy != "" && c.SecretString == "" {
+		c.SecretString = c.CookieSecretLegacy
+	}
 	if c.ClientIdLegacy != "" {
 		c.Providers.Google.ClientId = c.ClientIdLegacy
 	}
@@ -222,7 +226,7 @@ func handlFlagError(err error) error {
 	return err
 }
 
-var legacyFileFormat = regexp.MustCompile(`^([a-z-]+) ([\w\W]+)$`)
+var legacyFileFormat = regexp.MustCompile(`(?m)^([a-z-]+) (.*)$`)
 
 func convertLegacyToIni(name string) (io.Reader, error) {
 	b, err := ioutil.ReadFile(name)
