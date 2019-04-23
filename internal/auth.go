@@ -311,10 +311,20 @@ func (c *CookieDomain) Match(host string) bool {
 	return false
 }
 
+func (c *CookieDomain) UnmarshalFlag(value string) error {
+	*c = *NewCookieDomain(value)
+	return nil
+}
+
+func (c *CookieDomain) MarshalFlag() (string, error) {
+	return c.Domain, nil
+}
+
+// Legacy support for comma separated list of cookie domains
+
 type CookieDomains []CookieDomain
 
 func (c *CookieDomains) UnmarshalFlag(value string) error {
-	// TODO: test
 	if len(value) > 0 {
 		for _, d := range strings.Split(value, ",") {
 			cookieDomain := NewCookieDomain(d)

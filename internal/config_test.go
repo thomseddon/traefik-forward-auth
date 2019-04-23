@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 /**
@@ -44,7 +45,7 @@ func TestConfigParseArgs(t *testing.T) {
 		"--rule.two.action=auth",
 		"--rule.two.rule=\"Host(`two.com`) && Path(`/two`)\"",
 	})
-	assert.Nil(err)
+	require.Nil(t, err)
 
 	// Check normal flags
 	assert.Equal("cookiename", c.CookieName)
@@ -82,9 +83,30 @@ func TestConfigFlagBackwardsCompatability(t *testing.T) {
 		"--prompt=prompt",
 		"--lifetime=200",
 		"--cookie-secure=false",
+		"--cookie-domains=test1.com,example.org",
+		"--cookie-domain=another1.net",
+		"--domains=test2.com,example.org",
+		"--domain=another2.net",
+		"--whitelist=test3.com,example.org",
+		"--whitelist=another3.net",
 	})
-	assert.Nil(err)
+	require.Nil(t, err)
 
+	// The following used to be passed as comma separated list
+	expected1 := []CookieDomain{
+		*NewCookieDomain("another1.net"),
+		*NewCookieDomain("test1.com"),
+		*NewCookieDomain("example.org"),
+	}
+	assert.Equal(expected1, c.CookieDomains, "should read legacy comma separated list cookie-domains")
+
+	expected2 := []string{"another2.net", "test2.com", "example.org"}
+	assert.Equal(expected2, c.Domains, "should read legacy comma separated list domains")
+
+	expected3 := CommaSeparatedList{"test3.com", "example.org", "another3.net"}
+	assert.Equal(expected3, c.Whitelist, "should read legacy comma separated list whitelist")
+
+	// Google provider params used to be top level
 	assert.Equal("clientid", c.ClientIdLegacy)
 	assert.Equal("clientid", c.Providers.Google.ClientId, "--client-id should set providers.google.client-id")
 	assert.Equal("verysecret", c.ClientSecretLegacy)
@@ -111,7 +133,7 @@ func TestConfigParseIni(t *testing.T) {
 		"--config=../test/config1",
 		"--csrf-cookie-name=csrfcookiename",
 	})
-	assert.Nil(err)
+	require.Nil(t, err)
 
 	assert.Equal("inicookiename", c.CookieName, "should be read from ini file")
 	assert.Equal("csrfcookiename", c.CSRFCookieName, "should be read from ini file")
@@ -123,7 +145,7 @@ func TestConfigFileBackwardsCompatability(t *testing.T) {
 	c, err := NewConfig([]string{
 		"--config=../test/config-legacy",
 	})
-	assert.Nil(err)
+	require.Nil(t, err)
 
 	assert.Equal("/two", c.Path, "Variable in legacy config file should be read")
 }
@@ -144,7 +166,7 @@ func TestConfigTransformation(t *testing.T) {
 		"--secret=verysecret",
 		"--lifetime=200",
 	})
-	assert.Nil(err)
+	require.Nil(t, err)
 
 	assert.Equal("/_oauthpath", c.Path, "path should add slash to front")
 
