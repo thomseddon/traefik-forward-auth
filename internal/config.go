@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"regexp"
 	"strconv"
@@ -66,6 +67,26 @@ func NewGlobalConfig() Config {
 func NewConfig(args []string) (Config, error) {
 	c := Config{
 		Rules: map[string]*Rule{},
+		Providers: provider.Providers{
+			Google: provider.Google{
+				Scope: "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email",
+				LoginURL: &url.URL{
+					Scheme: "https",
+					Host:   "accounts.google.com",
+					Path:   "/o/oauth2/auth",
+				},
+				TokenURL: &url.URL{
+					Scheme: "https",
+					Host:   "www.googleapis.com",
+					Path:   "/oauth2/v3/token",
+				},
+				UserURL: &url.URL{
+					Scheme: "https",
+					Host:   "www.googleapis.com",
+					Path:   "/oauth2/v2/userinfo",
+				},
+			},
+		},
 	}
 
 	err := c.parseFlags(args)
@@ -99,9 +120,6 @@ func NewConfig(args []string) (Config, error) {
 	if len(c.DomainsLegacy) > 0 {
 		c.Domains = append(c.Domains, c.DomainsLegacy...)
 	}
-
-	// Provider defaults
-	c.Providers.Google.Build()
 
 	// Transformations
 	if len(c.Path) > 0 && c.Path[0] != '/' {

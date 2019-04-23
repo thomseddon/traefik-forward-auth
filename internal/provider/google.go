@@ -18,24 +18,6 @@ type Google struct {
 	UserURL  *url.URL
 }
 
-func (g *Google) Build() {
-	g.LoginURL = &url.URL{
-		Scheme: "https",
-		Host:   "accounts.google.com",
-		Path:   "/o/oauth2/auth",
-	}
-	g.TokenURL = &url.URL{
-		Scheme: "https",
-		Host:   "www.googleapis.com",
-		Path:   "/oauth2/v3/token",
-	}
-	g.UserURL = &url.URL{
-		Scheme: "https",
-		Host:   "www.googleapis.com",
-		Path:   "/oauth2/v2/userinfo",
-	}
-}
-
 func (g *Google) GetLoginURL(redirectUri, state string) string {
 	q := url.Values{}
 	q.Set("client_id", g.ClientId)

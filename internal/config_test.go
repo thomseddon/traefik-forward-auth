@@ -1,6 +1,7 @@
 package tfa
 
 import (
+	"net/url"
 	"os"
 	"testing"
 	"time"
@@ -32,7 +33,29 @@ func TestConfigDefaults(t *testing.T) {
 	assert.Equal("/_oauth", c.Path)
 	assert.Len(c.Whitelist, 0)
 
+	assert.Equal("https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email", c.Providers.Google.Scope)
 	assert.Equal("", c.Providers.Google.Prompt)
+
+	loginURL := &url.URL{
+		Scheme: "https",
+		Host:   "accounts.google.com",
+		Path:   "/o/oauth2/auth",
+	}
+	assert.Equal(loginURL, c.Providers.Google.LoginURL)
+
+	tokenURL := &url.URL{
+		Scheme: "https",
+		Host:   "www.googleapis.com",
+		Path:   "/oauth2/v3/token",
+	}
+	assert.Equal(tokenURL, c.Providers.Google.TokenURL)
+
+	userURL := &url.URL{
+		Scheme: "https",
+		Host:   "www.googleapis.com",
+		Path:   "/oauth2/v2/userinfo",
+	}
+	assert.Equal(userURL, c.Providers.Google.UserURL)
 }
 
 func TestConfigParseArgs(t *testing.T) {
