@@ -37,7 +37,7 @@ type Config struct {
 	Whitelist      CommaSeparatedList   `long:"whitelist" env:"WHITELIST" description:"Comma separated list of email addresses to allow"`
 
 	Providers provider.Providers `group:"providers" namespace:"providers" env-namespace:"PROVIDERS"`
-	Rules     map[string]*Rule `long:"rules.<name>.<param>" description:"Rule definitions, see docs, param can be: \"action\", \"rule\""`
+	Rules     map[string]*Rule   `long:"rules.<name>.<param>" description:"Rule definitions, see docs, param can be: \"action\", \"rule\""`
 
 	// Filled during transformations
 	Secret   []byte

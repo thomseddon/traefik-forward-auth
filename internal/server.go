@@ -85,6 +85,7 @@ func (s *Server) AuthHandler() http.HandlerFunc {
 			// Forward them on
 			http.Redirect(w, r, GetLoginURL(r, nonce), http.StatusTemporaryRedirect)
 
+			logger.Debug("Done")
 			return
 		}
 

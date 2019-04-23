@@ -8,7 +8,11 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
+
+// TODO:
 
 /**
  * Setup
@@ -24,19 +28,18 @@ func init() {
  */
 
 func TestServerAuthHandler(t *testing.T) {
+	assert := assert.New(t)
 	config, _ = NewConfig([]string{})
 
 	// Should redirect vanilla request to login url
 	req := newHttpRequest("/foo")
+	res, _ := doHttpRequest(req, nil)
+	assert.Equal(307, res.StatusCode, "vanilla request should be redirected")
 
-	res, _ := httpRequest(req, nil)
-	if res.StatusCode != 307 {
-		t.Error("Vanilla request should be redirected with 307, got:", res.StatusCode)
-	}
 	fwd, _ := res.Location()
-	if fwd.Scheme != "https" || fwd.Host != "accounts.google.com" || fwd.Path != "/o/oauth2/auth" {
-		t.Error("Vanilla request should be redirected to login url, got:", fwd)
-	}
+	assert.Equal("https", fwd.Scheme, "vanilla request should be redirected to google")
+	assert.Equal("accounts.google.com", fwd.Host, "vanilla request should be redirected to google")
+	assert.Equal("/o/oauth2/auth", fwd.Path, "vanilla request should be redirected to google")
 
 	// Should catch invalid cookie
 	req = newHttpRequest("/foo")
@@ -44,42 +47,33 @@ func TestServerAuthHandler(t *testing.T) {
 	parts := strings.Split(c.Value, "|")
 	c.Value = fmt.Sprintf("bad|%s|%s", parts[1], parts[2])
 
-	res, _ = httpRequest(req, c)
-	if res.StatusCode != 401 {
-		t.Error("Request with invalid cookie shound't be authorised", res.StatusCode)
-	}
+	res, _ = doHttpRequest(req, c)
+	assert.Equal(401, res.StatusCode, "invalid cookie should not be authorised")
 
 	// Should validate email
 	req = newHttpRequest("/foo")
 	c = MakeCookie(req, "test@example.com")
 	config.Domains = []string{"test.com"}
 
-	res, _ = httpRequest(req, c)
-	if res.StatusCode != 401 {
-		t.Error("Request with invalid email shound't be authorised", res.StatusCode)
-	}
+	res, _ = doHttpRequest(req, c)
+	assert.Equal(401, res.StatusCode, "invalid email should not be authorised")
 
 	// Should allow valid request email
 	req = newHttpRequest("/foo")
-
 	c = MakeCookie(req, "test@example.com")
 	config.Domains = []string{}
 
-	res, _ = httpRequest(req, c)
-	if res.StatusCode != 200 {
-		t.Error("Valid request should be allowed, got:", res.StatusCode)
-	}
+	res, _ = doHttpRequest(req, c)
+	assert.Equal(200, res.StatusCode, "valid request should be allowed")
 
 	// Should pass through user
 	users := res.Header["X-Forwarded-User"]
-	if len(users) != 1 {
-		t.Error("Valid request missing X-Forwarded-User header")
-	} else if users[0] != "test@example.com" {
-		t.Error("X-Forwarded-User should match user, got: ", users)
-	}
+	assert.Len(users, 1, "valid request should have X-Forwarded-User header")
+	assert.Equal([]string{"test@example.com"}, users, "X-Forwarded-User header should match user")
 }
 
 func TestServerAuthCallback(t *testing.T) {
+	assert := assert.New(t)
 	config, _ = NewConfig([]string{})
 
 	// Setup token server
@@ -98,50 +92,43 @@ func TestServerAuthCallback(t *testing.T) {
 
 	// Should pass auth response request to callback
 	req := newHttpRequest("/_oauth")
-	res, _ := httpRequest(req, nil)
-	if res.StatusCode != 401 {
-		t.Error("Auth callback without cookie shound't be authorised, got:", res.StatusCode)
-	}
+	res, _ := doHttpRequest(req, nil)
+	assert.Equal(401, res.StatusCode, "auth callback without cookie shouldn't be authorised")
 
 	// Should catch invalid csrf cookie
 	req = newHttpRequest("/_oauth?state=12345678901234567890123456789012:http://redirect")
 	c := MakeCSRFCookie(req, "nononononononononononononononono")
-	res, _ = httpRequest(req, c)
-	if res.StatusCode != 401 {
-		t.Error("Auth callback with invalid cookie shound't be authorised, got:", res.StatusCode)
-	}
+	res, _ = doHttpRequest(req, c)
+	assert.Equal(401, res.StatusCode, "auth callback with invalid cookie shouldn't be authorised")
 
 	// Should redirect valid request
 	req = newHttpRequest("/_oauth?state=12345678901234567890123456789012:http://redirect")
 	c = MakeCSRFCookie(req, "12345678901234567890123456789012")
-	res, _ = httpRequest(req, c)
-	if res.StatusCode != 307 {
-		t.Error("Valid callback should be allowed, got:", res.StatusCode)
-	}
+	res, _ = doHttpRequest(req, c)
+	assert.Equal(307, res.StatusCode, "valid auth callback should be allowed")
+
 	fwd, _ := res.Location()
-	if fwd.Scheme != "http" || fwd.Host != "redirect" || fwd.Path != "" {
-		t.Error("Valid request should be redirected to return url, got:", fwd)
-	}
+	assert.Equal("http", fwd.Scheme, "valid request should be redirected to return url")
+	assert.Equal("redirect", fwd.Host, "valid request should be redirected to return url")
+	assert.Equal("", fwd.Path, "valid request should be redirected to return url")
 }
 
 func TestServerDefaultAction(t *testing.T) {
+	assert := assert.New(t)
 	config, _ = NewConfig([]string{})
 
 	req := newHttpRequest("/random")
-	res, _ := httpRequest(req, nil)
-	if res.StatusCode != 307 {
-		t.Error("Request should require auth with auth default handler, got:", res.StatusCode)
-	}
+	res, _ := doHttpRequest(req, nil)
+	assert.Equal(307, res.StatusCode, "request should require auth with auth default handler")
 
 	config.DefaultAction = "allow"
 	req = newHttpRequest("/random")
-	res, _ = httpRequest(req, nil)
-	if res.StatusCode != 200 {
-		t.Error("Request should be allowed with allow default handler, got:", res.StatusCode)
-	}
+	res, _ = doHttpRequest(req, nil)
+	assert.Equal(200, res.StatusCode, "request should be allowed with default handler")
 }
 
 func TestServerRoutePathPrefix(t *testing.T) {
+	assert := assert.New(t)
 	config, _ = NewConfig([]string{})
 	config.Rules = map[string]*Rule{
 		"web1": {
@@ -152,17 +139,13 @@ func TestServerRoutePathPrefix(t *testing.T) {
 
 	// Should block any request
 	req := newHttpRequest("/random")
-	res, _ := httpRequest(req, nil)
-	if res.StatusCode != 307 {
-		t.Error("Request not matching any rule should require auth, got:", res.StatusCode)
-	}
+	res, _ := doHttpRequest(req, nil)
+	assert.Equal(307, res.StatusCode, "request not matching any rule should require auth")
 
 	// Should allow /api request
 	req = newHttpRequest("/api")
-	res, _ = httpRequest(req, nil)
-	if res.StatusCode != 200 {
-		t.Error("Request matching allowed rule should be allowed, got:", res.StatusCode)
-	}
+	res, _ = doHttpRequest(req, nil)
+	assert.Equal(200, res.StatusCode, "request matching allow rule should be allowed")
 }
 
 /**
@@ -186,7 +169,7 @@ func (t *UserServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   }`)
 }
 
-func httpRequest(r *http.Request, c *http.Cookie) (*http.Response, string) {
+func doHttpRequest(r *http.Request, c *http.Cookie) (*http.Response, string) {
 	w := httptest.NewRecorder()
 
 	// Set cookies on recorder
@@ -198,7 +181,6 @@ func httpRequest(r *http.Request, c *http.Cookie) (*http.Response, string) {
 	for _, c := range w.HeaderMap["Set-Cookie"] {
 		r.Header.Add("Cookie", c)
 	}
-
 
 	NewServer().RootHandler(w, r)
 
