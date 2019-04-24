@@ -35,12 +35,12 @@ services:
   traefik-forward-auth:
     build: ../
     environment:
-      - CLIENT_ID=test
-      - CLIENT_SECRET=test
-      - COOKIE_SECRET=something-random
-      - COOKIE_SECURE=false
-      - COOKIE_DOMAINS=localhost.com
-      - AUTH_URL=http://auth.localhost.com:8085/_oauth
+      - PROVIDERS_GOOGLE_CLIENT_ID=your-client-id
+      - PROVIDERS_GOOGLE_CLIENT_SECRET=your-client-secret
+      - SECRET=something-random
+      - INSECURE_COOKIE=true
+      - COOKIE_DOMAIN=localhost.com
+      - AUTH_HOST=auth.localhost.com
     networks:
       - traefik
 
