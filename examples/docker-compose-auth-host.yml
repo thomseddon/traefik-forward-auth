@@ -20,18 +20,25 @@ services:
     labels:
       - "traefik.backend=whoami"
       - "traefik.enable=true"
-      - "traefik.frontend.rule=Host:whoami.localhost.com"
+      - "traefik.frontend.rule=Host:whoami.yourdomain.com"
 
   traefik-forward-auth:
     image: thomseddon/traefik-forward-auth
     environment:
-      - CLIENT_ID=your-client-id
-      - CLIENT_SECRET=your-client-secret
+      - PROVIDERS_GOOGLE_CLIENT_ID=your-client-id
+      - PROVIDERS_GOOGLE_CLIENT_SECRET=your-client-secret
       - SECRET=something-random
-      - COOKIE_SECURE=false
+      - INSECURE_COOKIE=true
       - DOMAIN=yourcompany.com
+      - AUTH_HOST=auth.yourdomain.com
     networks:
       - traefik
+    # When using an auth host, adding it here prompts traefik to generate certs
+    labels:
+      - traefik.enable=true
+      - traefik.port=4181
+      - traefik.backend=traefik-forward-auth
+      - traefik.frontend.rule=Host:auth.yourdomain.com
 
 networks:
   traefik:
