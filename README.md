@@ -45,7 +45,7 @@ version: '3'
 
 services:
   traefik:
-    image: traefik:1
+    image: traefik:1.7
     ports:
       - "8085:80"
     volumes:
@@ -322,6 +322,8 @@ Two criteria must be met for an `auth-host` to be used:
 
 1. Request matches given `cookie-domain`
 2. `auth-host` is also subdomain of same `cookie-domain`
+
+Please note: For Auth Host mode to work, you must ensure that requests to your auth-host are routed to the traefik-forward-auth container, as demonstrated with the service labels in the [docker-compose-auth.yml](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/docker-compose-auth-host.yml) example.
 
 ## Copyright
 

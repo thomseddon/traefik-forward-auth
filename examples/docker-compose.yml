@@ -23,13 +23,15 @@ services:
       - "traefik.frontend.rule=Host:whoami.localhost.com"
 
   traefik-forward-auth:
-    image: thomseddon/traefik-forward-auth
+    build: ../
+    command: ./traefik-forward-auth --rule.1.action=allow --rule.1.rule="Path(`/`)"
     environment:
       - PROVIDERS_GOOGLE_CLIENT_ID=your-client-id
       - PROVIDERS_GOOGLE_CLIENT_SECRET=your-client-secret
       - SECRET=something-random
       - INSECURE_COOKIE=true
       - DOMAIN=yourcompany.com
+      - LOG_LEVEL=debug
     networks:
       - traefik
 
