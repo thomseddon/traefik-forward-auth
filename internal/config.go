@@ -276,6 +276,12 @@ func NewRule() *Rule {
 	}
 }
 
+func (r *Rule) formattedRule() string {
+	// Traefik implements their own "Host" matcher and then offers "HostRegexp"
+	// to invoke the mux "Host" matcher. This ensures the mux version is used
+	return strings.ReplaceAll(r.Rule, "Host(", "HostRegexp(")
+}
+
 func (r *Rule) Validate() {
 	if r.Action != "auth" && r.Action != "allow" {
 		log.Fatal("invalid rule action, must be \"auth\" or \"allow\"")

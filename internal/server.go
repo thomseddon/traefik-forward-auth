@@ -28,9 +28,9 @@ func (s *Server) buildRoutes() {
 	// Let's build a router
 	for name, rule := range config.Rules {
 		if rule.Action == "allow" {
-			s.router.AddRoute(rule.Rule, 1, s.AllowHandler(name))
+			s.router.AddRoute(rule.formattedRule(), 1, s.AllowHandler(name))
 		} else {
-			s.router.AddRoute(rule.Rule, 1, s.AuthHandler(name))
+			s.router.AddRoute(rule.formattedRule(), 1, s.AuthHandler(name))
 		}
 	}
 
@@ -47,6 +47,8 @@ func (s *Server) buildRoutes() {
 
 func (s *Server) RootHandler(w http.ResponseWriter, r *http.Request) {
 	// Modify request
+	r.Method = r.Header.Get("X-Forwarded-Method")
+	r.Host = r.Header.Get("X-Forwarded-Host")
 	r.URL, _ = url.Parse(r.Header.Get("X-Forwarded-Uri"))
 
 	// Pass to mux
