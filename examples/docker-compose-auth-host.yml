@@ -33,7 +33,7 @@ services:
       - AUTH_HOST=auth.yourdomain.com
     networks:
       - traefik
-    # When using an auth host, adding it here prompts traefik to generate certs
+    # When using an auth host, the below must be added
     labels:
       - traefik.enable=true
       - traefik.port=4181

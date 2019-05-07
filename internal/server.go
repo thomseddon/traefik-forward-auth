@@ -26,11 +26,11 @@ func (s *Server) buildRoutes() {
 	}
 
 	// Let's build a router
-	for _, rule := range config.Rules {
+	for name, rule := range config.Rules {
 		if rule.Action == "allow" {
-			s.router.AddRoute(rule.Rule, 1, s.AllowHandler())
+			s.router.AddRoute(rule.Rule, 1, s.AllowHandler(name))
 		} else {
-			s.router.AddRoute(rule.Rule, 1, s.AuthHandler())
+			s.router.AddRoute(rule.Rule, 1, s.AuthHandler(name))
 		}
 	}
 
@@ -39,9 +39,9 @@ func (s *Server) buildRoutes() {
 
 	// Add a default handler
 	if config.DefaultAction == "allow" {
-		s.router.NewRoute().Handler(s.AllowHandler())
+		s.router.NewRoute().Handler(s.AllowHandler("default"))
 	} else {
-		s.router.NewRoute().Handler(s.AuthHandler())
+		s.router.NewRoute().Handler(s.AuthHandler("default"))
 	}
 }
 
@@ -54,18 +54,18 @@ func (s *Server) RootHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // Handler that allows requests
-func (s *Server) AllowHandler() http.HandlerFunc {
+func (s *Server) AllowHandler(rule string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		s.logger(r, "Allowing request")
+		s.logger(r, rule, "Allowing request")
 		w.WriteHeader(200)
 	}
 }
 
 // Authenticate requests
-func (s *Server) AuthHandler() http.HandlerFunc {
+func (s *Server) AuthHandler(rule string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Logging setup
-		logger := s.logger(r, "Authenticating request")
+		logger := s.logger(r, rule, "Authenticating request")
 
 		// Get auth cookie
 		c, err := r.Cookie(config.CookieName)
@@ -118,7 +118,7 @@ func (s *Server) AuthHandler() http.HandlerFunc {
 func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Logging setup
-		logger := s.logger(r, "Handling callback")
+		logger := s.logger(r, "default", "Handling callback")
 
 		// Check for CSRF cookie
 		c, err := r.Cookie(config.CSRFCookieName)
@@ -165,16 +165,17 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 	}
 }
 
-func (s *Server) logger(r *http.Request, msg string) *logrus.Entry {
+func (s *Server) logger(r *http.Request, rule, msg string) *logrus.Entry {
 	// Create logger
 	logger := log.WithFields(logrus.Fields{
-		"SourceIP": r.Header.Get("X-Forwarded-For"),
+		"source_ip": r.Header.Get("X-Forwarded-For"),
 	})
 
 	// Log request
 	logger.WithFields(logrus.Fields{
-		"Headers": r.Header,
-	}).Debugf(msg)
+		"rule": rule,
+		"headers": r.Header,
+	}).Debug(msg)
 
 	return logger
 }

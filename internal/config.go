@@ -25,7 +25,7 @@ type Config struct {
 	LogFormat string `long:"log-format"  env:"LOG_FORMAT" default:"text" choice:"text" choice:"json" choice:"pretty" description:"Log format"`
 
 	AuthHost       string               `long:"auth-host" env:"AUTH_HOST" description:"Single host to use when returning from 3rd party auth"`
-	Config         func(s string) error `long:"config" env:"CONFIG" description:"Path to config file"`
+	Config         func(s string) error `long:"config" env:"CONFIG" description:"Path to config file" json:"-"`
 	CookieDomains  []CookieDomain       `long:"cookie-domain" env:"COOKIE_DOMAIN" description:"Domain to set auth cookie on, can be set multiple times"`
 	InsecureCookie bool                 `long:"insecure-cookie" env:"INSECURE_COOKIE" description:"Use insecure cookies"`
 	CookieName     string               `long:"cookie-name" env:"COOKIE_NAME" default:"_forward_auth" description:"Cookie Name"`
@@ -34,23 +34,23 @@ type Config struct {
 	Domains        []string             `long:"domain" env:"DOMAIN" description:"Only allow given email domains, can be set multiple times"`
 	LifetimeString int                  `long:"lifetime" env:"LIFETIME" default:"43200" description:"Lifetime in seconds"`
 	Path           string               `long:"url-path" env:"URL_PATH" default:"/_oauth" description:"Callback URL Path"`
-	SecretString   string               `long:"secret" env:"SECRET" description:"Secret used for signing (required)"`
+	SecretString   string               `long:"secret" env:"SECRET" description:"Secret used for signing (required)" json:"-"`
 	Whitelist      CommaSeparatedList   `long:"whitelist" env:"WHITELIST" description:"Only allow given email addresses, can be set multiple times"`
 
 	Providers provider.Providers `group:"providers" namespace:"providers" env-namespace:"PROVIDERS"`
 	Rules     map[string]*Rule   `long:"rules.<name>.<param>" description:"Rule definitions, param can be: \"action\" or \"rule\""`
 
 	// Filled during transformations
-	Secret   []byte
+	Secret   []byte  `json:"-"`
 	Lifetime time.Duration
 
 	// Legacy
 	CookieDomainsLegacy CookieDomains      `long:"cookie-domains" env:"COOKIE_DOMAINS" description:"DEPRECATED - Use \"cookie-domain\""`
-	CookieSecretLegacy  string             `long:"cookie-secret" env:"COOKIE_SECRET" description:"DEPRECATED - Use \"secret\""`
+	CookieSecretLegacy  string             `long:"cookie-secret" env:"COOKIE_SECRET" description:"DEPRECATED - Use \"secret\""  json:"-"`
 	CookieSecureLegacy  string             `long:"cookie-secure" env:"COOKIE_SECURE" description:"DEPRECATED - Use \"insecure-cookie\""`
 	DomainsLegacy       CommaSeparatedList `long:"domains" env:"DOMAINS" description:"DEPRECATED - Use \"domain\""`
 	ClientIdLegacy      string             `long:"client-id" env:"CLIENT_ID" group:"DEPs" description:"DEPRECATED - Use \"providers.google.client-id\""`
-	ClientSecretLegacy  string             `long:"client-secret" env:"CLIENT_SECRET" description:"DEPRECATED - Use \"providers.google.client-id\""`
+	ClientSecretLegacy  string             `long:"client-secret" env:"CLIENT_SECRET" description:"DEPRECATED - Use \"providers.google.client-id\""  json:"-"`
 	PromptLegacy        string             `long:"prompt" env:"PROMPT" description:"DEPRECATED - Use \"providers.google.prompt\""`
 }
 
@@ -100,6 +100,7 @@ func NewConfig(args []string) (Config, error) {
 
 	// Backwards compatability
 	if c.CookieSecretLegacy != "" && c.SecretString == "" {
+		log.Warn("cookie-secret config option is deprecated, please use secret")
 		c.SecretString = c.CookieSecretLegacy
 	}
 	if c.ClientIdLegacy != "" {
@@ -109,9 +110,11 @@ func NewConfig(args []string) (Config, error) {
 		c.Providers.Google.ClientSecret = c.ClientSecretLegacy
 	}
 	if c.PromptLegacy != "" {
+		log.Warn("prompt config option is deprecated, please use providers.google.prompt")
 		c.Providers.Google.Prompt = c.PromptLegacy
 	}
 	if c.CookieSecureLegacy != "" {
+		log.Warn("cookie-secure config option is deprecated, please use insecure-cookie")
 		secure, err := strconv.ParseBool(c.CookieSecureLegacy)
 		if err != nil {
 			return c, err
@@ -119,9 +122,11 @@ func NewConfig(args []string) (Config, error) {
 		c.InsecureCookie = !secure
 	}
 	if len(c.CookieDomainsLegacy) > 0 {
+		log.Warn("cookie-domains config option is deprecated, please use cookie-domain")
 		c.CookieDomains = append(c.CookieDomains, c.CookieDomainsLegacy...)
 	}
 	if len(c.DomainsLegacy) > 0 {
+		log.Warn("domains config option is deprecated, please use domain")
 		c.Domains = append(c.Domains, c.DomainsLegacy...)
 	}
 
