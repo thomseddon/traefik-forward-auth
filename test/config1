@@ -1,1 +1,3 @@
 url-path=two
+rule.two.action=auth
+rule.two.rule=Host(`two.com`) && Path(`/two`)

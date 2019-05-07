@@ -165,6 +165,18 @@ func TestConfigParseIni(t *testing.T) {
 	assert.Equal("inicookiename", c.CookieName, "should be read from ini file")
 	assert.Equal("csrfcookiename", c.CSRFCookieName, "should be read from ini file")
 	assert.Equal("/two", c.Path, "variable in second ini file should override first ini file")
+	assert.Equal(map[string]*Rule{
+		"1": {
+			Action:   "allow",
+			Rule:     "PathPrefix(`/one`)",
+			Provider: "google",
+		},
+		"two": {
+			Action:   "auth",
+			Rule:     "Host(`two.com`) && Path(`/two`)",
+			Provider: "google",
+		},
+	}, c.Rules)
 }
 
 func TestConfigFileBackwardsCompatability(t *testing.T) {

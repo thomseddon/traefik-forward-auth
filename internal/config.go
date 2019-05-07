@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jessevdk/go-flags"
+	"github.com/thomseddon/go-flags"
 	"github.com/thomseddon/traefik-forward-auth/internal/provider"
 )
 
@@ -141,7 +141,7 @@ func NewConfig(args []string) (Config, error) {
 }
 
 func (c *Config) parseFlags(args []string) error {
-	p := flags.NewParser(c, flags.Default)
+	p := flags.NewParser(c, flags.Default | flags.IniUnknownOptionHandler)
 	p.UnknownOptionHandler = c.parseUnknownFlag
 
 	i := flags.NewIniParser(p)
@@ -157,6 +157,7 @@ func (c *Config) parseFlags(args []string) error {
 				return err
 			}
 
+			fmt.Println("config format deprecated, please use ini format")
 			return i.Parse(converted)
 		}
 
