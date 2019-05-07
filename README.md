@@ -128,12 +128,12 @@ Application Options:
   --rules.<name>.<param>=                               Rule definitions, param can be: "action" or "rule"
 
 Google Provider:
-  --providers.google.client-id=                         Client ID [$CLIENT_ID]
-  --providers.google.client-secret=                     Client Secret [$CLIENT_SECRET]
-  --providers.google.prompt=                            Space separated list of OpenID prompt options [$PROMPT]
+  --providers.google.client-id=                         Client ID [$PROVIDERS_GOOGLE_CLIENT_ID]
+  --providers.google.client-secret=                     Client Secret [$PROVIDERS_GOOGLE_CLIENT_SECRET]
+  --providers.google.prompt=                            Space separated list of OpenID prompt options [$PROVIDERS_GOOGLE_PROMPT]
 
 Help Options:
-  -h, --help                                                Show this help message
+  -h, --help                                            Show this help message
 ```
 
 All options can be supplied in any of the following ways, in the following precedence (first is highest precedence):

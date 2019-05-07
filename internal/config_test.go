@@ -181,10 +181,12 @@ func TestConfigFileBackwardsCompatability(t *testing.T) {
 func TestConfigParseEnvironment(t *testing.T) {
 	assert := assert.New(t)
 	os.Setenv("COOKIE_NAME", "env_cookie_name")
+	os.Setenv("PROVIDERS_GOOGLE_CLIENT_ID", "env_client_id")
 	c, err := NewConfig([]string{})
 	assert.Nil(err)
 
 	assert.Equal("env_cookie_name", c.CookieName, "variable should be read from environment")
+	assert.Equal("env_client_id", c.Providers.Google.ClientId, "namespace variable should be read from environment")
 }
 
 func TestConfigTransformation(t *testing.T) {
