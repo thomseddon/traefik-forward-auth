@@ -98,7 +98,7 @@ Click "Create Credentials" > "OAuth client ID". Select "Web Application", fill i
 
 #### Upgrade Guide
 
-v2 was released in April 2019, whilst this is fully backwards compatibile, a number of configuration options were modified, please see the [upgrade guide](https://github.com/thomseddon/traefik-forward-auth/wiki/v2-Upgrade-Guide) to prevent warnings on startup and ensure you are using the current configuration.
+v2 was released in April 2019, whilst this is fully backwards compatible, a number of configuration options were modified, please see the [upgrade guide](https://github.com/thomseddon/traefik-forward-auth/wiki/v2-Upgrade-Guide) to prevent warnings on startup and ensure you are using the current configuration.
 
 ## Configuration
 
