@@ -175,7 +175,7 @@ func (s *Server) logger(r *http.Request, rule, msg string) *logrus.Entry {
 
 	// Log request
 	logger.WithFields(logrus.Fields{
-		"rule": rule,
+		"rule":    rule,
 		"headers": r.Header,
 	}).Debug(msg)
 

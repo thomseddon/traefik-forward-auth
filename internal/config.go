@@ -41,7 +41,7 @@ type Config struct {
 	Rules     map[string]*Rule   `long:"rules.<name>.<param>" description:"Rule definitions, param can be: \"action\" or \"rule\""`
 
 	// Filled during transformations
-	Secret   []byte  `json:"-"`
+	Secret   []byte `json:"-"`
 	Lifetime time.Duration
 
 	// Legacy
@@ -141,7 +141,7 @@ func NewConfig(args []string) (Config, error) {
 }
 
 func (c *Config) parseFlags(args []string) error {
-	p := flags.NewParser(c, flags.Default | flags.IniUnknownOptionHandler)
+	p := flags.NewParser(c, flags.Default|flags.IniUnknownOptionHandler)
 	p.UnknownOptionHandler = c.parseUnknownFlag
 
 	i := flags.NewIniParser(p)

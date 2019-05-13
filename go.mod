@@ -25,7 +25,7 @@ require (
 	github.com/sirupsen/logrus v1.4.1
 	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/stretchr/testify v1.3.0
-	github.com/thomseddon/go-flags v1.4.1-0.20190507181358-ce437f05b7fb
+	github.com/thomseddon/go-flags v1.4.1-0.20190507184247-a3629c504486
 	github.com/vulcand/predicate v1.1.0 // indirect
 	golang.org/x/crypto v0.0.0-20190422183909-d864b10871cd // indirect
 	golang.org/x/net v0.0.0-20190420063019-afa5a82059c6 // indirect
