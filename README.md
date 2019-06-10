@@ -4,7 +4,6 @@
 
 A minimal forward authentication service that provides Google oauth based login and authentication for the [traefik](https://github.com/containous/traefik) reverse proxy/load balancer.
 
-
 ## Why?
 
 - Seamlessly overlays any http service with a single endpoint (see: `url-path` in [Configuration](#configuration))
@@ -16,6 +15,7 @@ A minimal forward authentication service that provides Google oauth based login 
 
 # Contents
 
+- [Releases](#releases)
 - [Usage](#usage)
   - [Simple](#simple)
   - [Advanced](#advanced)
@@ -31,6 +31,16 @@ A minimal forward authentication service that provides Google oauth based login 
     - [Auth Host Mode](#auth-host-mode)
 - [Copyright](#copyright)
 - [License](#license)
+
+## Releases
+
+We recommend using the `2` tag on docker hub.
+
+You can also use the latest incremental releases found on [docker hub](https://hub.docker.com/r/thomseddon/traefik-forward-auth/tags) and [github](https://github.com/thomseddon/traefik-forward-auth/releases).
+
+#### Upgrade Guide
+
+v2 was released in June 2019, whilst this is fully backwards compatible, a number of configuration options were modified, please see the [upgrade guide](https://github.com/thomseddon/traefik-forward-auth/wiki/v2-Upgrade-Guide) to prevent warnings on startup and ensure you are using the current configuration.
 
 ## Usage
 
@@ -95,10 +105,6 @@ Head to https://console.developers.google.com and make sure you've switched to t
 Create a new project then search for and select "Credentials" in the search bar. Fill out the "OAuth Consent Screen" tab.
 
 Click "Create Credentials" > "OAuth client ID". Select "Web Application", fill in the name of your app, skip "Authorized JavaScript origins" and fill "Authorized redirect URIs" with all the domains you will allow authentication from, appended with the `url-path` (e.g. https://app.test.com/_oauth)
-
-#### Upgrade Guide
-
-v2 was released in April 2019, whilst this is fully backwards compatible, a number of configuration options were modified, please see the [upgrade guide](https://github.com/thomseddon/traefik-forward-auth/wiki/v2-Upgrade-Guide) to prevent warnings on startup and ensure you are using the current configuration.
 
 ## Configuration
 
