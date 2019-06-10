@@ -98,6 +98,29 @@ func TestConfigParseUnknownFlags(t *testing.T) {
 	}
 }
 
+func TestConfigParseRuleError(t *testing.T) {
+	assert := assert.New(t)
+
+	// Rule without name
+	_, err := NewConfig([]string{
+		"--rule..action=auth",
+	})
+	if assert.Error(err) {
+		assert.Equal("route name is required", err.Error())
+	}
+
+	// Rule without value
+	c, err := NewConfig([]string{
+		"--rule.one.action=",
+	})
+	if assert.Error(err) {
+		assert.Equal("route param value is required", err.Error())
+	}
+	// Check rules
+	assert.Equal(map[string]*Rule{}, c.Rules)
+}
+
+
 func TestConfigFlagBackwardsCompatability(t *testing.T) {
 	assert := assert.New(t)
 	c, err := NewConfig([]string{

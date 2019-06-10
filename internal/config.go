@@ -176,16 +176,15 @@ func (c *Config) parseUnknownFlag(option string, arg flags.SplitArgument, args [
 	// Parse rules in the format "rule.<name>.<param>"
 	parts := strings.Split(option, ".")
 	if len(parts) == 3 && parts[0] == "rule" {
-		// Get or create rule
-		rule, ok := c.Rules[parts[1]]
-		if !ok {
-			rule = NewRule()
-			c.Rules[parts[1]] = rule
+		// Ensure there is a name
+		name := parts[1]
+		if len(name) == 0 {
+			return args, errors.New("route name is required")
 		}
 
 		// Get value, or pop the next arg
 		val, ok := arg.Value()
-		if !ok {
+		if !ok && len(args) > 1 {
 			val = args[0]
 			args = args[1:]
 		}
@@ -202,6 +201,13 @@ func (c *Config) parseUnknownFlag(option string, arg flags.SplitArgument, args [
 			if err != nil {
 				return args, err
 			}
+		}
+
+		// Get or create rule
+		rule, ok := c.Rules[name]
+		if !ok {
+			rule = NewRule()
+			c.Rules[name] = rule
 		}
 
 		// Add param value to rule
