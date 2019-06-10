@@ -250,7 +250,7 @@ func (c *Config) Validate() {
 	}
 
 	if c.Providers.Google.ClientId == "" || c.Providers.Google.ClientSecret == "" {
-		log.Fatal("google.providers.client-id, google.providers.client-secret must be set")
+		log.Fatal("providers.google.client-id, providers.google.client-secret must be set")
 	}
 
 	// Check rules
