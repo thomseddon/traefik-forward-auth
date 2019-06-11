@@ -131,7 +131,7 @@ func TestConfigFlagBackwardsCompatability(t *testing.T) {
 		"--cookie-secure=false",
 		"--cookie-domains=test1.com,example.org",
 		"--cookie-domain=another1.net",
-		"--domains=test2.com,example.org",
+		"--domain=test2.com,example.org",
 		"--domain=another2.net",
 		"--whitelist=test3.com,example.org",
 		"--whitelist=another3.net",
@@ -146,7 +146,7 @@ func TestConfigFlagBackwardsCompatability(t *testing.T) {
 	}
 	assert.Equal(expected1, c.CookieDomains, "should read legacy comma separated list cookie-domains")
 
-	expected2 := []string{"another2.net", "test2.com", "example.org"}
+	expected2 := CommaSeparatedList{"test2.com", "example.org", "another2.net"}
 	assert.Equal(expected2, c.Domains, "should read legacy comma separated list domains")
 
 	expected3 := CommaSeparatedList{"test3.com", "example.org", "another3.net"}
@@ -237,8 +237,7 @@ func TestConfigParseEnvironmentBackwardsCompatability(t *testing.T) {
 		"COOKIE_SECURE":  "false",
 		"COOKIE_DOMAINS": "test1.com,example.org",
 		"COOKIE_DOMAIN":  "another1.net",
-		"DOMAINS":        "test2.com,example.org",
-		"DOMAIN":         "another2.net",
+		"DOMAIN":        "test2.com,example.org",
 		"WHITELIST":      "test3.com,example.org",
 	}
 	for k, v := range vars {
@@ -255,7 +254,7 @@ func TestConfigParseEnvironmentBackwardsCompatability(t *testing.T) {
 	}
 	assert.Equal(expected1, c.CookieDomains, "should read legacy comma separated list cookie-domains")
 
-	expected2 := []string{"another2.net", "test2.com", "example.org"}
+	expected2 := CommaSeparatedList{"test2.com", "example.org"}
 	assert.Equal(expected2, c.Domains, "should read legacy comma separated list domains")
 
 	expected3 := CommaSeparatedList{"test3.com", "example.org"}

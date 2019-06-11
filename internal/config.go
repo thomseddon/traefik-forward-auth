@@ -31,7 +31,7 @@ type Config struct {
 	CookieName     string               `long:"cookie-name" env:"COOKIE_NAME" default:"_forward_auth" description:"Cookie Name"`
 	CSRFCookieName string               `long:"csrf-cookie-name" env:"CSRF_COOKIE_NAME" default:"_forward_auth_csrf" description:"CSRF Cookie Name"`
 	DefaultAction  string               `long:"default-action" env:"DEFAULT_ACTION" default:"auth" choice:"auth" choice:"allow" description:"Default action"`
-	Domains        []string             `long:"domain" env:"DOMAIN" description:"Only allow given email domains, can be set multiple times"`
+	Domains        CommaSeparatedList   `long:"domain" env:"DOMAIN" description:"Only allow given email domains, can be set multiple times"`
 	LifetimeString int                  `long:"lifetime" env:"LIFETIME" default:"43200" description:"Lifetime in seconds"`
 	Path           string               `long:"url-path" env:"URL_PATH" default:"/_oauth" description:"Callback URL Path"`
 	SecretString   string               `long:"secret" env:"SECRET" description:"Secret used for signing (required)" json:"-"`
@@ -45,13 +45,12 @@ type Config struct {
 	Lifetime time.Duration
 
 	// Legacy
-	CookieDomainsLegacy CookieDomains      `long:"cookie-domains" env:"COOKIE_DOMAINS" description:"DEPRECATED - Use \"cookie-domain\""`
-	CookieSecretLegacy  string             `long:"cookie-secret" env:"COOKIE_SECRET" description:"DEPRECATED - Use \"secret\""  json:"-"`
-	CookieSecureLegacy  string             `long:"cookie-secure" env:"COOKIE_SECURE" description:"DEPRECATED - Use \"insecure-cookie\""`
-	DomainsLegacy       CommaSeparatedList `long:"domains" env:"DOMAINS" description:"DEPRECATED - Use \"domain\""`
-	ClientIdLegacy      string             `long:"client-id" env:"CLIENT_ID" group:"DEPs" description:"DEPRECATED - Use \"providers.google.client-id\""`
-	ClientSecretLegacy  string             `long:"client-secret" env:"CLIENT_SECRET" description:"DEPRECATED - Use \"providers.google.client-id\""  json:"-"`
-	PromptLegacy        string             `long:"prompt" env:"PROMPT" description:"DEPRECATED - Use \"providers.google.prompt\""`
+	CookieDomainsLegacy CookieDomains `long:"cookie-domains" env:"COOKIE_DOMAINS" description:"DEPRECATED - Use \"cookie-domain\""`
+	CookieSecretLegacy  string        `long:"cookie-secret" env:"COOKIE_SECRET" description:"DEPRECATED - Use \"secret\""  json:"-"`
+	CookieSecureLegacy  string        `long:"cookie-secure" env:"COOKIE_SECURE" description:"DEPRECATED - Use \"insecure-cookie\""`
+	ClientIdLegacy      string        `long:"client-id" env:"CLIENT_ID" group:"DEPs" description:"DEPRECATED - Use \"providers.google.client-id\""`
+	ClientSecretLegacy  string        `long:"client-secret" env:"CLIENT_SECRET" description:"DEPRECATED - Use \"providers.google.client-id\""  json:"-"`
+	PromptLegacy        string        `long:"prompt" env:"PROMPT" description:"DEPRECATED - Use \"providers.google.prompt\""`
 }
 
 func NewGlobalConfig() Config {
@@ -124,10 +123,6 @@ func NewConfig(args []string) (Config, error) {
 	if len(c.CookieDomainsLegacy) > 0 {
 		fmt.Println("cookie-domains config option is deprecated, please use cookie-domain")
 		c.CookieDomains = append(c.CookieDomains, c.CookieDomainsLegacy...)
-	}
-	if len(c.DomainsLegacy) > 0 {
-		fmt.Println("domains config option is deprecated, please use domain")
-		c.Domains = append(c.Domains, c.DomainsLegacy...)
 	}
 
 	// Transformations
