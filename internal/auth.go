@@ -133,9 +133,14 @@ func redirectBase(r *http.Request) string {
 
 // Return url
 func returnUrl(r *http.Request) string {
+	replacedPath := r.Header.Get("X-Replaced-Path")
+	if replacedPath != "" {
+		return fmt.Sprintf("%s%s", redirectBase(r), replacedPath)
+	}
 	path := r.Header.Get("X-Forwarded-Uri")
+	prefix := r.Header.Get(("X-Forwarded-Prefix"))
 
-	return fmt.Sprintf("%s%s", redirectBase(r), path)
+	return fmt.Sprintf("%s%s%s", redirectBase(r), prefix, path)
 }
 
 // Get oauth redirect uri

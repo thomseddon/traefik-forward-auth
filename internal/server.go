@@ -1,6 +1,7 @@
 package tfa
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 
@@ -58,7 +59,19 @@ func (s *Server) RootHandler(w http.ResponseWriter, r *http.Request) {
 	// Modify request
 	r.Method = r.Header.Get("X-Forwarded-Method")
 	r.Host = r.Header.Get("X-Forwarded-Host")
-	r.URL, _ = url.Parse(r.Header.Get("X-Forwarded-Uri"))
+
+	path := r.Header.Get("X-Forwarded-Uri")
+	r.URL, _ = url.Parse(path)
+
+	prefix := r.Header.Get("X-Forwarded-Prefix")
+	if prefix != "" {
+		// Use X-Forwarded-Prefix if present (PathPrefixStrip traefik rules)
+		r.URL, _ = url.Parse(fmt.Sprintf("%s%s", prefix, path))
+	}
+	// Use X-Replaced-Path if present (Traefik Modifiers)
+	if r.Header.Get("X-Replaced-Path") != "" {
+		r.URL, _ = url.Parse(r.Header.Get("X-Replaced-Path"))
+	}
 
 	// Pass to mux
 	s.router.ServeHTTP(w, r)

@@ -428,6 +428,18 @@ func TestServerRoutePath(t *testing.T) {
 	req = newDefaultHttpRequest("/private/path")
 	res, _ = doHttpRequest(req, nil)
 	assert.Equal(200, res.StatusCode, "request matching allow rule should be allowed")
+
+	// Should allow matching request
+	req = newDefaultHttpRequest("/path")
+	req.Header.Add("X-Forwarded-Prefix", "/private")
+	res, _ = doHttpRequest(req, nil)
+	assert.Equal(200, res.StatusCode, "request matching allow rule should be allowed")
+
+	// Should allow matching request
+	req = newDefaultHttpRequest("/replaced/path")
+	req.Header.Add("X-Replaced-Path", "/private/path")
+	res, _ = doHttpRequest(req, nil)
+	assert.Equal(200, res.StatusCode, "request matching allow rule should be allowed")
 }
 
 func TestServerRouteQuery(t *testing.T) {
