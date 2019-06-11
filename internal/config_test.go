@@ -120,7 +120,6 @@ func TestConfigParseRuleError(t *testing.T) {
 	assert.Equal(map[string]*Rule{}, c.Rules)
 }
 
-
 func TestConfigFlagBackwardsCompatability(t *testing.T) {
 	assert := assert.New(t)
 	c, err := NewConfig([]string{
@@ -222,6 +221,71 @@ func TestConfigParseEnvironment(t *testing.T) {
 
 	assert.Equal("env_cookie_name", c.CookieName, "variable should be read from environment")
 	assert.Equal("env_client_id", c.Providers.Google.ClientId, "namespace variable should be read from environment")
+
+	os.Unsetenv("COOKIE_NAME")
+	os.Unsetenv("PROVIDERS_GOOGLE_CLIENT_ID")
+}
+
+func TestConfigParseEnvironmentBackwardsCompatability(t *testing.T) {
+	assert := assert.New(t)
+	vars := map[string]string{
+		"CLIENT_ID":      "clientid",
+		"CLIENT_SECRET":  "verysecret",
+		"PROMPT":         "prompt",
+		"COOKIE_SECRET":  "veryverysecret",
+		"LIFETIME":       "200",
+		"COOKIE_SECURE":  "false",
+		"COOKIE_DOMAINS": "test1.com,example.org",
+		"COOKIE_DOMAIN":  "another1.net",
+		"DOMAINS":        "test2.com,example.org",
+		"DOMAIN":         "another2.net",
+		"WHITELIST":      "test3.com,example.org",
+	}
+	for k, v := range vars {
+		os.Setenv(k, v)
+	}
+	c, err := NewConfig([]string{})
+	require.Nil(t, err)
+
+	// The following used to be passed as comma separated list
+	expected1 := []CookieDomain{
+		*NewCookieDomain("another1.net"),
+		*NewCookieDomain("test1.com"),
+		*NewCookieDomain("example.org"),
+	}
+	assert.Equal(expected1, c.CookieDomains, "should read legacy comma separated list cookie-domains")
+
+	expected2 := []string{"another2.net", "test2.com", "example.org"}
+	assert.Equal(expected2, c.Domains, "should read legacy comma separated list domains")
+
+	expected3 := CommaSeparatedList{"test3.com", "example.org"}
+	assert.Equal(expected3, c.Whitelist, "should read legacy comma separated list whitelist")
+
+	// Name changed
+	assert.Equal([]byte("veryverysecret"), c.Secret)
+
+	// Google provider params used to be top level
+	assert.Equal("clientid", c.ClientIdLegacy)
+	assert.Equal("clientid", c.Providers.Google.ClientId, "--client-id should set providers.google.client-id")
+	assert.Equal("verysecret", c.ClientSecretLegacy)
+	assert.Equal("verysecret", c.Providers.Google.ClientSecret, "--client-secret should set providers.google.client-secret")
+	assert.Equal("prompt", c.PromptLegacy)
+	assert.Equal("prompt", c.Providers.Google.Prompt, "--prompt should set providers.google.promot")
+
+	// "cookie-secure" used to be a standard go bool flag that could take
+	// true, TRUE, 1, false, FALSE, 0 etc. values.
+	// Here we're checking that format is still suppoted
+	assert.Equal("false", c.CookieSecureLegacy)
+	assert.True(c.InsecureCookie, "--cookie-secure=false should set insecure-cookie true")
+
+	c, err = NewConfig([]string{"--cookie-secure=TRUE"})
+	assert.Nil(err)
+	assert.Equal("TRUE", c.CookieSecureLegacy)
+	assert.False(c.InsecureCookie, "--cookie-secure=TRUE should set insecure-cookie false")
+
+	for k := range vars {
+		os.Unsetenv(k)
+	}
 }
 
 func TestConfigTransformation(t *testing.T) {
