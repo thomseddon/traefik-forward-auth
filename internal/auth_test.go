@@ -24,28 +24,24 @@ func TestAuthValidateCookie(t *testing.T) {
 
 	// Should require 3 parts
 	c.Value = ""
-	valid, _, err := ValidateCookie(r, c)
-	assert.False(valid)
+	_, err := ValidateCookie(r, c)
 	if assert.Error(err) {
 		assert.Equal("Invalid cookie format", err.Error())
 	}
 	c.Value = "1|2"
-	valid, _, err = ValidateCookie(r, c)
-	assert.False(valid)
+	_, err = ValidateCookie(r, c)
 	if assert.Error(err) {
 		assert.Equal("Invalid cookie format", err.Error())
 	}
 	c.Value = "1|2|3|4"
-	valid, _, err = ValidateCookie(r, c)
-	assert.False(valid)
+	_, err = ValidateCookie(r, c)
 	if assert.Error(err) {
 		assert.Equal("Invalid cookie format", err.Error())
 	}
 
 	// Should catch invalid mac
 	c.Value = "MQ==|2|3"
-	valid, _, err = ValidateCookie(r, c)
-	assert.False(valid)
+	_, err = ValidateCookie(r, c)
 	if assert.Error(err) {
 		assert.Equal("Invalid cookie mac", err.Error())
 	}
@@ -53,8 +49,7 @@ func TestAuthValidateCookie(t *testing.T) {
 	// Should catch expired
 	config.Lifetime = time.Second * time.Duration(-1)
 	c = MakeCookie(r, "test@test.com")
-	valid, _, err = ValidateCookie(r, c)
-	assert.False(valid)
+	_, err = ValidateCookie(r, c)
 	if assert.Error(err) {
 		assert.Equal("Cookie has expired", err.Error())
 	}
@@ -62,8 +57,7 @@ func TestAuthValidateCookie(t *testing.T) {
 	// Should accept valid cookie
 	config.Lifetime = time.Second * time.Duration(10)
 	c = MakeCookie(r, "test@test.com")
-	valid, email, err := ValidateCookie(r, c)
-	assert.True(valid, "valid request should return valid")
+	email, err := ValidateCookie(r, c)
 	assert.Nil(err, "valid request should not return an error")
 	assert.Equal("test@test.com", email, "valid request should return user email")
 }
@@ -244,8 +238,8 @@ func TestAuthMakeCookie(t *testing.T) {
 	assert.Equal("_forward_auth", c.Name)
 	parts := strings.Split(c.Value, "|")
 	assert.Len(parts, 3, "cookie should be 3 parts")
-	valid, _, _ := ValidateCookie(r, c)
-	assert.True(valid, "should generate valid cookie")
+	_, err := ValidateCookie(r, c)
+	assert.Nil(err, "should generate valid cookie")
 	assert.Equal("/", c.Path)
 	assert.Equal("app.example.com", c.Domain)
 	assert.True(c.Secure)

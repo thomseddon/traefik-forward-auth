@@ -72,35 +72,25 @@ func (s *Server) AuthHandler(rule string) http.HandlerFunc {
 		// Get auth cookie
 		c, err := r.Cookie(config.CookieName)
 		if err != nil {
-			// Error indicates no cookie, generate nonce
-			err, nonce := Nonce()
-			if err != nil {
-				logger.Errorf("Error generating nonce, %v", err)
-				http.Error(w, "Service unavailable", 503)
-				return
-			}
-
-			// Set the CSRF cookie
-			http.SetCookie(w, MakeCSRFCookie(r, nonce))
-			logger.Debug("Set CSRF cookie and redirecting to google login")
-
-			// Forward them on
-			http.Redirect(w, r, GetLoginURL(r, nonce), http.StatusTemporaryRedirect)
-
-			logger.Debug("Done")
+			s.authRedirect(logger, w, r)
 			return
 		}
 
 		// Validate cookie
-		valid, email, err := ValidateCookie(r, c)
-		if !valid {
-			logger.Errorf("Invalid cookie: %v", err)
-			http.Error(w, "Not authorized", 401)
+		email, err := ValidateCookie(r, c)
+		if err != nil {
+			if err.Error() == "Cookie has expired" {
+				logger.Info("Cookie has expired")
+				s.authRedirect(logger, w, r)
+			} else {
+				logger.Errorf("Invalid cookie: %v", err)
+				http.Error(w, "Not authorized", 401)
+			}
 			return
 		}
 
 		// Validate user
-		valid = ValidateEmail(email)
+		valid := ValidateEmail(email)
 		if !valid {
 			logger.WithFields(logrus.Fields{
 				"email": email,
@@ -165,6 +155,26 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 		// Redirect
 		http.Redirect(w, r, redirect, http.StatusTemporaryRedirect)
 	}
+}
+
+func (s *Server) authRedirect(logger *logrus.Entry, w http.ResponseWriter, r *http.Request) {
+	// Error indicates no cookie, generate nonce
+	err, nonce := Nonce()
+	if err != nil {
+		logger.Errorf("Error generating nonce, %v", err)
+		http.Error(w, "Service unavailable", 503)
+		return
+	}
+
+	// Set the CSRF cookie
+	http.SetCookie(w, MakeCSRFCookie(r, nonce))
+	logger.Debug("Set CSRF cookie and redirecting to google login")
+
+	// Forward them on
+	http.Redirect(w, r, GetLoginURL(r, nonce), http.StatusTemporaryRedirect)
+
+	logger.Debug("Done")
+	return
 }
 
 func (s *Server) logger(r *http.Request, rule, msg string) *logrus.Entry {

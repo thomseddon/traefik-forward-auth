@@ -237,7 +237,7 @@ func TestConfigParseEnvironmentBackwardsCompatability(t *testing.T) {
 		"COOKIE_SECURE":  "false",
 		"COOKIE_DOMAINS": "test1.com,example.org",
 		"COOKIE_DOMAIN":  "another1.net",
-		"DOMAIN":        "test2.com,example.org",
+		"DOMAIN":         "test2.com,example.org",
 		"WHITELIST":      "test3.com,example.org",
 	}
 	for k, v := range vars {

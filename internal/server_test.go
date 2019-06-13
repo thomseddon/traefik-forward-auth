@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -27,7 +28,7 @@ func init() {
  * Tests
  */
 
-func TestServerAuthHandler(t *testing.T) {
+func TestServerAuthHandlerInvalid(t *testing.T) {
 	assert := assert.New(t)
 	config, _ = NewConfig([]string{})
 
@@ -57,13 +58,46 @@ func TestServerAuthHandler(t *testing.T) {
 
 	res, _ = doHttpRequest(req, c)
 	assert.Equal(401, res.StatusCode, "invalid email should not be authorised")
+}
+
+func TestServerAuthHandlerExpired(t *testing.T) {
+	assert := assert.New(t)
+	config, _ = NewConfig([]string{})
+	config.Lifetime = time.Second * time.Duration(-1)
+	config.Domains = []string{"test.com"}
+
+	// Should redirect expired cookie
+	req := newDefaultHttpRequest("/foo")
+	c := MakeCookie(req, "test@example.com")
+	res, _ := doHttpRequest(req, c)
+	assert.Equal(307, res.StatusCode, "request with expired cookie should be redirected")
+
+	// Check for CSRF cookie
+	var cookie *http.Cookie
+	for _, c := range res.Cookies() {
+		if c.Name == config.CSRFCookieName {
+			cookie = c
+		}
+	}
+	assert.NotNil(cookie)
+
+	// Check redirection location
+	fwd, _ := res.Location()
+	assert.Equal("https", fwd.Scheme, "request with expired cookie should be redirected to google")
+	assert.Equal("accounts.google.com", fwd.Host, "request with expired cookie should be redirected to google")
+	assert.Equal("/o/oauth2/auth", fwd.Path, "request with expired cookie should be redirected to google")
+}
+
+func TestServerAuthHandlerValid(t *testing.T) {
+	assert := assert.New(t)
+	config, _ = NewConfig([]string{})
 
 	// Should allow valid request email
-	req = newDefaultHttpRequest("/foo")
-	c = MakeCookie(req, "test@example.com")
+	req := newDefaultHttpRequest("/foo")
+	c := MakeCookie(req, "test@example.com")
 	config.Domains = []string{}
 
-	res, _ = doHttpRequest(req, c)
+	res, _ := doHttpRequest(req, c)
 	assert.Equal(200, res.StatusCode, "valid request should be allowed")
 
 	// Should pass through user
