@@ -59,6 +59,25 @@ func (s *Server) RootHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) AllowHandler(rule string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s.logger(r, rule, "Allowing request")
+
+		// Get auth cookie
+		c, err := r.Cookie(config.CookieName)
+		
+		// IF cookie exists validate it
+		if err == nil {
+			email, err := ValidateCookie(r, c)
+
+			// if cookie is valid validate email
+			if err == nil {
+				valid := ValidateEmail(email)
+
+				// If the email is valid set the header 
+				if (valid) {
+					w.Header().Set("X-Forwarded-User", email)
+				}
+			}
+		}
+
 		w.WriteHeader(200)
 	}
 }
