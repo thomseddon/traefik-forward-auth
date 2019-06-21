@@ -213,6 +213,8 @@ func (c *Config) parseUnknownFlag(option string, arg flags.SplitArgument, args [
 			rule.Rule = val
 		case "provider":
 			rule.Provider = val
+		case "email":
+			rule.Email = val
 		default:
 			return args, fmt.Errorf("inavlid route param: %v", option)
 		}
@@ -269,6 +271,7 @@ type Rule struct {
 	Action   string
 	Rule     string
 	Provider string
+	Email 	 string
 }
 
 func NewRule() *Rule {

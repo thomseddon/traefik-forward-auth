@@ -28,7 +28,7 @@ func (s *Server) buildRoutes() {
 	// Let's build a router
 	for name, rule := range config.Rules {
 		if rule.Action == "allow" {
-			s.router.AddRoute(rule.formattedRule(), 1, s.AllowHandler(name))
+			s.router.AddRoute(rule.formattedRule(), 1, s.AllowHandler(name, rule.Email))
 		} else {
 			s.router.AddRoute(rule.formattedRule(), 1, s.AuthHandler(name))
 		}
@@ -39,7 +39,7 @@ func (s *Server) buildRoutes() {
 
 	// Add a default handler
 	if config.DefaultAction == "allow" {
-		s.router.NewRoute().Handler(s.AllowHandler("default"))
+		s.router.NewRoute().Handler(s.AllowHandler("default", ""))
 	} else {
 		s.router.NewRoute().Handler(s.AuthHandler("default"))
 	}
@@ -56,9 +56,32 @@ func (s *Server) RootHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // Handler that allows requests
-func (s *Server) AllowHandler(rule string) http.HandlerFunc {
+func (s *Server) AllowHandler(rule string, email string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s.logger(r, rule, "Allowing request")
+
+		// Check if user is authenticated
+		c, err := r.Cookie(config.CookieName)
+
+		// If cookie exists validate it
+		if err == nil {
+			cookieEmail, err := ValidateCookie(r, c)
+
+			// if cookie is valid validate email
+			if err == nil {
+				valid := ValidateEmail(cookieEmail)
+
+				// If the email is valid set the header 
+				if (valid) {
+					email = cookieEmail
+				}
+			}
+		}
+
+		if email != "" {
+			w.Header().Set("X-Forwarded-User", email)
+		}
+
 		w.WriteHeader(200)
 	}
 }
