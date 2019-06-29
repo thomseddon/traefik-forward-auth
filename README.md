@@ -34,7 +34,7 @@ A minimal forward authentication service that provides Google oauth based login 
 
 ## Releases
 
-We recommend using the `2` tag on docker hub.
+We recommend using the `v2.0.0` tag on docker hub.
 
 You can also use the latest incremental releases found on [docker hub](https://hub.docker.com/r/thomseddon/traefik-forward-auth/tags) and [github](https://github.com/thomseddon/traefik-forward-auth/releases).
 
@@ -63,7 +63,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
 
   traefik-forward-auth:
-    image: thomseddon/traefik-forward-auth:2
+    image: thomseddon/traefik-forward-auth:v2.0.0
     environment:
       - CLIENT_ID=your-client-id
       - CLIENT_SECRET=your-client-secret
