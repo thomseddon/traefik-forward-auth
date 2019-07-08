@@ -273,7 +273,7 @@ func TestConfigParseEnvironmentBackwardsCompatability(t *testing.T) {
 
 	// "cookie-secure" used to be a standard go bool flag that could take
 	// true, TRUE, 1, false, FALSE, 0 etc. values.
-	// Here we're checking that format is still suppoted
+	// Here we're checking that format is still supported
 	assert.Equal("false", c.CookieSecureLegacy)
 	assert.True(c.InsecureCookie, "--cookie-secure=false should set insecure-cookie true")
 

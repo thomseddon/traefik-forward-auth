@@ -48,7 +48,7 @@ type Config struct {
 	CookieDomainsLegacy CookieDomains `long:"cookie-domains" env:"COOKIE_DOMAINS" description:"DEPRECATED - Use \"cookie-domain\""`
 	CookieSecretLegacy  string        `long:"cookie-secret" env:"COOKIE_SECRET" description:"DEPRECATED - Use \"secret\""  json:"-"`
 	CookieSecureLegacy  string        `long:"cookie-secure" env:"COOKIE_SECURE" description:"DEPRECATED - Use \"insecure-cookie\""`
-	ClientIdLegacy      string        `long:"client-id" env:"CLIENT_ID" group:"DEPs" description:"DEPRECATED - Use \"providers.google.client-id\""`
+	ClientIdLegacy      string        `long:"client-id" env:"CLIENT_ID" description:"DEPRECATED - Use \"providers.google.client-id\""`
 	ClientSecretLegacy  string        `long:"client-secret" env:"CLIENT_SECRET" description:"DEPRECATED - Use \"providers.google.client-id\""  json:"-"`
 	PromptLegacy        string        `long:"prompt" env:"PROMPT" description:"DEPRECATED - Use \"providers.google.prompt\""`
 }
@@ -161,7 +161,7 @@ func (c *Config) parseFlags(args []string) error {
 
 	_, err := p.ParseArgs(args)
 	if err != nil {
-		return handlFlagError(err)
+		return handleFlagError(err)
 	}
 
 	return nil
@@ -214,7 +214,7 @@ func (c *Config) parseUnknownFlag(option string, arg flags.SplitArgument, args [
 		case "provider":
 			rule.Provider = val
 		default:
-			return args, fmt.Errorf("inavlid route param: %v", option)
+			return args, fmt.Errorf("invalid route param: %v", option)
 		}
 	} else {
 		return args, fmt.Errorf("unknown flag: %v", option)
@@ -223,7 +223,7 @@ func (c *Config) parseUnknownFlag(option string, arg flags.SplitArgument, args [
 	return args, nil
 }
 
-func handlFlagError(err error) error {
+func handleFlagError(err error) error {
 	flagsErr, ok := err.(*flags.Error)
 	if ok && flagsErr.Type == flags.ErrHelp {
 		// Library has just printed cli help

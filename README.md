@@ -293,7 +293,7 @@ The authenticated user is set in the `X-Forwarded-User` header, to pass this on 
 
 #### Overlay Mode
 
-Overlay is the default operation mode, in this mode the authorisation endpoint is overlayed onto any domain. By default the `/_oauth` path is used, this can be customised using the `url-path` option.
+Overlay is the default operation mode, in this mode the authorisation endpoint is overlaid onto any domain. By default the `/_oauth` path is used, this can be customised using the `url-path` option.
 
 The user flow will be:
 

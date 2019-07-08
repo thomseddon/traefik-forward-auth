@@ -273,7 +273,7 @@ func cookieSignature(r *http.Request, email, expires string) string {
 	return base64.URLEncoding.EncodeToString(hash.Sum(nil))
 }
 
-// Get cookie expirary
+// Get cookie expiry
 func cookieExpiry() time.Time {
 	return time.Now().Local().Add(config.Lifetime)
 }
