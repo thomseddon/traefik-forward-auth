@@ -333,6 +333,8 @@ All options can be supplied in any of the following ways, in the following prece
            - ``Path(`path`, `/articles/{category}/{id:[0-9]+}`, ...)``
            - ``PathPrefix(`/products/`, `/articles/{category}/{id:[0-9]+}`)``
            - ``Query(`foo=bar`, `bar=baz`)``
+       - `whitelist` - optional, same usage as [`whitelist`](#whitelist).
+       - `domains` - optional, same usage as [`domain`](#domain).
 
    For example:
    ```
@@ -361,7 +363,7 @@ You can restrict who can login with the following parameters:
 * `domain` - Use this to limit logins to a specific domain, e.g. test.com only
 * `whitelist` - Use this to only allow specific users to login e.g. thom@test.com only
 
-Note, if you pass both `whitelist` and `domain`, then the default behaviour is for only `whitelist` to be used and `domain` will be effectively ignored. You can allow users matching *either* `whitelist` or `domain` by passing the `match-whitelist-or-domain` parameter (this will be the default behaviour in v3).
+Note, if you pass `whitelist` then only this is checked and `domain` is effectively ignored. If you set `domains` or `whitelist` on a rules, the global configuration is ignored.
 
 ### Forwarded Headers
 

@@ -67,56 +67,65 @@ func TestAuthValidateEmail(t *testing.T) {
 	config, _ = NewConfig([]string{})
 
 	// Should allow any
-	v := ValidateEmail("test@test.com")
+	v := ValidateEmail("test@test.com", "default")
 	assert.True(v, "should allow any domain if email domain is not defined")
-	v = ValidateEmail("one@two.com")
+	v = ValidateEmail("one@two.com", "default")
 	assert.True(v, "should allow any domain if email domain is not defined")
 
 	// Should block non matching domain
 	config.Domains = []string{"test.com"}
-	v = ValidateEmail("one@two.com")
+	v = ValidateEmail("one@two.com", "default")
 	assert.False(v, "should not allow user from another domain")
 
 	// Should allow matching domain
 	config.Domains = []string{"test.com"}
-	v = ValidateEmail("test@test.com")
+	v = ValidateEmail("test@test.com", "default")
 	assert.True(v, "should allow user from allowed domain")
 
 	// Should block non whitelisted email address
 	config.Domains = []string{}
 	config.Whitelist = []string{"test@test.com"}
-	v = ValidateEmail("one@two.com")
+	v = ValidateEmail("one@two.com", "default")
 	assert.False(v, "should not allow user not in whitelist")
 
 	// Should allow matching whitelisted email address
 	config.Domains = []string{}
 	config.Whitelist = []string{"test@test.com"}
-	v = ValidateEmail("test@test.com")
+	v = ValidateEmail("test@test.com", "default")
 	assert.True(v, "should allow user in whitelist")
 
-	// Should allow only matching email address when
-	// MatchWhitelistOrDomain is disabled
-	config.Domains = []string{"example.com"}
-	config.Whitelist = []string{"test@test.com"}
-	config.MatchWhitelistOrDomain = false
-	v = ValidateEmail("test@test.com")
-	assert.True(v, "should allow user in whitelist")
-	v = ValidateEmail("test@example.com")
-	assert.False(v, "should not allow user from valid domain")
-	v = ValidateEmail("one@two.com")
-	assert.False(v, "should not allow user not in either")
+	// Should allow matching whitelisted in rules email address
+	config.Domains = []string{"globaltestdomain.com"}
+	config.Whitelist = []string{}
+	config.Rules = map[string]*Rule{"test": NewRule()}
+	config.Rules["test"].Whitelist = []string{"test@test.com"}
+	// Validation for user in the rule whitelist
+	v = ValidateEmail("test@test.com", "test")
+	assert.True(v, "should allow user in rule whitelist")
+	// Validation for user not in the rule whitelist
+	v = ValidateEmail("test2@test.com", "test")
+	assert.False(v, "should not allow user not in rule whitelist")
+	// Validation for user in global domain but not in rule
+	v = ValidateEmail("test@globaltestdomain.com", "test")
+	assert.False(v, "should not allow user in global but not in rule")
+	// Validation for user in the whitelist, but that not this rule
+	v = ValidateEmail("test@test.com", "default")
+	assert.False(v, "should not allow user not in the rule whitelisted")
 
-	// Should allow either matching domain or email address when
-	// MatchWhitelistOrDomain is enabled
-	config.Domains = []string{"example.com"}
-	config.Whitelist = []string{"test@test.com"}
-	config.MatchWhitelistOrDomain = true
-	v = ValidateEmail("test@test.com")
-	assert.True(v, "should allow user in whitelist")
-	v = ValidateEmail("test@example.com")
-	assert.True(v, "should allow user from valid domain")
-	v = ValidateEmail("one@two.com")
-	assert.False(v, "should not allow user not in either")
+	// Should allow matching domains
+	config.Domains = []string{"globaltestdomain.com"}
+	config.Whitelist = []string{}
+	config.Rules = map[string]*Rule{"test": NewRule()}
+	config.Rules["test"].Domains = []string{"test.com"}
+	// Validation for user in the rule domains
+	v = ValidateEmail("test@test.com", "test")
+	assert.True(v, "should allow user in rule domains")
+	// Validation for user not in the rule whitelist
+	v = ValidateEmail("test@test2.com", "test")
+	assert.False(v, "should not allow user not in rule domains")
+	// Validation for user in the whitelist, but that not this rule
+	v = ValidateEmail("test@test.com", "default")
+	assert.False(v, "should not allow user not in the rule")
 }
 
 func TestRedirectUri(t *testing.T) {

@@ -56,43 +56,76 @@ func ValidateCookie(r *http.Request, c *http.Cookie) (string, error) {
 	return parts[2], nil
 }
 
-// ValidateEmail checks if the given email address matches either a whitelisted
-// email address, as defined by the "whitelist" config parameter. Or is part of
-// a permitted domain, as defined by the "domains" config parameter
-func ValidateEmail(email string) bool {
-	// Do we have any validation to perform?
-	if len(config.Whitelist) == 0 && len(config.Domains) == 0 {
+// Validate email
+func ValidateEmail(email string, rule string) bool {
+	found := false
+
+	_, ruleExists := config.Rules[rule]
+	if ruleExists && len(config.Rules[rule].Whitelist) > 0 {
+		found = ValidateWhitelist(email, config.Rules[rule].Whitelist)
+	} else if ruleExists && len(config.Rules[rule].Domains) > 0 {
+		found = ValidateDomains(email, config.Rules[rule].Domains)
+	} else if len(config.Whitelist) > 0 {
+		found = ValidateWhitelist(email, config.Whitelist)
+	} else if len(config.Domains) > 0 {
+		found = ValidateDomains(email, config.Domains)
+	} else {
 		return true
 	}
 
-	// Email whitelist validation
-	if len(config.Whitelist) > 0 {
-		for _, whitelist := range config.Whitelist {
-			if email == whitelist {
-				return true
-			}
-		}
+	return found
+}
 
-		// If we're not matching *either*, stop here
-		if !config.MatchWhitelistOrDomain {
-			return false
+// Validate email is in whitelist
+func ValidateWhitelist(email string, whitelist CommaSeparatedList) bool {
+	found := false
+	for _, whitelist := range whitelist {
+		if email == whitelist {
+			found = true
 		}
 	}
+	return found
+}
 
-	// Domain validation
-	if len(config.Domains) > 0 {
-		parts := strings.Split(email, "@")
-		if len(parts) < 2 {
-			return false
-		}
-		for _, domain := range config.Domains {
-			if domain == parts[1] {
-				return true
-			}
+// Validate email match a domains
+func ValidateDomains(email string, domains CommaSeparatedList) bool {
+	found := false
+	parts := strings.Split(email, "@")
+	if len(parts) < 2 {
+		return false
+	}
+	for _, domain := range domains {
+		if domain == parts[1] {
+			found = true
 		}
 	}
+	return found
+}
 
-	return false
+// OAuth Methods
+
+// Get login url
+func GetLoginURL(r *http.Request, nonce string) string {
+	state := fmt.Sprintf("%s:%s", nonce, returnUrl(r))
+
+	// TODO: Support multiple providers
+	return config.Providers.Google.GetLoginURL(redirectUri(r), state)
+}
+
+// Exchange code for token
+
+func ExchangeCode(r *http.Request) (string, error) {
+	code := r.URL.Query().Get("code")
+
+	// TODO: Support multiple providers
+	return config.Providers.Google.ExchangeCode(redirectUri(r), code)
+}
+
+// Get user with token
+
+func GetUser(token string) (provider.User, error) {
+	// TODO: Support multiple providers
+	return config.Providers.Google.GetUser(token)
 }
 
 // Utility methods
