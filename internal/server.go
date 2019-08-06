@@ -90,7 +90,7 @@ func (s *Server) AuthHandler(rule string) http.HandlerFunc {
 		}
 
 		// Validate user
-		valid := ValidateEmail(email)
+		valid := ValidateEmail(email, rule)
 		if !valid {
 			logger.WithFields(logrus.Fields{
 				"email": email,

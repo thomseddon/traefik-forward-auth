@@ -56,28 +56,48 @@ func ValidateCookie(r *http.Request, c *http.Cookie) (string, error) {
 }
 
 // Validate email
-func ValidateEmail(email string) bool {
+func ValidateEmail(email string, rule string) bool {
 	found := false
-	if len(config.Whitelist) > 0 {
-		for _, whitelist := range config.Whitelist {
-			if email == whitelist {
-				found = true
-			}
-		}
+
+	_, ruleExists := config.Rules[rule]
+	if ruleExists && len(config.Rules[rule].Whitelist) > 0 {
+		found = ValidateWhitelist(email, config.Rules[rule].Whitelist)
+	} else if ruleExists && len(config.Rules[rule].Domains) > 0 {
+		found = ValidateDomains(email, config.Rules[rule].Domains)
+	} else if len(config.Whitelist) > 0 {
+		found = ValidateWhitelist(email, config.Whitelist)
 	} else if len(config.Domains) > 0 {
-		parts := strings.Split(email, "@")
-		if len(parts) < 2 {
-			return false
-		}
-		for _, domain := range config.Domains {
-			if domain == parts[1] {
-				found = true
-			}
-		}
+		found = ValidateDomains(email, config.Domains)
 	} else {
 		return true
 	}
 
+	return found
+}
+
+// Validate email is in whitelist
+func ValidateWhitelist(email string, whitelist CommaSeparatedList) bool {
+	found := false
+	for _, whitelist := range whitelist {
+		if email == whitelist {
+			found = true
+		}
+	}
+	return found
+}
+
+// Validate email match a domains
+func ValidateDomains(email string, domains CommaSeparatedList) bool {
+	found := false
+	parts := strings.Split(email, "@")
+	if len(parts) < 2 {
+		return false
+	}
+	for _, domain := range domains {
+		if domain == parts[1] {
+			found = true
+		}
+	}
 	return found
 }
 
