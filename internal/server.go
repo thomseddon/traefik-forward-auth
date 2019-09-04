@@ -6,14 +6,17 @@ import (
 
 	"github.com/containous/traefik/pkg/rules"
 	"github.com/sirupsen/logrus"
+	"github.com/thomseddon/traefik-forward-auth/internal/provider"
 )
 
 type Server struct {
 	router *rules.Router
+	ap     provider.AuthProvider
 }
 
-func NewServer() *Server {
-	s := &Server{}
+func NewServer(c Config) *Server {
+	ap, _ := initiateProvider(c)
+	s := &Server{ap: ap}
 	s.buildRoutes()
 	return s
 }
@@ -55,7 +58,7 @@ func (s *Server) RootHandler(w http.ResponseWriter, r *http.Request) {
 	s.router.ServeHTTP(w, r)
 }
 
-// Handler that allows requests
+// AllowHandler is the handler that allows requests
 func (s *Server) AllowHandler(rule string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s.logger(r, rule, "Allowing request")
@@ -63,7 +66,7 @@ func (s *Server) AllowHandler(rule string) http.HandlerFunc {
 	}
 }
 
-// Authenticate requests
+// AuthHandler is the handler that authenticates requests
 func (s *Server) AuthHandler(rule string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Logging setup
@@ -106,7 +109,7 @@ func (s *Server) AuthHandler(rule string) http.HandlerFunc {
 	}
 }
 
-// Handle auth callback
+// AuthCallbackHandler handle auth callbacks from the Identity Service
 func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Logging setup
@@ -132,7 +135,7 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 		http.SetCookie(w, ClearCSRFCookie(r))
 
 		// Exchange code for token
-		token, err := ExchangeCode(r)
+		token, err := ExchangeCode(r, s.ap)
 		if err != nil {
 			logger.Errorf("Code exchange failed with: %v", err)
 			http.Error(w, "Service unavailable", 503)
@@ -140,7 +143,7 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 		}
 
 		// Get user
-		user, err := GetUser(token)
+		user, err := GetUser(s.ap, token)
 		if err != nil {
 			logger.Errorf("Error getting user: %s", err)
 			return
@@ -171,7 +174,9 @@ func (s *Server) authRedirect(logger *logrus.Entry, w http.ResponseWriter, r *ht
 	logger.Debug("Set CSRF cookie and redirecting to google login")
 
 	// Forward them on
-	http.Redirect(w, r, GetLoginURL(r, nonce), http.StatusTemporaryRedirect)
+	uri := GetLoginURL(r, s.ap, nonce)
+	log.Info(uri)
+	http.Redirect(w, r, uri, http.StatusTemporaryRedirect)
 
 	logger.Debug("Done")
 	return

@@ -98,8 +98,8 @@ func TestAuthValidateEmail(t *testing.T) {
 // TODO: Split google tests out
 func TestAuthGetLoginURL(t *testing.T) {
 	assert := assert.New(t)
-	google := provider.Google{
-		ClientId:     "idtest",
+	google := &provider.Google{
+		ClientID:     "idtest",
 		ClientSecret: "sectest",
 		Scope:        "scopetest",
 		Prompt:       "consent select_account",
@@ -111,7 +111,6 @@ func TestAuthGetLoginURL(t *testing.T) {
 	}
 
 	config, _ = NewConfig([]string{})
-	config.Providers.Google = google
 
 	r, _ := http.NewRequest("GET", "http://example.com", nil)
 	r.Header.Add("X-Forwarded-Proto", "http")
@@ -119,7 +118,7 @@ func TestAuthGetLoginURL(t *testing.T) {
 	r.Header.Add("X-Forwarded-Uri", "/hello")
 
 	// Check url
-	uri, err := url.Parse(GetLoginURL(r, "nonce"))
+	uri, err := url.Parse(GetLoginURL(r, google, "nonce"))
 	assert.Nil(err)
 	assert.Equal("https", uri.Scheme)
 	assert.Equal("test.com", uri.Host)
@@ -143,10 +142,9 @@ func TestAuthGetLoginURL(t *testing.T) {
 	//
 	config, _ = NewConfig([]string{})
 	config.AuthHost = "auth.example.com"
-	config.Providers.Google = google
 
 	// Check url
-	uri, err = url.Parse(GetLoginURL(r, "nonce"))
+	uri, err = url.Parse(GetLoginURL(r, google, "nonce"))
 	assert.Nil(err)
 	assert.Equal("https", uri.Scheme)
 	assert.Equal("test.com", uri.Host)
@@ -170,10 +168,9 @@ func TestAuthGetLoginURL(t *testing.T) {
 	config, _ = NewConfig([]string{})
 	config.AuthHost = "auth.example.com"
 	config.CookieDomains = []CookieDomain{*NewCookieDomain("example.com")}
-	config.Providers.Google = google
 
 	// Check url
-	uri, err = url.Parse(GetLoginURL(r, "nonce"))
+	uri, err = url.Parse(GetLoginURL(r, google, "nonce"))
 	assert.Nil(err)
 	assert.Equal("https", uri.Scheme)
 	assert.Equal("test.com", uri.Host)
@@ -201,7 +198,7 @@ func TestAuthGetLoginURL(t *testing.T) {
 	r.Header.Add("X-Forwarded-Uri", "/hello")
 
 	// Check url
-	uri, err = url.Parse(GetLoginURL(r, "nonce"))
+	uri, err = url.Parse(GetLoginURL(r, google, "nonce"))
 	assert.Nil(err)
 	assert.Equal("https", uri.Scheme)
 	assert.Equal("test.com", uri.Host)

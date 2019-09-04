@@ -18,7 +18,7 @@ func main() {
 	config.Validate()
 
 	// Build server
-	server := internal.NewServer()
+	server := internal.NewServer(config)
 
 	// Attach router to default server
 	http.HandleFunc("/", server.RootHandler)
