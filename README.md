@@ -2,7 +2,7 @@
 # Traefik Forward Auth [![Build Status](https://travis-ci.org/thomseddon/traefik-forward-auth.svg?branch=master)](https://travis-ci.org/thomseddon/traefik-forward-auth) [![Go Report Card](https://goreportcard.com/badge/github.com/thomseddon/traefik-forward-auth)](https://goreportcard.com/report/github.com/thomseddon/traefik-forward-auth) ![Docker Pulls](https://img.shields.io/docker/pulls/thomseddon/traefik-forward-auth.svg) [![GitHub release](https://img.shields.io/github/release/thomseddon/traefik-forward-auth.svg)](https://GitHub.com/thomseddon/traefik-forward-auth/releases/)
 
 
-A minimal forward authentication service that provides Google oauth based login and authentication for the [traefik](https://github.com/containous/traefik) reverse proxy/load balancer.
+A minimal forward authentication service that provides oAuth based login and authentication for the [traefik](https://github.com/containous/traefik) reverse proxy/load balancer. It currently supports Google and Azure AD as identity services.
 
 ## Why?
 
@@ -15,22 +15,26 @@ A minimal forward authentication service that provides Google oauth based login 
 
 # Contents
 
-- [Releases](#releases)
-- [Usage](#usage)
-  - [Simple](#simple)
-  - [Advanced](#advanced)
-  - [OAuth Configuration](#oauth-configuration)
-- [Configuration](#configuration)
-  - [Overview](#overview)
-  - [Option Details](#option-details)
-- [Concepts](#concepts)
-  - [Forwarded Headers](#forwarded-headers)
-  - [User Restriction](#user-restriction)
-  - [Operation Modes](#operation-modes)
-    - [Overlay Mode](#overlay-mode)
-    - [Auth Host Mode](#auth-host-mode)
-- [Copyright](#copyright)
-- [License](#license)
+- [Traefik Forward Auth ![Build Status](https://travis-ci.org/thomseddon/traefik-forward-auth) ![Go Report Card](https://goreportcard.com/report/github.com/thomseddon/traefik-forward-auth) !Docker Pulls ![GitHub release](https://GitHub.com/thomseddon/traefik-forward-auth/releases/)](#traefik-forward-auth-build-statushttpstravis-ciorgthomseddontraefik-forward-auth-go-report-cardhttpsgoreportcardcomreportgithubcomthomseddontraefik-forward-auth-docker-pulls-github-releasehttpsgithubcomthomseddontraefik-forward-authreleases)
+  - [Why?](#why)
+- [Contents](#contents)
+  - [Releases](#releases)
+      - [Upgrade Guide](#upgrade-guide)
+  - [Usage](#usage)
+      - [Simple:](#simple)
+      - [Advanced:](#advanced)
+      - [OAuth Configuration](#oauth-configuration)
+  - [Configuration](#configuration)
+    - [Overview](#overview)
+    - [Option Details](#option-details)
+  - [Concepts](#concepts)
+    - [User Restriction](#user-restriction)
+    - [Forwarded Headers](#forwarded-headers)
+    - [Operation Modes](#operation-modes)
+      - [Overlay Mode](#overlay-mode)
+      - [Auth Host Mode](#auth-host-mode)
+  - [Copyright](#copyright)
+  - [License](#license)
 
 ## Releases
 
@@ -65,6 +69,7 @@ services:
   traefik-forward-auth:
     image: thomseddon/traefik-forward-auth:2
     environment:
+      - ID_SERVICE=GoogleAuth
       - CLIENT_ID=your-client-id
       - CLIENT_SECRET=your-client-secret
       - SECRET=something-random
@@ -133,10 +138,10 @@ Application Options:
   --whitelist=                                          Only allow given email addresses, can be set multiple times [$WHITELIST]
   --rules.<name>.<param>=                               Rule definitions, param can be: "action" or "rule"
 
-Google Provider:
-  --providers.google.client-id=                         Client ID [$PROVIDERS_GOOGLE_CLIENT_ID]
-  --providers.google.client-secret=                     Client Secret [$PROVIDERS_GOOGLE_CLIENT_SECRET]
-  --providers.google.prompt=                            Space separated list of OpenID prompt options [$PROVIDERS_GOOGLE_PROMPT]
+  --id-service=                                         Desired ID Service [$ID_SERVICE]
+  --client-id=                                          Client ID [$CLIENT_ID]
+  --client-secret=                                      Client Secret [$CLIENT_SECRET]
+  --prompt=                                             Space separated list of OpenID prompt options [$PROMPT]
 
 Help Options:
   -h, --help                                            Show this help message

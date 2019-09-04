@@ -42,7 +42,7 @@ type Config struct {
 	SecretString   string               `long:"secret" env:"SECRET" description:"Secret used for signing (required)" json:"-"`
 	Whitelist      CommaSeparatedList   `long:"whitelist" env:"WHITELIST" description:"Only allow given email addresses, can be set multiple times"`
 
-	IDService    IdentityService `long:"auth-provider" env:"ID_SERVICE" default:"GoogleAuth" description:"Name of the Auth Provider: Google, AzureAD"`
+	IDService    IdentityService `long:"id-service" env:"ID_SERVICE" default:"GoogleAuth" description:"Name of the Auth Provider: Google, AzureAD"`
 	ClientID     string          `long:"client-id" env:"CLIENT_ID" description:"Client ID"`
 	ClientSecret string          `long:"client-secret" env:"CLIENT_SECRET" description:"Client Secret" json:"-"`
 	Prompt       string          `long:"prompt" env:"PROMPT" description:"Space separated list of OpenID prompt options"`
