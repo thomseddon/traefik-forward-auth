@@ -25,8 +25,9 @@ services:
   traefik-forward-auth:
     image: thomseddon/traefik-forward-auth
     environment:
-      - PROVIDERS_GOOGLE_CLIENT_ID=your-client-id
-      - PROVIDERS_GOOGLE_CLIENT_SECRET=your-client-secret
+      - ID_SERVICE=GoogleAuth
+      - CLIENT_ID=your-client-id
+      - CLIENT_SECRET=your-client-secret
       - SECRET=something-random
       - INSECURE_COOKIE=true
       - DOMAIN=yourcompany.com
