@@ -15,8 +15,6 @@ import (
 	"github.com/thomseddon/traefik-forward-auth/internal/provider"
 )
 
-// Request Validation
-
 // Cookie = hash(secret, cookie domain, email, expires)|expires|email
 func ValidateCookie(r *http.Request, c *http.Cookie) (string, error) {
 	parts := strings.Split(c.Value, "|")
@@ -55,7 +53,7 @@ func ValidateCookie(r *http.Request, c *http.Cookie) (string, error) {
 	return parts[2], nil
 }
 
-// Validate email
+// ValidateEmail validates an email against a whitelist
 func ValidateEmail(email string) bool {
 	found := false
 	if len(config.Whitelist) > 0 {
@@ -83,28 +81,21 @@ func ValidateEmail(email string) bool {
 
 // OAuth Methods
 
-// Get login url
-func GetLoginURL(r *http.Request, nonce string) string {
+// GetLoginURL gets the login url
+func GetLoginURL(r *http.Request, ap provider.AuthProvider, nonce string) string {
 	state := fmt.Sprintf("%s:%s", nonce, returnUrl(r))
-
-	// TODO: Support multiple providers
-	return config.Providers.Google.GetLoginURL(redirectUri(r), state)
+	return ap.GetLoginURL(redirectUri(r), state)
 }
 
-// Exchange code for token
-
-func ExchangeCode(r *http.Request) (string, error) {
+// ExchangeCode exchanges code for token
+func ExchangeCode(r *http.Request, ap provider.AuthProvider) (string, error) {
 	code := r.URL.Query().Get("code")
-
-	// TODO: Support multiple providers
-	return config.Providers.Google.ExchangeCode(redirectUri(r), code)
+	return ap.ExchangeCode(redirectUri(r), code)
 }
 
-// Get user with token
-
-func GetUser(token string) (provider.User, error) {
-	// TODO: Support multiple providers
-	return config.Providers.Google.GetUser(token)
+// GetUser fetches the user data with token
+func GetUser(ap provider.AuthProvider, token string) (provider.User, error) {
+	return ap.GetUser(token)
 }
 
 // Utility methods
@@ -117,10 +108,9 @@ func redirectBase(r *http.Request) string {
 	return fmt.Sprintf("%s://%s", proto, host)
 }
 
-// // Return url
+// Return url
 func returnUrl(r *http.Request) string {
 	path := r.Header.Get("X-Forwarded-Uri")
-
 	return fmt.Sprintf("%s%s", redirectBase(r), path)
 }
 
@@ -171,6 +161,7 @@ func MakeCookie(r *http.Request, email string) *http.Cookie {
 
 // Make a CSRF cookie (used during login only)
 func MakeCSRFCookie(r *http.Request, nonce string) *http.Cookie {
+
 	return &http.Cookie{
 		Name:     config.CSRFCookieName,
 		Value:    nonce,
@@ -209,7 +200,7 @@ func ValidateCSRFCookie(r *http.Request, c *http.Cookie) (bool, string, error) {
 
 	// Check nonce match
 	if c.Value != state[:32] {
-		return false, "", errors.New("CSRF cookie does not match state")
+		return false, "", fmt.Errorf("CSRF cookie does not match state, %s  %s", c.Value, state[:32])
 	}
 
 	// Valid, return redirect

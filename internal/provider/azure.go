@@ -7,10 +7,9 @@ import (
 	"net/url"
 )
 
-type Google struct {
+type Azure struct {
 	ClientID     string `long:"client-id" env:"CLIENT_ID" description:"Client ID"`
 	ClientSecret string `long:"client-secret" env:"CLIENT_SECRET" description:"Client Secret" json:"-"`
-	Scope        string
 	Prompt       string `long:"prompt" env:"PROMPT" description:"Space separated list of OpenID prompt options"`
 
 	LoginURL *url.URL
@@ -18,33 +17,32 @@ type Google struct {
 	UserURL  *url.URL
 }
 
-func (g *Google) GetLoginURL(redirectUri, state string) string {
+func (az *Azure) GetLoginURL(redirectURI, state string) string {
 	q := url.Values{}
-	q.Set("client_id", g.ClientID)
+	q.Set("client_id", az.ClientID)
 	q.Set("response_type", "code")
-	q.Set("scope", g.Scope)
-	if g.Prompt != "" {
-		q.Set("prompt", g.Prompt)
+	if az.Prompt != "" {
+		q.Set("prompt", az.Prompt)
 	}
-	q.Set("redirect_uri", redirectUri)
+	q.Set("redirect_uri", redirectURI)
 	q.Set("state", state)
 
 	var u url.URL
-	u = *g.LoginURL
+	u = *az.LoginURL
 	u.RawQuery = q.Encode()
 
 	return u.String()
 }
 
-func (g *Google) ExchangeCode(redirectUri, code string) (string, error) {
+func (az *Azure) ExchangeCode(redirectURI, code string) (string, error) {
 	form := url.Values{}
-	form.Set("client_id", g.ClientID)
-	form.Set("client_secret", g.ClientSecret)
+	form.Set("client_id", az.ClientID)
+	form.Set("client_secret", az.ClientSecret)
 	form.Set("grant_type", "authorization_code")
-	form.Set("redirect_uri", redirectUri)
+	form.Set("redirect_uri", redirectURI)
 	form.Set("code", code)
 
-	res, err := http.PostForm(g.TokenURL.String(), form)
+	res, err := http.PostForm(az.TokenURL.String(), form)
 	if err != nil {
 		return "", err
 	}
@@ -56,11 +54,11 @@ func (g *Google) ExchangeCode(redirectUri, code string) (string, error) {
 	return token.Token, err
 }
 
-func (g *Google) GetUser(token string) (User, error) {
+func (az *Azure) GetUser(token string) (User, error) {
 	var user User
 
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", g.UserURL.String(), nil)
+	req, err := http.NewRequest("GET", az.UserURL.String(), nil)
 	if err != nil {
 		return user, err
 	}
