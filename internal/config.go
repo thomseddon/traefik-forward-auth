@@ -16,11 +16,11 @@ import (
 	flags "github.com/thomseddon/go-flags"
 )
 
-type IdentityService int
+type identityService string
 
 const (
-	GoogleAuth IdentityService = iota
-	AzureAD
+	GoogleAuth identityService = "GoogleAuth"
+	AzureAD    identityService = "AzureAD"
 )
 
 var config Config
@@ -42,7 +42,7 @@ type Config struct {
 	SecretString   string               `long:"secret" env:"SECRET" description:"Secret used for signing (required)" json:"-"`
 	Whitelist      CommaSeparatedList   `long:"whitelist" env:"WHITELIST" description:"Only allow given email addresses, can be set multiple times"`
 
-	IDService    IdentityService `long:"id-service" env:"ID_SERVICE" default:"GoogleAuth" description:"Name of the Auth Provider: Google, AzureAD"`
+	IDService    identityService `long:"id-service" env:"ID_SERVICE" default:"GoogleAuth" description:"Name of the Auth Provider: Google, AzureAD"`
 	ClientID     string          `long:"client-id" env:"CLIENT_ID" description:"Client ID"`
 	ClientSecret string          `long:"client-secret" env:"CLIENT_SECRET" description:"Client Secret" json:"-"`
 	Prompt       string          `long:"prompt" env:"PROMPT" description:"Space separated list of OpenID prompt options"`
@@ -204,6 +204,10 @@ func (c *Config) Validate() {
 
 	if c.ClientID == "" || c.ClientSecret == "" {
 		log.Fatal("client-id and client-secret must be set")
+	}
+
+	if c.IDService == AzureAD && c.TenantID == "" {
+		log.Fatal("Tenant ID is required for Azure")
 	}
 
 	// Check rules

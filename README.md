@@ -142,6 +142,7 @@ Application Options:
   --client-id=                                          Client ID [$CLIENT_ID]
   --client-secret=                                      Client Secret [$CLIENT_SECRET]
   --prompt=                                             Space separated list of OpenID prompt options [$PROMPT]
+  --tenant=                                             Only used by Microsoft Identity Platform's APIs and is the application id of the registered app
 
 Help Options:
   -h, --help                                            Show this help message
@@ -278,6 +279,22 @@ All options can be supplied in any of the following ways, in the following prece
    ```
 
    In the above example, the first rule would allow requests that begin with `/api/public` and contain the `Content-Type` header with a value of `application/json`. It would also allow requests that had the exact path `/public`.
+
+- `id-service`
+
+   Specify the identity service to be used: `GoogleAuth` or `AzureAD`
+
+- `client-id`
+
+  The Client ID of the application registered in the identity service
+
+- `client-secret`
+
+  The Client Secret of the application registered in the identity service
+
+- `prompt`
+
+  Prompt options when user redirected to the ideneity service
 
 ## Concepts
 

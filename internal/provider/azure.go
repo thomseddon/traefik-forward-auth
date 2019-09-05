@@ -24,6 +24,8 @@ func (az *Azure) GetLoginURL(redirectURI, state string) string {
 	if az.Prompt != "" {
 		q.Set("prompt", az.Prompt)
 	}
+	q.Set("response_mode", "query")
+	q.Set("scope", "openid%20offline_access%20profile")
 	q.Set("redirect_uri", redirectURI)
 	q.Set("state", state)
 
@@ -55,22 +57,22 @@ func (az *Azure) ExchangeCode(redirectURI, code string) (string, error) {
 }
 
 func (az *Azure) GetUser(token string) (User, error) {
-	var user User
+	var user AzureUser
 
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", az.UserURL.String(), nil)
 	if err != nil {
-		return user, err
+		return User{}, err
 	}
 
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token))
 	res, err := client.Do(req)
 	if err != nil {
-		return user, err
+		return User{}, err
 	}
 
 	defer res.Body.Close()
 	err = json.NewDecoder(res.Body).Decode(&user)
 
-	return user, err
+	return User{Id: user.Id, Email: user.Email}, err
 }
