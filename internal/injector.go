@@ -3,9 +3,13 @@
 package tfa
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"net/url"
+	"path"
 
 	"github.com/google/wire"
 	"github.com/thomseddon/traefik-forward-auth/internal/provider"
@@ -23,6 +27,8 @@ func setupProvider(c Config) (provider.AuthProvider, error) {
 		return setupGoogle(c), nil
 	case AzureAD:
 		return setupAzure(c), nil
+	case OIDC:
+		return setupOIDC(c), nil
 	default:
 		return nil, errors.New("Bad Auth provider")
 	}
@@ -72,5 +78,57 @@ func setupAzure(c Config) *provider.Azure {
 			Host:   "login.microsoftonline.com",
 			Path:   fmt.Sprintf("/%s/openid/userinfo", c.TenantID),
 		},
+	}
+}
+
+func getOIDCConfig(oidc string) map[string]interface{} {
+	uri, err := url.Parse(oidc)
+	if err != nil {
+		log.Fatal("Failed to parse OIDC string.")
+	}
+
+	uri.Path = path.Join(uri.Path, "/.well-known/openid-configuration")
+	res, err := http.Get(uri.String())
+	if err != nil {
+		log.Fatal("Failed to get OIDC parameter from OIDC connect.")
+	}
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		log.Fatal("Failed to read response body.")
+	}
+
+	var result map[string]interface{}
+	json.Unmarshal(body, &result)
+	log.Debug(result)
+
+	return result
+}
+
+func setupOIDC(c Config) *provider.OIDC {
+	var OIDCParams = getOIDCConfig(c.OIDCIssuer)
+
+	LoginURL, err := url.Parse((OIDCParams["authorization_endpoint"].(string)))
+	if err != nil {
+		log.Fatal("Unable to parse Login URL.")
+	}
+
+	TokenURL, err := url.Parse((OIDCParams["token_endpoint"].(string)))
+	if err != nil {
+		log.Fatal("Unable to parse Token URL.")
+	}
+
+	UserURL, err := url.Parse((OIDCParams["userinfo_endpoint"].(string)))
+	if err != nil {
+		log.Fatal("Unable to parse User URL.")
+	}
+
+	return &provider.OIDC{
+		ClientID:     c.ClientID,
+		ClientSecret: c.ClientSecret,
+		Prompt:       c.Prompt,
+		LoginURL:     LoginURL,
+		TokenURL:     TokenURL,
+		UserURL:      UserURL,
 	}
 }

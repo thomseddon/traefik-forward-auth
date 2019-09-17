@@ -21,6 +21,7 @@ type identityService string
 const (
 	GoogleAuth identityService = "GoogleAuth"
 	AzureAD    identityService = "AzureAD"
+	OIDC       identityService = "OIDC"
 )
 
 var config Config
@@ -42,11 +43,12 @@ type Config struct {
 	SecretString   string               `long:"secret" env:"SECRET" description:"Secret used for signing (required)" json:"-"`
 	Whitelist      CommaSeparatedList   `long:"whitelist" env:"WHITELIST" description:"Only allow given email addresses, can be set multiple times"`
 
-	IDService    identityService `long:"id-service" env:"ID_SERVICE" default:"GoogleAuth" description:"Name of the Auth Provider: Google, AzureAD"`
+	IDService    identityService `long:"id-service" env:"ID_SERVICE" default:"GoogleAuth" description:"Name of the Auth Provider: Google, AzureAD, OIDC"`
 	ClientID     string          `long:"client-id" env:"CLIENT_ID" description:"Client ID"`
 	ClientSecret string          `long:"client-secret" env:"CLIENT_SECRET" description:"Client Secret" json:"-"`
 	Prompt       string          `long:"prompt" env:"PROMPT" description:"Space separated list of OpenID prompt options"`
 	TenantID     string          `long:"tenant" env:"TENANT" description:"Azure subscription ID. Only used when provider is Azure"`
+	OIDCIssuer   string          `long:"oidc-issuer" env:"OIDC_ISSUER" description:"OIDC Issuer URL. Only used when provider is OIDC"`
 
 	Rules map[string]*Rule `long:"rules.<name>.<param>" description:"Rule definitions, param can be: \"action\" or \"rule\""`
 
@@ -208,6 +210,10 @@ func (c *Config) Validate() {
 
 	if c.IDService == AzureAD && c.TenantID == "" {
 		log.Fatal("Tenant ID is required for Azure")
+	}
+
+	if c.IDService == OIDC && c.OIDCIssuer == "" {
+		log.Fatal("OIDC Issuer is required for OIDC")
 	}
 
 	// Check rules

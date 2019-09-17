@@ -15,7 +15,7 @@ A minimal forward authentication service that provides oAuth based login and aut
 
 # Contents
 
-- [Traefik Forward Auth ![Build Status](https://travis-ci.org/thomseddon/traefik-forward-auth) ![Go Report Card](https://goreportcard.com/report/github.com/thomseddon/traefik-forward-auth) !Docker Pulls ![GitHub release](https://GitHub.com/thomseddon/traefik-forward-auth/releases/)](#traefik-forward-auth-build-statushttpstravis-ciorgthomseddontraefik-forward-auth-go-report-cardhttpsgoreportcardcomreportgithubcomthomseddontraefik-forward-auth-docker-pulls-github-releasehttpsgithubcomthomseddontraefik-forward-authreleases)
+- [Traefik Forward Auth](#traefik-forward-auth)
   - [Why?](#why)
 - [Contents](#contents)
   - [Releases](#releases)
@@ -142,7 +142,8 @@ Application Options:
   --client-id=                                          Client ID [$CLIENT_ID]
   --client-secret=                                      Client Secret [$CLIENT_SECRET]
   --prompt=                                             Space separated list of OpenID prompt options [$PROMPT]
-  --tenant=                                             Only used by Microsoft Identity Platform's APIs and is the application id of the registered app
+  --tenant=                                             Only used by Microsoft Identity Platform's APIs and is the application id of the registered app [$TENANT]
+  --oidc-issuer=                                        OIDC Issuer URL. Only used when provider is OIDC [$OIDC_ISSUER]
 
 Help Options:
   -h, --help                                            Show this help message
@@ -282,7 +283,7 @@ All options can be supplied in any of the following ways, in the following prece
 
 - `id-service`
 
-   Specify the identity service to be used: `GoogleAuth` or `AzureAD`
+   Specify the identity service to be used: `GoogleAuth`, `AzureAD` or `OIDC`
 
 - `client-id`
 
@@ -295,6 +296,16 @@ All options can be supplied in any of the following ways, in the following prece
 - `prompt`
 
   Prompt options when user redirected to the ideneity service
+
+- `tenant`
+
+  Only used by Microsoft Identity Platform's APIs and is the application id of the registered app
+
+- `oidc-issuer`
+
+  OIDC Issuer URL. Only used when provider is OIDC.
+
+  Example for Keycloak: `https://keycloak.example.com/auth/realms/master`
 
 ## Concepts
 
