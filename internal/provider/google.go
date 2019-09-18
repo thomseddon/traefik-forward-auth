@@ -2,6 +2,7 @@ package provider
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -16,6 +17,17 @@ type Google struct {
 	LoginURL *url.URL
 	TokenURL *url.URL
 	UserURL  *url.URL
+}
+
+func (g *Google) Name() string {
+	return "google"
+}
+
+func (g *Google) Validate() error {
+	if g.ClientId == "" || g.ClientSecret == "" {
+		return errors.New("providers.google.client-id, providers.google.client-secret must be set")
+	}
+	return nil
 }
 
 func (g *Google) GetLoginURL(redirectUri, state string) string {

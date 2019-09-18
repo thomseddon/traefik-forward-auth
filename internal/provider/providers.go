@@ -2,6 +2,15 @@ package provider
 
 type Providers struct {
 	Google Google `group:"Google Provider" namespace:"google" env-namespace:"GOOGLE"`
+	OIDC   OIDC   `group:"ODIC Provider" namespace:"odic" env-namespace:"ODIC"`
+}
+
+type Provider interface {
+	Name() string
+	GetLoginURL(redirectUri, state string) string
+	ExchangeCode(redirectUri, code string) (string, error)
+	GetUser(token string) (User, error)
+	Validate() error
 }
 
 type Token struct {

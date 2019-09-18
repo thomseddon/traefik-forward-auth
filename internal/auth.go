@@ -81,32 +81,6 @@ func ValidateEmail(email string) bool {
 	return found
 }
 
-// OAuth Methods
-
-// Get login url
-func GetLoginURL(r *http.Request, nonce string) string {
-	state := fmt.Sprintf("%s:%s", nonce, returnUrl(r))
-
-	// TODO: Support multiple providers
-	return config.Providers.Google.GetLoginURL(redirectUri(r), state)
-}
-
-// Exchange code for token
-
-func ExchangeCode(r *http.Request) (string, error) {
-	code := r.URL.Query().Get("code")
-
-	// TODO: Support multiple providers
-	return config.Providers.Google.ExchangeCode(redirectUri(r), code)
-}
-
-// Get user with token
-
-func GetUser(token string) (provider.User, error) {
-	// TODO: Support multiple providers
-	return config.Providers.Google.GetUser(token)
-}
-
 // Utility methods
 
 // Get the redirect base
@@ -196,24 +170,35 @@ func ClearCSRFCookie(r *http.Request) *http.Cookie {
 }
 
 // Validate the csrf cookie against state
-func ValidateCSRFCookie(r *http.Request, c *http.Cookie) (bool, string, error) {
+func ValidateCSRFCookie(r *http.Request, c *http.Cookie) (valid bool, provider string, redirect string, err error) {
 	state := r.URL.Query().Get("state")
 
 	if len(c.Value) != 32 {
-		return false, "", errors.New("Invalid CSRF cookie value")
+		return false, "", "", errors.New("Invalid CSRF cookie value")
 	}
 
 	if len(state) < 34 {
-		return false, "", errors.New("Invalid CSRF state value")
+		return false, "", "", errors.New("Invalid CSRF state value")
 	}
 
 	// Check nonce match
 	if c.Value != state[:32] {
-		return false, "", errors.New("CSRF cookie does not match state")
+		return false, "", "", errors.New("CSRF cookie does not match state")
 	}
 
-	// Valid, return redirect
-	return true, state[33:], nil
+	// Extract provider
+	params := state[33:]
+	split := strings.Index(params, ":")
+	if split == -1 {
+		return false, "", "", errors.New("Invalid CSRF state format")
+	}
+
+	// Valid, return provider and redirect
+	return true, params[:split], params[split+1:], nil
+}
+
+func MakeState(r *http.Request, p provider.Provider, nonce string) string {
+	return fmt.Sprintf("%s:%s:%s", nonce, p.Name(), returnUrl(r))
 }
 
 func Nonce() (error, string) {

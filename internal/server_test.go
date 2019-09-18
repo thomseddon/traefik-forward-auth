@@ -13,8 +13,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TODO:
-
 /**
  * Setup
  */
@@ -136,7 +134,7 @@ func TestServerAuthCallback(t *testing.T) {
 	assert.Equal(401, res.StatusCode, "auth callback with invalid cookie shouldn't be authorised")
 
 	// Should redirect valid request
-	req = newDefaultHttpRequest("/_oauth?state=12345678901234567890123456789012:http://redirect")
+	req = newDefaultHttpRequest("/_oauth?state=12345678901234567890123456789012:google:http://redirect")
 	c = MakeCSRFCookie(req, "12345678901234567890123456789012")
 	res, _ = doHttpRequest(req, c)
 	assert.Equal(307, res.StatusCode, "valid auth callback should be allowed")

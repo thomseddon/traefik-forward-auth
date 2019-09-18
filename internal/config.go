@@ -24,18 +24,19 @@ type Config struct {
 	LogLevel  string `long:"log-level" env:"LOG_LEVEL" default:"warn" choice:"trace" choice:"debug" choice:"info" choice:"warn" choice:"error" choice:"fatal" choice:"panic" description:"Log level"`
 	LogFormat string `long:"log-format"  env:"LOG_FORMAT" default:"text" choice:"text" choice:"json" choice:"pretty" description:"Log format"`
 
-	AuthHost       string               `long:"auth-host" env:"AUTH_HOST" description:"Single host to use when returning from 3rd party auth"`
-	Config         func(s string) error `long:"config" env:"CONFIG" description:"Path to config file" json:"-"`
-	CookieDomains  []CookieDomain       `long:"cookie-domain" env:"COOKIE_DOMAIN" description:"Domain to set auth cookie on, can be set multiple times"`
-	InsecureCookie bool                 `long:"insecure-cookie" env:"INSECURE_COOKIE" description:"Use insecure cookies"`
-	CookieName     string               `long:"cookie-name" env:"COOKIE_NAME" default:"_forward_auth" description:"Cookie Name"`
-	CSRFCookieName string               `long:"csrf-cookie-name" env:"CSRF_COOKIE_NAME" default:"_forward_auth_csrf" description:"CSRF Cookie Name"`
-	DefaultAction  string               `long:"default-action" env:"DEFAULT_ACTION" default:"auth" choice:"auth" choice:"allow" description:"Default action"`
-	Domains        CommaSeparatedList   `long:"domain" env:"DOMAIN" description:"Only allow given email domains, can be set multiple times"`
-	LifetimeString int                  `long:"lifetime" env:"LIFETIME" default:"43200" description:"Lifetime in seconds"`
-	Path           string               `long:"url-path" env:"URL_PATH" default:"/_oauth" description:"Callback URL Path"`
-	SecretString   string               `long:"secret" env:"SECRET" description:"Secret used for signing (required)" json:"-"`
-	Whitelist      CommaSeparatedList   `long:"whitelist" env:"WHITELIST" description:"Only allow given email addresses, can be set multiple times"`
+	AuthHost        string               `long:"auth-host" env:"AUTH_HOST" description:"Single host to use when returning from 3rd party auth"`
+	Config          func(s string) error `long:"config" env:"CONFIG" description:"Path to config file" json:"-"`
+	CookieDomains   []CookieDomain       `long:"cookie-domain" env:"COOKIE_DOMAIN" description:"Domain to set auth cookie on, can be set multiple times"`
+	InsecureCookie  bool                 `long:"insecure-cookie" env:"INSECURE_COOKIE" description:"Use insecure cookies"`
+	CookieName      string               `long:"cookie-name" env:"COOKIE_NAME" default:"_forward_auth" description:"Cookie Name"`
+	CSRFCookieName  string               `long:"csrf-cookie-name" env:"CSRF_COOKIE_NAME" default:"_forward_auth_csrf" description:"CSRF Cookie Name"`
+	DefaultAction   string               `long:"default-action" env:"DEFAULT_ACTION" default:"auth" choice:"auth" choice:"allow" description:"Default action"`
+	DefaultProvider string               `long:"default-provider" env:"DEFAULT_PROVIDER" default:"google" choice:"google" choice:"odic" description:"Default provider"`
+	Domains         CommaSeparatedList   `long:"domain" env:"DOMAIN" description:"Only allow given email domains, can be set multiple times"`
+	LifetimeString  int                  `long:"lifetime" env:"LIFETIME" default:"43200" description:"Lifetime in seconds"`
+	Path            string               `long:"url-path" env:"URL_PATH" default:"/_oauth" description:"Callback URL Path"`
+	SecretString    string               `long:"secret" env:"SECRET" description:"Secret used for signing (required)" json:"-"`
+	Whitelist       CommaSeparatedList   `long:"whitelist" env:"WHITELIST" description:"Only allow given email addresses, can be set multiple times"`
 
 	Providers provider.Providers `group:"providers" namespace:"providers" env-namespace:"PROVIDERS"`
 	Rules     map[string]*Rule   `long:"rules.<name>.<param>" description:"Rule definitions, param can be: \"action\" or \"rule\""`
@@ -250,19 +251,89 @@ func (c *Config) Validate() {
 		log.Fatal("\"secret\" option must be set.")
 	}
 
-	if c.Providers.Google.ClientId == "" || c.Providers.Google.ClientSecret == "" {
-		log.Fatal("providers.google.client-id, providers.google.client-secret must be set")
+	// Validate default provider
+	err := c.validateProvider(c.DefaultProvider)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	// Check rules
+	// TODO: decide
 	for _, rule := range c.Rules {
-		rule.Validate()
+		err = rule.Validate(c)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	for _, r := range c.Rules {
+		if r.Action != "auth" && r.Action != "allow" {
+			log.Fatal("invalid rule action, must be \"auth\" or \"allow\"")
+		}
+
+		err = c.validateProvider(r.Provider)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }
 
 func (c Config) String() string {
 	jsonConf, _ := json.Marshal(c)
 	return string(jsonConf)
+}
+
+// GetProvider returns the provider of the given name. Ret
+func (c *Config) GetProvider(name string) (provider.Provider, error) {
+	switch name {
+	case "google":
+		return &config.Providers.Google, nil
+	}
+
+	return nil, fmt.Errorf("Unknown provider: %s", name)
+}
+
+// GetConfiguredProvider returns the provider of the given name, if it has been
+// configured. Returns an error if the provider is unknown, or hasn't been configured
+func (c *Config) GetConfiguredProvider(name string) (provider.Provider, error) {
+	// Check the provider has been configured
+	if !c.providerConfigured(name) {
+		return nil, errors.New("Unconfigured provider")
+	}
+
+	return c.GetProvider(name)
+}
+
+func (c *Config) providerConfigured(name string) bool {
+	// Check default provider
+	if name == config.DefaultProvider {
+		return true
+	}
+
+	// Check rule providers
+	for _, rule := range c.Rules {
+		if name == rule.Provider {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (c *Config) validateProvider(name string) error {
+	// Check provider exists
+	p, err := c.GetProvider(name)
+	if err != nil {
+		return err
+	}
+
+	// Validate
+	err = p.Validate()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type Rule struct {
@@ -284,15 +355,12 @@ func (r *Rule) formattedRule() string {
 	return strings.ReplaceAll(r.Rule, "Host(", "HostRegexp(")
 }
 
-func (r *Rule) Validate() {
+func (r *Rule) Validate(c *Config) error {
 	if r.Action != "auth" && r.Action != "allow" {
-		log.Fatal("invalid rule action, must be \"auth\" or \"allow\"")
+		return errors.New("invalid rule action, must be \"auth\" or \"allow\"")
 	}
 
-	// TODO: Update with more provider support
-	if r.Provider != "google" {
-		log.Fatal("invalid rule provider, must be \"google\"")
-	}
+	return c.validateProvider(r.Provider)
 }
 
 // Legacy support for comma separated lists
