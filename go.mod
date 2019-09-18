@@ -11,6 +11,7 @@ require (
 	github.com/containous/traefik v2.0.0-alpha2+incompatible
 	github.com/go-acme/lego v2.5.0+incompatible // indirect
 	github.com/go-kit/kit v0.8.0 // indirect
+	github.com/google/wire v0.3.0
 	github.com/gorilla/context v1.1.1 // indirect
 	github.com/gravitational/trace v0.0.0-20190409171327-f30095ced5ff // indirect
 	github.com/jessevdk/go-flags v1.4.1-0.20181221193153-c0795c8afcf4
