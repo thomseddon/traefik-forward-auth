@@ -245,9 +245,10 @@ func csrfCookieDomain(r *http.Request) string {
 func matchCookieDomains(domain string) (bool, string) {
 	// Remove port
 	p := strings.Split(domain, ":")
-
+  log.Debugf("ConfigCookieDomain %s", config.CookieDomains)
 	for _, d := range config.CookieDomains {
-		if d.Match(p[0]) {
+    log.Debugf("Cookie Domain %s, Domain %s", d, p)
+    if d.Match(p[0]) {
 			return true, d.Domain
 		}
 	}
