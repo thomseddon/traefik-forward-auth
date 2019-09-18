@@ -6,9 +6,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var log logrus.FieldLogger
+var log *logrus.Logger
 
-func NewDefaultLogger() logrus.FieldLogger {
+func NewDefaultLogger() *logrus.Logger {
 	// Setup logger
 	log = logrus.StandardLogger()
 	logrus.SetOutput(os.Stdout)
