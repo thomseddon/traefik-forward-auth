@@ -248,7 +248,7 @@ func convertLegacyToIni(name string) (io.Reader, error) {
 func (c *Config) Validate() {
 	// Check for show stopper errors
 	if len(c.Secret) == 0 {
-		log.Fatal("\"secret\" option must be set.")
+		log.Fatal("\"secret\" option must be set")
 	}
 
 	// Validate default provider
@@ -257,21 +257,9 @@ func (c *Config) Validate() {
 		log.Fatal(err)
 	}
 
-	// Check rules
-	// TODO: decide
+	// Check rules (validates the rule and the rule provider)
 	for _, rule := range c.Rules {
 		err = rule.Validate(c)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	for _, r := range c.Rules {
-		if r.Action != "auth" && r.Action != "allow" {
-			log.Fatal("invalid rule action, must be \"auth\" or \"allow\"")
-		}
-
-		err = c.validateProvider(r.Provider)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -283,11 +271,13 @@ func (c Config) String() string {
 	return string(jsonConf)
 }
 
-// GetProvider returns the provider of the given name. Ret
+// GetProvider returns the provider of the given name
 func (c *Config) GetProvider(name string) (provider.Provider, error) {
 	switch name {
 	case "google":
-		return &config.Providers.Google, nil
+		return &c.Providers.Google, nil
+	case "oidc":
+		return &c.Providers.OIDC, nil
 	}
 
 	return nil, fmt.Errorf("Unknown provider: %s", name)
@@ -298,7 +288,7 @@ func (c *Config) GetProvider(name string) (provider.Provider, error) {
 func (c *Config) GetConfiguredProvider(name string) (provider.Provider, error) {
 	// Check the provider has been configured
 	if !c.providerConfigured(name) {
-		return nil, errors.New("Unconfigured provider")
+		return nil, fmt.Errorf("Unconfigured provider: %s", name)
 	}
 
 	return c.GetProvider(name)
@@ -306,7 +296,7 @@ func (c *Config) GetConfiguredProvider(name string) (provider.Provider, error) {
 
 func (c *Config) providerConfigured(name string) bool {
 	// Check default provider
-	if name == config.DefaultProvider {
+	if name == c.DefaultProvider {
 		return true
 	}
 

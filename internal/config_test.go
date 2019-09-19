@@ -1,11 +1,14 @@
 package tfa
 
 import (
+	// "fmt"
 	"net/url"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -28,6 +31,7 @@ func TestConfigDefaults(t *testing.T) {
 	assert.Equal("_forward_auth", c.CookieName)
 	assert.Equal("_forward_auth_csrf", c.CSRFCookieName)
 	assert.Equal("auth", c.DefaultAction)
+	assert.Equal("google", c.DefaultProvider)
 	assert.Len(c.Domains, 0)
 	assert.Equal(time.Second*time.Duration(43200), c.Lifetime)
 	assert.Equal("/_oauth", c.Path)
@@ -63,6 +67,7 @@ func TestConfigParseArgs(t *testing.T) {
 	c, err := NewConfig([]string{
 		"--cookie-name=cookiename",
 		"--csrf-cookie-name", "\"csrfcookiename\"",
+		// "--default-provider", "\"oidc\"", // TODO
 		"--rule.1.action=allow",
 		"--rule.1.rule=PathPrefix(`/one`)",
 		"--rule.two.action=auth",
@@ -79,12 +84,12 @@ func TestConfigParseArgs(t *testing.T) {
 		"1": {
 			Action:   "allow",
 			Rule:     "PathPrefix(`/one`)",
-			Provider: "google",
+			Provider: "google", // TODO oidc
 		},
 		"two": {
 			Action:   "auth",
 			Rule:     "Host(`two.com`) && Path(`/two`)",
-			Provider: "google",
+			Provider: "google", // TODO oidc
 		},
 	}, c.Rules)
 }
@@ -303,6 +308,106 @@ func TestConfigTransformation(t *testing.T) {
 
 	assert.Equal(200, c.LifetimeString)
 	assert.Equal(time.Second*time.Duration(200), c.Lifetime, "lifetime should be read and converted to duration")
+}
+
+func TestConfigValidate(t *testing.T) {
+	assert := assert.New(t)
+
+	// Install new logger + hook
+	var hook *test.Hook
+	log, hook = test.NewNullLogger()
+	log.ExitFunc = func(code int) {}
+
+	// Validate defualt config + rule error
+	c := Config{
+		DefaultProvider: "google",
+		Rules: map[string]*Rule{
+			"1": {
+				Action: "bad",
+			},
+		},
+	}
+	c.Validate()
+
+	logs := hook.AllEntries()
+	assert.Len(logs, 3)
+
+	// Should have fatal error requiring secret
+	assert.Equal("\"secret\" option must be set", logs[0].Message)
+	assert.Equal(logrus.FatalLevel, logs[0].Level)
+
+	// Should also have default provider (google) error
+	assert.Equal("providers.google.client-id, providers.google.client-secret must be set", logs[1].Message)
+	assert.Equal(logrus.FatalLevel, logs[1].Level)
+
+	// Should validate rule
+	assert.Equal("invalid rule action, must be \"auth\" or \"allow\"", logs[2].Message)
+	assert.Equal(logrus.FatalLevel, logs[2].Level)
+
+	hook.Reset()
+
+	// Validate with invalid providers
+	c = Config{
+		Secret:          []byte("veryverysecret"),
+		DefaultProvider: "bad1",
+		Rules: map[string]*Rule{
+			"1": {
+				Action:   "auth",
+				Provider: "bad2",
+			},
+		},
+	}
+	c.Validate()
+
+	logs = hook.AllEntries()
+	assert.Len(logs, 2)
+
+	// Should also have default provider (google) error
+	assert.Equal("Unknown provider: bad1", logs[0].Message)
+	assert.Equal(logrus.FatalLevel, logs[0].Level)
+
+	// Should have error for rule provider
+	assert.Equal("Unknown provider: bad2", logs[1].Message)
+	assert.Equal(logrus.FatalLevel, logs[1].Level)
+}
+
+func TestConfigGetProvider(t *testing.T) {
+	assert := assert.New(t)
+	c := Config{}
+
+	// Should be able to get "google" provider
+	p, err := c.GetProvider("google")
+	assert.Nil(err)
+	assert.Equal(&c.Providers.Google, p)
+
+	// Should be able to get "oidc" provider
+	p, err = c.GetProvider("oidc")
+	assert.Nil(err)
+	assert.Equal(&c.Providers.OIDC, p)
+
+	// Should catch unknown provider
+	p, err = c.GetProvider("bad")
+	if assert.Error(err) {
+		assert.Equal("Unknown provider: bad", err.Error())
+	}
+}
+
+func TestConfigGetConfiguredProvider(t *testing.T) {
+	assert := assert.New(t)
+	c := Config{
+		DefaultProvider: "google",
+	}
+
+	// Should be able to get "google" default provider
+	p, err := c.GetConfiguredProvider("google")
+	assert.Nil(err)
+	assert.Equal(&c.Providers.Google, p)
+
+	// Should fail to get valid "oidc" provider as it's not configured
+	p, err = c.GetConfiguredProvider("oidc")
+	if assert.Error(err) {
+		assert.Equal("Unconfigured provider: oidc", err.Error())
+	}
 }
 
 func TestConfigCommaSeparatedList(t *testing.T) {

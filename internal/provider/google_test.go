@@ -1,136 +1,144 @@
 package provider
 
-// import (
-// 	"net/http"
-// 	"net/url"
-// 	"testing"
+import (
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"testing"
 
-// 	"github.com/stretchr/testify/assert"
-// 	// tfa "github.com/thomseddon/traefik-forward-auth/internal"
-// )
+	"github.com/stretchr/testify/assert"
+)
 
-// TODO: Split google tests out
-// func TestAuthGetLoginURL(t *testing.T) {
-// 	assert := assert.New(t)
-// 	google := Google{
-// 		ClientId:     "idtest",
-// 		ClientSecret: "sectest",
-// 		Scope:        "scopetest",
-// 		Prompt:       "consent select_account",
-// 		LoginURL: &url.URL{
-// 			Scheme: "https",
-// 			Host:   "test.com",
-// 			Path:   "/auth",
-// 		},
-// 	}
+// Utilities
 
-// 	config, _ = tfa.NewConfig([]string{})
-// 	config.Providers.Google = google
+type TokenServerHandler struct{}
 
-// 	r, _ := http.NewRequest("GET", "http://example.com", nil)
-// 	r.Header.Add("X-Forwarded-Proto", "http")
-// 	r.Header.Add("X-Forwarded-Host", "example.com")
-// 	r.Header.Add("X-Forwarded-Uri", "/hello")
+func (t *TokenServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	body, _ := ioutil.ReadAll(r.Body)
+	if r.Method == "POST" &&
+			string(body) == "client_id=idtest&client_secret=sectest&code=code&grant_type=authorization_code&redirect_uri=http%3A%2F%2Fexample.com%2F_oauth" {
+		fmt.Fprint(w, `{"access_token":"123456789"}`)
+	} else {
+		fmt.Fprint(w, `TokenServerHandler received bad request`)
+	}
+}
 
-// 	// Check url
-// 	uri, err := url.Parse(GetLoginURL(r, "nonce"))
-// 	assert.Nil(err)
-// 	assert.Equal("https", uri.Scheme)
-// 	assert.Equal("test.com", uri.Host)
-// 	assert.Equal("/auth", uri.Path)
+type UserServerHandler struct{}
 
-// 	// Check query string
-// 	qs := uri.Query()
-// 	expectedQs := url.Values{
-// 		"client_id":     []string{"idtest"},
-// 		"redirect_uri":  []string{"http://example.com/_oauth"},
-// 		"response_type": []string{"code"},
-// 		"scope":         []string{"scopetest"},
-// 		"prompt":        []string{"consent select_account"},
-// 		"state":         []string{"nonce:http://example.com/hello"},
-// 	}
-// 	assert.Equal(expectedQs, qs)
+func (t *UserServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprint(w, `{
+    "id":"1",
+    "email":"example@example.com",
+    "verified_email":true,
+    "hd":"example.com"
+  }`)
+}
 
-// 	//
-// 	// With Auth URL but no matching cookie domain
-// 	// - will not use auth host
-// 	//
-// 	config, _ = tfa.NewConfig([]string{})
-// 	config.AuthHost = "auth.example.com"
-// 	config.Providers.Google = google
+// Tests
 
-// 	// Check url
-// 	uri, err = url.Parse(GetLoginURL(r, "nonce"))
-// 	assert.Nil(err)
-// 	assert.Equal("https", uri.Scheme)
-// 	assert.Equal("test.com", uri.Host)
-// 	assert.Equal("/auth", uri.Path)
+func TestGoogleName(t *testing.T) {
+	p := Google{}
+	assert.Equal(t, "google", p.Name())
+}
 
-// 	// Check query string
-// 	qs = uri.Query()
-// 	expectedQs = url.Values{
-// 		"client_id":     []string{"idtest"},
-// 		"redirect_uri":  []string{"http://example.com/_oauth"},
-// 		"response_type": []string{"code"},
-// 		"scope":         []string{"scopetest"},
-// 		"prompt":        []string{"consent select_account"},
-// 		"state":         []string{"nonce:http://example.com/hello"},
-// 	}
-// 	assert.Equal(expectedQs, qs)
+func TestGoogleValidate(t *testing.T) {
+	assert := assert.New(t)
+	p := Google{}
 
-// 	//
-// 	// With correct Auth URL + cookie domain
-// 	//
-// 	config, _ = tfa.NewConfig([]string{})
-// 	config.AuthHost = "auth.example.com"
-// 	config.CookieDomains = []CookieDomain{*NewCookieDomain("example.com")}
-// 	config.Providers.Google = google
+	err := p.Validate()
+	if assert.Error(err) {
+		assert.Equal("providers.google.client-id, providers.google.client-secret must be set", err.Error())
+	}
+}
 
-// 	// Check url
-// 	uri, err = url.Parse(GetLoginURL(r, "nonce"))
-// 	assert.Nil(err)
-// 	assert.Equal("https", uri.Scheme)
-// 	assert.Equal("test.com", uri.Host)
-// 	assert.Equal("/auth", uri.Path)
+func TestGoogleGetLoginURL(t *testing.T) {
+	assert := assert.New(t)
+	p := Google{
+		ClientId:     "idtest",
+		ClientSecret: "sectest",
+		Scope:        "scopetest",
+		Prompt:       "consent select_account",
+		LoginURL: &url.URL{
+			Scheme: "https",
+			Host:   "google.com",
+			Path:   "/auth",
+		},
+	}
 
-// 	// Check query string
-// 	qs = uri.Query()
-// 	expectedQs = url.Values{
-// 		"client_id":     []string{"idtest"},
-// 		"redirect_uri":  []string{"http://auth.example.com/_oauth"},
-// 		"response_type": []string{"code"},
-// 		"scope":         []string{"scopetest"},
-// 		"state":         []string{"nonce:http://example.com/hello"},
-// 		"prompt":        []string{"consent select_account"},
-// 	}
-// 	assert.Equal(expectedQs, qs)
+	// Check url
+	uri, err := url.Parse(p.GetLoginURL("http://example.com/_oauth", "state"))
+	assert.Nil(err)
+	assert.Equal("https", uri.Scheme)
+	assert.Equal("google.com", uri.Host)
+	assert.Equal("/auth", uri.Path)
 
-// 	//
-// 	// With Auth URL + cookie domain, but from different domain
-// 	// - will not use auth host
-// 	//
-// 	r, _ = http.NewRequest("GET", "http://another.com", nil)
-// 	r.Header.Add("X-Forwarded-Proto", "http")
-// 	r.Header.Add("X-Forwarded-Host", "another.com")
-// 	r.Header.Add("X-Forwarded-Uri", "/hello")
+	// Check query string
+	qs := uri.Query()
+	expectedQs := url.Values{
+		"client_id":     []string{"idtest"},
+		"redirect_uri":  []string{"http://example.com/_oauth"},
+		"response_type": []string{"code"},
+		"scope":         []string{"scopetest"},
+		"prompt":        []string{"consent select_account"},
+		"state":         []string{"state"},
+	}
+	assert.Equal(expectedQs, qs)
+}
 
-// 	// Check url
-// 	uri, err = url.Parse(GetLoginURL(r, "nonce"))
-// 	assert.Nil(err)
-// 	assert.Equal("https", uri.Scheme)
-// 	assert.Equal("test.com", uri.Host)
-// 	assert.Equal("/auth", uri.Path)
+func TestGoogleExchangeCode(t *testing.T) {
+	assert := assert.New(t)
+	p := Google{
+		ClientId:     "idtest",
+		ClientSecret: "sectest",
+		Scope:        "scopetest",
+		Prompt:       "consent select_account",
+		LoginURL: &url.URL{
+			Scheme: "https",
+			Host:   "google.com",
+			Path:   "/auth",
+		},
+	}
 
-// 	// Check query string
-// 	qs = uri.Query()
-// 	expectedQs = url.Values{
-// 		"client_id":     []string{"idtest"},
-// 		"redirect_uri":  []string{"http://another.com/_oauth"},
-// 		"response_type": []string{"code"},
-// 		"scope":         []string{"scopetest"},
-// 		"state":         []string{"nonce:http://another.com/hello"},
-// 		"prompt":        []string{"consent select_account"},
-// 	}
-// 	assert.Equal(expectedQs, qs)
-// }
-//
+	// Setup token server
+	tokenServerHandler := &TokenServerHandler{}
+	tokenServer := httptest.NewServer(tokenServerHandler)
+	defer tokenServer.Close()
+	tokenURL, _ := url.Parse(tokenServer.URL)
+	p.TokenURL = tokenURL
+
+	token, err := p.ExchangeCode("http://example.com/_oauth", "code")
+	assert.Nil(err)
+	assert.Equal("123456789", token)
+}
+
+func TestGoogleGetUser(t *testing.T) {
+	assert := assert.New(t)
+	p := Google{
+		ClientId:     "idtest",
+		ClientSecret: "sectest",
+		Scope:        "scopetest",
+		Prompt:       "consent select_account",
+		LoginURL: &url.URL{
+			Scheme: "https",
+			Host:   "google.com",
+			Path:   "/auth",
+		},
+	}
+
+	// Setup user server
+	userServerHandler := &UserServerHandler{}
+	userServer := httptest.NewServer(userServerHandler)
+	defer userServer.Close()
+	userURL, _ := url.Parse(userServer.URL)
+	p.UserURL = userURL
+
+	user, err := p.GetUser("123456789")
+	assert.Nil(err)
+
+  assert.Equal("1", user.Id)
+  assert.Equal("example@example.com", user.Email)
+  assert.True(user.Verified)
+  assert.Equal("example.com", user.Hd)
+}
