@@ -31,7 +31,7 @@ type Config struct {
 	CookieName      string               `long:"cookie-name" env:"COOKIE_NAME" default:"_forward_auth" description:"Cookie Name"`
 	CSRFCookieName  string               `long:"csrf-cookie-name" env:"CSRF_COOKIE_NAME" default:"_forward_auth_csrf" description:"CSRF Cookie Name"`
 	DefaultAction   string               `long:"default-action" env:"DEFAULT_ACTION" default:"auth" choice:"auth" choice:"allow" description:"Default action"`
-	DefaultProvider string               `long:"default-provider" env:"DEFAULT_PROVIDER" default:"google" choice:"google" choice:"odic" description:"Default provider"`
+	DefaultProvider string               `long:"default-provider" env:"DEFAULT_PROVIDER" default:"google" choice:"google" choice:"reddit" choice:"odic" description:"Default provider"`
 	Domains         CommaSeparatedList   `long:"domain" env:"DOMAIN" description:"Only allow given email domains, can be set multiple times"`
 	LifetimeString  int                  `long:"lifetime" env:"LIFETIME" default:"43200" description:"Lifetime in seconds"`
 	Path            string               `long:"url-path" env:"URL_PATH" default:"/_oauth" description:"Callback URL Path"`
@@ -276,6 +276,8 @@ func (c *Config) GetProvider(name string) (provider.Provider, error) {
 	switch name {
 	case "google":
 		return &c.Providers.Google, nil
+	case "reddit":
+		return &c.Providers.Reddit, nil
 	case "oidc":
 		return &c.Providers.OIDC, nil
 	}
