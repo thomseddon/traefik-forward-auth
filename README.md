@@ -131,7 +131,7 @@ Application Options:
   --url-path=                                           Callback URL Path (default: /_oauth) [$URL_PATH]
   --secret=                                             Secret used for signing (required) [$SECRET]
   --whitelist=                                          Only allow given email addresses, can be set multiple times [$WHITELIST]
-  --rules.<name>.<param>=                               Rule definitions, param can be: "action" or "rule"
+  --rule.<name>.<param>=                               Rule definitions, param can be: "action" or "rule"
 
 Google Provider:
   --providers.google.client-id=                         Client ID [$PROVIDERS_GOOGLE_CLIENT_ID]
@@ -244,7 +244,7 @@ All options can be supplied in any of the following ways, in the following prece
 
    For more details, please also read [User Restriction](#user-restriction) in the concepts section.
 
-- `rules`
+- `rule`
 
    Specify selective authentication rules. Rules are specified in the following format: `rule.<name>.<param>=<value>`
 
