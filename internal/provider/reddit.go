@@ -22,8 +22,9 @@ type Reddit struct {
 
 type RedditUser struct {
 	Id       string `json:"id"`
-	Username string `json:"name"`
+	Email    string `json:"name"`
 	Verified bool   `json:"has_verified_email"`
+	Hd       string `json:"hd"`
 }
 
 func (r *Reddit) Name() string {
@@ -97,7 +98,9 @@ func (r *Reddit) GetUser(token string) (User, error) {
 		return user, err
 	}
 
-	user = User{Id: redditUser.Id, Email: redditUser.Username, Verified: redditUser.Verified}
+	redditUser.Email = redditUser.Email + "@reddit.com"
+
+	user = User(redditUser)
 
 	return user, err
 }
