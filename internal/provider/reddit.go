@@ -86,6 +86,7 @@ func (r *Reddit) GetUser(token string) (User, error) {
 	}
 
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token))
+	req.Header.Add("User-Agent", "traefik-forward-auth")
 	res, err := client.Do(req)
 	if err != nil {
 		return user, err
