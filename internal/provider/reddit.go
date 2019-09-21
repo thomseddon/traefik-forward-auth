@@ -99,7 +99,9 @@ func (r *Reddit) GetUser(token string) (User, error) {
 		return user, err
 	}
 
-	redditUser.Email = redditUser.Email + "@reddit.com"
+	if redditUser.Email != nil {
+		redditUser.Email = redditUser.Email + "@reddit.com"
+	}
 
 	user = User(redditUser)
 
