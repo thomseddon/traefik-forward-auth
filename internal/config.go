@@ -87,6 +87,24 @@ func NewConfig(args []string) (Config, error) {
 					Path:   "/oauth2/v2/userinfo",
 				},
 			},
+			Reddit: provider.Reddit{
+				Scope: "identity",
+				LoginURL: &url.URL{
+					Scheme: "https",
+					Host:   "ssl.reddit.com",
+					Path:   "/api/v1/authorize",
+				},
+				TokenURL: &url.URL{
+					Scheme: "https",
+					Host:   "ssl.reddit.com",
+					Path:   "/api/v1/access_token",
+				},
+				UserURL: &url.URL{
+					Scheme: "https",
+					Host:   "oauth.reddit.com",
+					Path:   "/api/v1/me",
+				},
+			},
 		},
 	}
 
