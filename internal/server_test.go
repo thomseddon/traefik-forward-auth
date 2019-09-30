@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 /**
@@ -40,10 +41,20 @@ func TestServerAuthHandlerInvalid(t *testing.T) {
 	assert.Equal("accounts.google.com", fwd.Host, "vanilla request should be redirected to google")
 	assert.Equal("/o/oauth2/auth", fwd.Path, "vanilla request should be redirected to google")
 
+	// Check state string
+	qs := fwd.Query()
+	state, exists := qs["state"]
+	require.True(t, exists)
+	require.Len(t, state, 1)
+	parts := strings.SplitN(state[0], ":", 3)
+	require.Len(t, parts, 3)
+	assert.Equal("google", parts[1])
+	assert.Equal("http://example.com/foo", parts[2])
+
 	// Should catch invalid cookie
 	req = newDefaultHttpRequest("/foo")
 	c := MakeCookie(req, "test@example.com")
-	parts := strings.Split(c.Value, "|")
+	parts = strings.Split(c.Value, "|")
 	c.Value = fmt.Sprintf("bad|%s|%s", parts[1], parts[2])
 
 	res, _ = doHttpRequest(req, c)
@@ -157,6 +168,29 @@ func TestServerDefaultAction(t *testing.T) {
 	req = newDefaultHttpRequest("/random")
 	res, _ = doHttpRequest(req, nil)
 	assert.Equal(200, res.StatusCode, "request should be allowed with default handler")
+}
+
+func TestServerDefaultProvider(t *testing.T) {
+	assert := assert.New(t)
+	config, _ = NewConfig([]string{})
+
+	// Should use "google" as default provider when not specified
+	// TODO: better way to verify "google" provider has been selected?
+	req := newDefaultHttpRequest("/random")
+	res, _ := doHttpRequest(req, nil)
+	fwd, _ := res.Location()
+	assert.Equal("https", fwd.Scheme, "request with expired cookie should be redirected to google")
+	assert.Equal("accounts.google.com", fwd.Host, "request with expired cookie should be redirected to google")
+	assert.Equal("/o/oauth2/auth", fwd.Path, "request with expired cookie should be redirected to google")
+
+	// TODO: Should use "oidc" as default provider when specified
+	// config.DefaultProvider = "oidc"
+	// req := newDefaultHttpRequest("/random")
+	// res, _ := doHttpRequest(req, nil)
+	// fwd, _ := res.Location()
+	// assert.Equal("https", fwd.Scheme, "request with expired cookie should be redirected to google")
+	// assert.Equal("accounts.google.com", fwd.Host, "request with expired cookie should be redirected to google")
+	// assert.Equal("/o/oauth2/auth", fwd.Path, "request with expired cookie should be redirected to google")
 }
 
 func TestServerRouteHeaders(t *testing.T) {
@@ -352,6 +386,7 @@ func newHttpRequest(method, dest, uri string) *http.Request {
 	r := httptest.NewRequest("", "http://should-use-x-forwarded.com", nil)
 	p, _ := url.Parse(dest)
 	r.Header.Add("X-Forwarded-Method", method)
+	r.Header.Add("X-Forwarded-Proto", p.Scheme)
 	r.Header.Add("X-Forwarded-Host", p.Host)
 	r.Header.Add("X-Forwarded-Uri", uri)
 	return r

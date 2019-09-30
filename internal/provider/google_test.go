@@ -1,40 +1,12 @@
 package provider
 
 import (
-	"fmt"
-	"io/ioutil"
-	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
-
-// Utilities
-
-type TokenServerHandler struct{}
-
-func (t *TokenServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	body, _ := ioutil.ReadAll(r.Body)
-	if r.Method == "POST" &&
-			string(body) == "client_id=idtest&client_secret=sectest&code=code&grant_type=authorization_code&redirect_uri=http%3A%2F%2Fexample.com%2F_oauth" {
-		fmt.Fprint(w, `{"access_token":"123456789"}`)
-	} else {
-		fmt.Fprint(w, `TokenServerHandler received bad request`)
-	}
-}
-
-type UserServerHandler struct{}
-
-func (t *UserServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, `{
-    "id":"1",
-    "email":"example@example.com",
-    "verified_email":true,
-    "hd":"example.com"
-  }`)
-}
 
 // Tests
 

@@ -1,18 +1,22 @@
 package provider
 
 import (
-	"net/url"
+	"errors"
+	// "context"
+	// "net/url"
+
+	"github.com/coreos/go-oidc"
+	"golang.org/x/oauth2"
 )
 
 type OIDC struct {
-	ClientId     string `long:"client-id" env:"CLIENT_ID" description:"Client ID"`
+	IssuerURL    string `long:"issuer-url" env:"ISSUER_URL" description:"Issuer URL"`
+	ClientID     string `long:"client-id" env:"CLIENT_ID" description:"Client ID"`
 	ClientSecret string `long:"client-secret" env:"CLIENT_SECRET" description:"Client Secret" json:"-"`
-	Scope        string
-	Prompt       string `long:"prompt" env:"PROMPT" description:"Space separated list of OpenID prompt options"`
 
-	LoginURL *url.URL
-	TokenURL *url.URL
-	UserURL  *url.URL
+	provider *oidc.Provider
+	verifier *oidc.IDTokenVerifier
+	config *oauth2.Config
 }
 
 func (o *OIDC) Name() string {
@@ -20,52 +24,82 @@ func (o *OIDC) Name() string {
 }
 
 func (o *OIDC) Validate() error {
-	// TODO
+	// Check parms
+	if o.IssuerURL == "" || o.ClientID == "" || o.ClientSecret == "" {
+		return errors.New("providers.oidc.issuer-url, providers.oidc.client-id, providers.oidc.client-secret must be set")
+	}
+
+	// Try to initiate provider
+	var err error
+	// TODO: fix context
+	o.provider, err = oidc.NewProvider(oauth2.NoContext, o.IssuerURL)
+	if err != nil {
+		return err
+	}
+
+	// Create oauth2 config
+	o.config = &oauth2.Config{
+    ClientID: o.ClientID,
+    ClientSecret: o.ClientSecret,
+    Endpoint: o.provider.Endpoint(),
+
+    // "openid" is a required scope for OpenID Connect flows.
+    Scopes: []string{oidc.ScopeOpenID, "profile", "email"},
+	}
+
+	// Create OIDC verifier
+	o.verifier = o.provider.Verifier(&oidc.Config{
+		ClientID: o.ClientID,
+	})
+
 	return nil
 }
 
 func (o *OIDC) GetLoginURL(redirectUri, state string) string {
-	return "http://oidc.com"
-	// q := url.Values{}
-	// q.Set("client_id", g.ClientId)
-	// q.Set("response_type", "code")
-	// q.Set("scope", g.Scope)
-	// if g.Prompt != "" {
-	// 	q.Set("prompt", g.Prompt)
-	// }
-	// q.Set("redirect_uri", redirectUri)
-	// q.Set("state", state)
-
-	// var u url.URL
-	// u = *g.LoginURL
-	// u.RawQuery = q.Encode()
-
-	// return u.String()
+	config := o.config
+	config.RedirectURL = redirectUri
+	return o.config.AuthCodeURL(state)
 }
 
 func (o *OIDC) ExchangeCode(redirectUri, code string) (string, error) {
-	return "token", nil
-	// form := url.Values{}
-	// form.Set("client_id", g.ClientId)
-	// form.Set("client_secret", g.ClientSecret)
-	// form.Set("grant_type", "authorization_code")
-	// form.Set("redirect_uri", redirectUri)
-	// form.Set("code", code)
+	config := o.config
+	config.RedirectURL = redirectUri
 
-	// res, err := http.PostForm(g.TokenURL.String(), form)
-	// if err != nil {
-	// 	return "", err
-	// }
+	token, err := o.config.Exchange(oauth2.NoContext, code)
+	if err != nil {
+		return "", err
+	}
 
-	// var token Token
-	// defer res.Body.Close()
-	// err = json.NewDecoder(res.Body).Decode(&token)
+	// Extract ID token
+	rawIDToken, ok := token.Extra("id_token").(string)
+	if !ok {
+		return "", errors.New("Missing id_token")
+	}
 
-	// return token.Token, err
+	return rawIDToken, nil
 }
 
 func (o *OIDC) GetUser(token string) (User, error) {
 	var user User
+
+	// Parse & Verify ID Token
+	idToken, err := o.verifier.Verify(oauth2.NoContext, token)
+	if err != nil {
+		return user, err
+	}
+
+	// Extract custom claims
+	var claims struct {
+		Email    string `json:"email"`
+		Verified bool   `json:"email_verified"`
+	}
+	if err := idToken.Claims(&claims); err != nil {
+		return user, err
+	}
+
+	user.Email = claims.Email
+	user.Verified = claims.Verified
+
 	return user, nil
 
 	// client := &http.Client{}
