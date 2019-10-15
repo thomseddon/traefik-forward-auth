@@ -31,7 +31,7 @@ type Config struct {
 	CookieName      string               `long:"cookie-name" env:"COOKIE_NAME" default:"_forward_auth" description:"Cookie Name"`
 	CSRFCookieName  string               `long:"csrf-cookie-name" env:"CSRF_COOKIE_NAME" default:"_forward_auth_csrf" description:"CSRF Cookie Name"`
 	DefaultAction   string               `long:"default-action" env:"DEFAULT_ACTION" default:"auth" choice:"auth" choice:"allow" description:"Default action"`
-	DefaultProvider string               `long:"default-provider" env:"DEFAULT_PROVIDER" default:"google" choice:"google" choice:"odic" description:"Default provider"`
+	DefaultProvider string               `long:"default-provider" env:"DEFAULT_PROVIDER" default:"google" choice:"google" choice:"odic" choice:"github" description:"Default provider"`
 	Domains         CommaSeparatedList   `long:"domain" env:"DOMAIN" description:"Only allow given email domains, can be set multiple times"`
 	LifetimeString  int                  `long:"lifetime" env:"LIFETIME" default:"43200" description:"Lifetime in seconds"`
 	Path            string               `long:"url-path" env:"URL_PATH" default:"/_oauth" description:"Callback URL Path"`
@@ -85,6 +85,23 @@ func NewConfig(args []string) (Config, error) {
 					Scheme: "https",
 					Host:   "www.googleapis.com",
 					Path:   "/oauth2/v2/userinfo",
+				},
+			},
+			GitHub: provider.GitHub{
+				LoginURL: &url.URL{
+					Scheme: "https",
+					Host:   "github.com",
+					Path:   "/login/oauth/authorize",
+				},
+				TokenURL: &url.URL{
+					Scheme: "https",
+					Host:   "github.com",
+					Path:   "/login/oauth/access_token",
+				},
+				UserURL:  &url.URL{
+					Scheme: "https",
+					Host:   "api.github.com",
+					Path:   "/user",
 				},
 			},
 		},
@@ -278,6 +295,8 @@ func (c *Config) GetProvider(name string) (provider.Provider, error) {
 		return &c.Providers.Google, nil
 	case "oidc":
 		return &c.Providers.OIDC, nil
+	case "github":
+		return &c.Providers.GitHub, nil
 	}
 
 	return nil, fmt.Errorf("Unknown provider: %s", name)

@@ -37,6 +37,7 @@ func (s *Server) buildRoutes() {
 	}
 
 	// Add callback handler
+	log.Info("config.Path=", config.Path)
 	s.router.Handle(config.Path, s.AuthCallbackHandler())
 
 	// Add a default handler
@@ -72,6 +73,7 @@ func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Logging setup
 		logger := s.logger(r, rule, "Authenticating request")
+		log.Info("ReqURL=", r.RequestURI)
 
 		// Get auth cookie
 		c, err := r.Cookie(config.CookieName)
@@ -180,7 +182,7 @@ func (s *Server) authRedirect(logger *logrus.Entry, w http.ResponseWriter, r *ht
 
 	// Set the CSRF cookie
 	http.SetCookie(w, MakeCSRFCookie(r, nonce))
-	logger.Debug("Set CSRF cookie and redirecting to google login")
+	logger.Debug("Set CSRF cookie and redirecting to provider's login")
 
 	// Forward them on
 	loginUrl := p.GetLoginURL(redirectUri(r), MakeState(r, p, nonce))

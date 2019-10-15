@@ -2,6 +2,7 @@ package provider
 
 type Providers struct {
 	Google Google `group:"Google Provider" namespace:"google" env-namespace:"GOOGLE"`
+	GitHub GitHub `group:"Github Provider" namespace:"github" env-namespace:"GITHUB"`
 	OIDC   OIDC   `group:"ODIC Provider" namespace:"odic" env-namespace:"ODIC"`
 }
 
