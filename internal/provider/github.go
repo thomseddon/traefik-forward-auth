@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -18,6 +19,29 @@ type GitHub struct {
 	LoginURL *url.URL
 	TokenURL *url.URL
 	UserURL  *url.URL
+	TeamsURL *url.URL
+}
+
+type GitHubUser struct {
+	Id       	string `json:"id"`
+	Username 	string `json:"login"`
+	Email		string `json:"email"`
+	Teams		[]string
+}
+
+type GitHubTeam struct {
+	Id	string `json:"id"`
+	Name string `json:"name"`
+	Slug string `json:"slug"`
+}
+
+func (u GitHubUser) ToUser() User {
+	var user User
+
+	user.Id = u.Id
+	user.Email = u.Email
+	user.Hd = strings.Split(u.Email,"@")[1]
+	return user
 }
 
 func (g *GitHub) Name() string {
@@ -35,7 +59,7 @@ func (g *GitHub) GetLoginURL(redirectUri, state string) string {
 	q := url.Values{}
 	q.Set("client_id", g.ClientId)
 	q.Set("redirect_uri", redirectUri)
-	q.Set("scope", strings.Replace(g.Scope, ",", " ",-1))
+	q.Set("scope", strings.Replace(g.Scope, ",", " ", -1))
 	if g.Prompt != "" {
 		q.Set("prompt", g.Prompt)
 	}
@@ -60,30 +84,75 @@ func (g *GitHub) ExchangeCode(redirectUri, code string) (string, error) {
 		return "", err
 	}
 
-	var token Token
 	defer res.Body.Close()
-	err = json.NewDecoder(res.Body).Decode(&token)
 
-	return token.Token, err
+	if res.StatusCode == http.StatusOK {
+		bodyBytes, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			return "", err
+		}
+		bodyString := string(bodyBytes)
+		values, err := url.ParseQuery(bodyString)
+		if err != nil {
+			return "", err
+		}
+
+		if values.Get("access_token") == "" {
+			return "", errors.New("invalid response from server: " + bodyString)
+		}
+		return values.Get("access_token"), nil
+	}
+
+	return "", errors.New("server returned " + res.Status)
 }
 
-func (g *GitHub) GetUser(token string) (User, error) {
-	var user User
+func (g* GitHub) GetAuthMethod(token string) (url.Values, error) {
+	var ghUser GitHubUser
+	var auth_method url.Values
 
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", g.UserURL.String(), nil)
 	if err != nil {
-		return user, err
+		return auth_method, err
 	}
 
 	req.Header.Add("Authorization", fmt.Sprintf("token %s", token))
 	res, err := client.Do(req)
 	if err != nil {
-		return user, err
+		return auth_method, err
 	}
 
 	defer res.Body.Close()
-	err = json.NewDecoder(res.Body).Decode(&user)
+	err = json.NewDecoder(res.Body).Decode(&ghUser)
 
-	return user, err
+	// Get Teams
+	var teams []GitHubTeam
+	req, err = http.NewRequest("GET", g.TeamsURL.String(), nil)
+	if err != nil {
+		return auth_method, err
+	}
+
+	req.Header.Add("Authorization", fmt.Sprintf("token %s", token))
+	res, err = client.Do(req)
+	if err != nil {
+		return auth_method, err
+	}
+
+	defer res.Body.Close()
+	err = json.NewDecoder(res.Body).Decode(&teams)
+
+	var teams_s []string
+
+	for _, team := range teams {
+		teams_s = append(teams_s, team.Id)
+	}
+
+	ghUser.Teams = teams_s
+
+	if err != nil {
+		auth_method.Add("user", ghUser.Username)
+		auth_method.Add("teams", strings.Join(ghUser.Teams, ","))
+	}
+
+	return auth_method, err
 }

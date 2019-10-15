@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -17,7 +18,7 @@ import (
 
 // Request Validation
 
-// Cookie = hash(secret, cookie domain, email, expires)|expires|email
+// Cookie = hash(secret, cookie domain, authmethod, expires)|expires|authmethod
 func ValidateCookie(r *http.Request, c *http.Cookie) (string, error) {
 	parts := strings.Split(c.Value, "|")
 
@@ -79,6 +80,30 @@ func ValidateEmail(email string) bool {
 	}
 
 	return found
+}
+
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+
+// Validate teams
+func ValidateTeams(teams_s string) bool {
+	teams := strings.Split(teams_s, ",")
+
+	if len(config.Teams) > 0 {
+		for _, team := range config.Teams {
+			if contains(teams, team) {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 // Utility methods
@@ -255,10 +280,10 @@ func useAuthDomain(r *http.Request) (bool, string) {
 // Cookie methods
 
 // Create an auth cookie
-func MakeCookie(r *http.Request, email string) *http.Cookie {
+func MakeCookie(r *http.Request, auth_method url.Values) *http.Cookie {
 	expires := cookieExpiry()
-	mac := cookieSignature(r, email, fmt.Sprintf("%d", expires.Unix()))
-	value := fmt.Sprintf("%s|%d|%s", mac, expires.Unix(), email)
+	mac := cookieSignature(r, auth_method.Encode(), fmt.Sprintf("%d", expires.Unix()))
+	value := fmt.Sprintf("%s|%d|%s", mac, expires.Unix(), auth_method)
 
 	return &http.Cookie{
 		Name:     config.CookieName,

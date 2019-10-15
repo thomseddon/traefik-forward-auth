@@ -73,7 +73,6 @@ func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Logging setup
 		logger := s.logger(r, rule, "Authenticating request")
-		log.Info("ReqURL=", r.RequestURI)
 
 		// Get auth cookie
 		c, err := r.Cookie(config.CookieName)
@@ -83,7 +82,7 @@ func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 		}
 
 		// Validate cookie
-		email, err := ValidateCookie(r, c)
+		auth_method, err := ValidateCookie(r, c)
 		if err != nil {
 			if err.Error() == "Cookie has expired" {
 				logger.Info("Cookie has expired")
@@ -95,19 +94,33 @@ func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 			return
 		}
 
-		// Validate user
-		valid := ValidateEmail(email)
-		if !valid {
-			logger.WithFields(logrus.Fields{
-				"email": email,
-			}).Errorf("Invalid email")
-			http.Error(w, "Not authorized", 401)
-			return
-		}
+		var user string
 
+		switch providerName {
+			case "github":
+			valid := ValidateTeams(auth_method)
+			if !valid {
+				logger.WithFields(logrus.Fields{
+					"auth_method": auth_method,
+				}).Errorf("Invalid auth_method")
+				http.Error(w, "Not authorized", 401)
+				return
+			}
+
+			default:
+			// Validate user
+			valid := ValidateEmail(auth_method)
+			if !valid {
+				logger.WithFields(logrus.Fields{
+					"email": auth_method,
+				}).Errorf("Invalid email")
+				http.Error(w, "Not authorized", 401)
+				return
+			}
+		}
 		// Valid request
 		logger.Debugf("Allowing valid request ")
-		w.Header().Set("X-Forwarded-User", email)
+		w.Header().Set("X-Forwarded-User", user)
 		w.WriteHeader(200)
 	}
 }
@@ -154,16 +167,16 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 		}
 
 		// Get user
-		user, err := p.GetUser(token)
+		auth_method, err := p.GetAuthMethod(token)
 		if err != nil {
 			logger.Errorf("Error getting user: %s", err)
 			return
 		}
 
 		// Generate cookie
-		http.SetCookie(w, MakeCookie(r, user.Email))
+		http.SetCookie(w, MakeCookie(r, auth_method))
 		logger.WithFields(logrus.Fields{
-			"user": user.Email,
+			"auth_method": auth_method,
 		}).Infof("Generated auth cookie")
 
 		// Redirect

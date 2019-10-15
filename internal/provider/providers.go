@@ -1,5 +1,7 @@
 package provider
 
+import "net/url"
+
 type Providers struct {
 	Google Google `group:"Google Provider" namespace:"google" env-namespace:"GOOGLE"`
 	GitHub GitHub `group:"Github Provider" namespace:"github" env-namespace:"GITHUB"`
@@ -10,8 +12,8 @@ type Provider interface {
 	Name() string
 	GetLoginURL(redirectUri, state string) string
 	ExchangeCode(redirectUri, code string) (string, error)
-	GetUser(token string) (User, error)
 	Validate() error
+	GetAuthMethod(token string) (url.Values, error)
 }
 
 type Token struct {
@@ -22,5 +24,5 @@ type User struct {
 	Id       string `json:"id"`
 	Email    string `json:"email"`
 	Verified bool   `json:"verified_email"`
-	Hd       string `json:"hd"`
+	Hd       string `json:"hd"` // Domain
 }
