@@ -6,6 +6,8 @@ import (
 
 	"github.com/containous/traefik/pkg/rules"
 	"github.com/sirupsen/logrus"
+
+	"strings"
 )
 
 type Server struct {
@@ -143,6 +145,14 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 		user, err := GetUser(token)
 		if err != nil {
 			logger.Errorf("Error getting user: %s", err)
+			return
+		}
+
+		//Validate redirect
+		allowedHostForRedirect := redirectBase(r)
+		if !strings.HasPrefix(redirect+"/", allowedHostForRedirect+"/") {
+			logger.Errorf("Redirection %v does not match the redirectBase", redirect)
+			http.Error(w, "Not authorized", 401)
 			return
 		}
 

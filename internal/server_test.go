@@ -145,6 +145,16 @@ func TestServerAuthCallback(t *testing.T) {
 	assert.Equal("http", fwd.Scheme, "valid request should be redirected to return url")
 	assert.Equal("example.com", fwd.Host, "valid request should be redirected to return url")
 	assert.Equal("/redirect", fwd.Path, "valid request should be redirected to return url")
+
+	req = newDefaultHttpRequest("/_oauth?state=12345678901234567890123456789012:http://example.com.notallowed")
+	c = MakeCSRFCookie(req, "12345678901234567890123456789012")
+	res, _ = doHttpRequest(req, c)
+	assert.Equal(401, res.StatusCode, "redirect domain cannot differ from the host defined in the state parameter")
+
+	req = newDefaultHttpRequest("/_oauth?state=12345678901234567890123456789012:http://notallowed.example.com")
+	c = MakeCSRFCookie(req, "12345678901234567890123456789012")
+	res, _ = doHttpRequest(req, c)
+	assert.Equal(401, res.StatusCode, "subdomain cannot differ from the host defined in the state parameter")
 }
 
 func TestServerDefaultAction(t *testing.T) {
@@ -355,6 +365,7 @@ func newHttpRequest(method, dest, uri string) *http.Request {
 	p, _ := url.Parse(dest)
 	r.Header.Add("X-Forwarded-Method", method)
 	r.Header.Add("X-Forwarded-Host", p.Host)
+	r.Header.Add("X-Forwarded-Proto", p.Scheme)
 	r.Header.Add("X-Forwarded-Uri", uri)
 	return r
 }
