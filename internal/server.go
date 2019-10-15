@@ -149,8 +149,8 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 		}
 
 		//Validate redirect
-		allowedHostForRedirect := redirectBase(r)
-		if !strings.HasPrefix(redirect+"/", allowedHostForRedirect+"/") {
+		redirectBaseUseToForgeStatePrameter := redirectBase(r)
+		if !strings.HasPrefix(redirect+"/", redirectBaseUseToForgeStatePrameter+"/") {
 			logger.Errorf("Redirection %v does not match the redirectBase", redirect)
 			http.Error(w, "Not authorized", 401)
 			return
