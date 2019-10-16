@@ -17,6 +17,11 @@ import (
  * Tests
  */
 
+func generateTestAuthMethod(email string) url.Values {
+	v, _ := url.ParseQuery("email=" + email)
+	return v
+}
+
 func TestAuthValidateCookie(t *testing.T) {
 	assert := assert.New(t)
 	config, _ = NewConfig([]string{})
@@ -27,40 +32,44 @@ func TestAuthValidateCookie(t *testing.T) {
 	c.Value = ""
 	_, err := ValidateCookie(r, c)
 	if assert.Error(err) {
-		assert.Equal("Invalid cookie format", err.Error())
+		assert.Equal("invalid cookie format", err.Error())
 	}
 	c.Value = "1|2"
 	_, err = ValidateCookie(r, c)
 	if assert.Error(err) {
-		assert.Equal("Invalid cookie format", err.Error())
+		assert.Equal("invalid cookie format", err.Error())
 	}
 	c.Value = "1|2|3|4"
 	_, err = ValidateCookie(r, c)
 	if assert.Error(err) {
-		assert.Equal("Invalid cookie format", err.Error())
+		assert.Equal("invalid cookie format", err.Error())
 	}
 
 	// Should catch invalid mac
 	c.Value = "MQ==|2|3"
 	_, err = ValidateCookie(r, c)
 	if assert.Error(err) {
-		assert.Equal("Invalid cookie mac", err.Error())
+		assert.Equal("invalid cookie mac", err.Error())
 	}
 
 	// Should catch expired
 	config.Lifetime = time.Second * time.Duration(-1)
-	c = MakeCookie(r, "test@test.com")
+	v, err := url.ParseQuery("email=test@test.com")
+	assert.Nil(err)
+	c = MakeCookie(r, v)
 	_, err = ValidateCookie(r, c)
 	if assert.Error(err) {
-		assert.Equal("Cookie has expired", err.Error())
+		assert.Equal("cookie has expired", err.Error())
 	}
 
 	// Should accept valid cookie
-	config.Lifetime = time.Second * time.Duration(10)
-	c = MakeCookie(r, "test@test.com")
-	email, err := ValidateCookie(r, c)
+	config.Lifetime = time.Minute * time.Duration(1)
+	c = MakeCookie(r, v)
+	authMethod, err := ValidateCookie(r, c)
+	v, err = url.ParseQuery(authMethod)
 	assert.Nil(err, "valid request should not return an error")
-	assert.Equal("test@test.com", email, "valid request should return user email")
+
+	assert.Equal("test@test.com", v.Get("email"), "valid request should return user email")
 }
 
 func TestAuthValidateEmail(t *testing.T) {
@@ -235,7 +244,7 @@ func TestAuthMakeCookie(t *testing.T) {
 	r, _ := http.NewRequest("GET", "http://app.example.com", nil)
 	r.Header.Add("X-Forwarded-Host", "app.example.com")
 
-	c := MakeCookie(r, "test@example.com")
+	c := MakeCookie(r, generateTestAuthMethod("test@example.com"))
 	assert.Equal("_forward_auth", c.Name)
 	parts := strings.Split(c.Value, "|")
 	assert.Len(parts, 3, "cookie should be 3 parts")
@@ -250,7 +259,7 @@ func TestAuthMakeCookie(t *testing.T) {
 
 	config.CookieName = "testname"
 	config.InsecureCookie = true
-	c = MakeCookie(r, "test@example.com")
+	c = MakeCookie(r, generateTestAuthMethod("test@example.com"))
 	assert.Equal("testname", c.Name)
 	assert.False(c.Secure)
 }

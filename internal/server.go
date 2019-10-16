@@ -38,13 +38,13 @@ func (s *Server) buildRoutes() {
 
 	// Add callback handler
 	// Callback Rule
-	r := NewRule()
+	/*r := NewRule()
 	r.Rule = "Host(`" + config.AuthHost + "`) && Path(`"+ config.Path +"`)"
 	r.Action = "allow"
 	fr := r.formattedRule()
 
-	logrus.Debug("FormattedRule=", fr)
-	s.router.AddRoute(fr, 1, s.AuthCallbackHandler())
+	logrus.Debug("FormattedRule=", fr)*/
+	s.router.Handle(config.Path, s.AuthCallbackHandler())
 
 	// Add a default handler
 	if config.DefaultAction == "allow" {
@@ -59,7 +59,7 @@ func (s *Server) RootHandler(w http.ResponseWriter, r *http.Request) {
 	r.Method = r.Header.Get("X-Forwarded-Method")
 	r.Host = r.Header.Get("X-Forwarded-Host")
 	if r.Header.Get("X-Forwarded-Uri") != "" {
-		r.URL, _ = url.Parse(r.Header.Get("X-Forwarded-Uri"))
+		   r.URL, _ = url.Parse(r.Header.Get("X-Forwarded-Uri"))
 	}
 
 	// Pass to mux
@@ -130,6 +130,7 @@ func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 				return
 			}
 		}
+
 		// Valid request
 		logger.Debugf("Allowing valid request ")
 		w.Header().Set("X-Forwarded-User", authMethod)
@@ -182,14 +183,14 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 		authMethod, err := p.GetAuthMethod(token)
 		if err != nil {
 			logger.Errorf("Error getting user: %s", err)
-			http.Error(w, "Service unavailable", 503)
+			//http.Error(w, "Service unavailable", 503)
 			return
 		}
 
 		// Generate cookie
 		http.SetCookie(w, MakeCookie(r, authMethod))
 		logger.WithFields(logrus.Fields{
-			"auth_method": authMethod,
+			"auth_kethod": authMethod,
 		}).Infof("Generated auth cookie")
 
 		// Redirect

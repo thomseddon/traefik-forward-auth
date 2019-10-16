@@ -23,33 +23,34 @@ func ValidateCookie(r *http.Request, c *http.Cookie) (string, error) {
 	parts := strings.Split(c.Value, "|")
 
 	if len(parts) != 3 {
-		return "", errors.New("Invalid cookie format")
+		return "", errors.New("invalid cookie format")
 	}
 
 	mac, err := base64.URLEncoding.DecodeString(parts[0])
 	if err != nil {
-		return "", errors.New("Unable to decode cookie mac")
+		return "", errors.New("unable to decode cookie mac")
 	}
 
 	expectedSignature := cookieSignature(r, parts[2], parts[1])
 	expected, err := base64.URLEncoding.DecodeString(expectedSignature)
 	if err != nil {
-		return "", errors.New("Unable to generate mac")
+		return "", errors.New("unable to generate mac")
 	}
 
 	// Valid token?
 	if !hmac.Equal(mac, expected) {
-		return "", errors.New("Invalid cookie mac")
+		return "", errors.New("invalid cookie mac")
 	}
 
 	expires, err := strconv.ParseInt(parts[1], 10, 64)
 	if err != nil {
-		return "", errors.New("Unable to parse cookie expiry")
+		return "", errors.New("unable to parse cookie expiry")
 	}
 
 	// Has it expired?
-	if time.Unix(expires, 0).Before(time.Now()) {
-		return "", errors.New("Cookie has expired")
+	now := time.Now()
+	if time.Unix(expires, 0).Before(now) {
+		return "", errors.New("cookie has expired")
 	}
 
 	// Looks valid
@@ -242,13 +243,12 @@ func redirectBase(r *http.Request) string {
 	host := r.Header.Get("X-Forwarded-Host")
 	port := r.Header.Get("X-Forwarded-Port")
 
-	if port != "" {
-		port, err := strconv.Atoi(port)
-		if err == nil && port >= 1 && port <= 65535 {
-			return fmt.Sprintf("%s://%s:%d", proto, host, port)
-		}
-	}
-
+   if port != "" {
+		   port, err := strconv.Atoi(port)
+		   if err == nil && port >= 1 && port <= 65535 {
+				   return fmt.Sprintf("%s://%s:%d", proto, host, port)
+		   }
+   }
 	return fmt.Sprintf("%s://%s", proto, host)
 }
 
@@ -266,11 +266,11 @@ func redirectUri(r *http.Request) string {
 		port := r.Header.Get("X-Forwarded-Port")
 
 		if port != "" {
-			port, err := strconv.Atoi(port)
-			log.Info("Got port: ", port)
-			if err == nil && port >= 1 && port <= 65535 {
-				return fmt.Sprintf("%s://%s:%d%s", proto, config.AuthHost, port, config.Path)
-			}
+			   port, err := strconv.Atoi(port)
+			   log.Info("Got port: ", port)
+			   if err == nil && port >= 1 && port <= 65535 {
+					   return fmt.Sprintf("%s://%s:%d%s", proto, config.AuthHost, port, config.Path)
+			   }
 		}
 		return fmt.Sprintf("%s://%s%s", proto, config.AuthHost, config.Path)
 	}
