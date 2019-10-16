@@ -85,7 +85,7 @@ func TestGoogleExchangeCode(t *testing.T) {
 	assert.Equal("123456789", token)
 }
 
-func TestGoogleGetUser(t *testing.T) {
+func TestGoogleGetAuth(t *testing.T) {
 	assert := assert.New(t)
 	p := Google{
 		ClientId:     "idtest",
@@ -106,11 +106,13 @@ func TestGoogleGetUser(t *testing.T) {
 	userURL, _ := url.Parse(userServer.URL)
 	p.UserURL = userURL
 
-	user, err := p.GetUser("123456789")
+	authMethod, err := p.GetAuthMethod("123456789")
 	assert.Nil(err)
 
-  assert.Equal("1", user.Id)
-  assert.Equal("example@example.com", user.Email)
-  assert.True(user.Verified)
-  assert.Equal("example.com", user.Hd)
+	assert.Nil(err)
+
+	assert.Equal("1", authMethod.Get("user"))
+	assert.Equal("example@example.com", authMethod.Get("email"))
+	assert.True(authMethod.Get("verified") == "true")
+	assert.Equal("example.com", authMethod.Get("hd"))
 }

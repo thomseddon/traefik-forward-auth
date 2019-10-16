@@ -56,7 +56,7 @@ func NewUserServer() (*httptest.Server, *url.URL) {
 
 func (t *UserServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	body, _ := ioutil.ReadAll(r.Body)
-	fmt.Println((string(body)))
+	fmt.Println(string(body))
 	fmt.Fprint(w, `{
     "id":"1",
     "email":"example@example.com",

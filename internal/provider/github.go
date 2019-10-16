@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -23,24 +24,34 @@ type GitHub struct {
 }
 
 type GitHubUser struct {
-	Id       	string `json:"id"`
-	Username 	string `json:"login"`
-	Email		string `json:"email"`
-	Teams		[]string
+	Id       int    `json:"id"`
+	Username string `json:"login"`
+	Email    string `json:"email"`
+	Teams    []string
+}
+
+type GitHubOrg struct {
+	Id     int    `json:"id"`
+	Login  string `json:"login"`
+	Name   string `json:"name"`
+	Email  string `json:"email"`
+	Avatar string `json:"avatar_url"`
 }
 
 type GitHubTeam struct {
-	Id	string `json:"id"`
-	Name string `json:"name"`
-	Slug string `json:"slug"`
+	Id           int    `json:"id"`
+	Name         string `json:"name"`
+	Slug         string `json:"slug"`
+	Description  string `json:"description"`
+	Organization GitHubOrg
 }
 
 func (u GitHubUser) ToUser() User {
 	var user User
 
-	user.Id = u.Id
+	user.Id = strconv.Itoa(u.Id)
 	user.Email = u.Email
-	user.Hd = strings.Split(u.Email,"@")[1]
+	user.Hd = strings.Split(u.Email, "@")[1]
 	return user
 }
 
@@ -106,20 +117,20 @@ func (g *GitHub) ExchangeCode(redirectUri, code string) (string, error) {
 	return "", errors.New("server returned " + res.Status)
 }
 
-func (g* GitHub) GetAuthMethod(token string) (url.Values, error) {
+func (g *GitHub) GetAuthMethod(token string) (url.Values, error) {
 	var ghUser GitHubUser
-	var auth_method url.Values
+	var authMethod = url.Values{}
 
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", g.UserURL.String(), nil)
 	if err != nil {
-		return auth_method, err
+		return authMethod, err
 	}
 
 	req.Header.Add("Authorization", fmt.Sprintf("token %s", token))
 	res, err := client.Do(req)
 	if err != nil {
-		return auth_method, err
+		return authMethod, err
 	}
 
 	defer res.Body.Close()
@@ -129,30 +140,30 @@ func (g* GitHub) GetAuthMethod(token string) (url.Values, error) {
 	var teams []GitHubTeam
 	req, err = http.NewRequest("GET", g.TeamsURL.String(), nil)
 	if err != nil {
-		return auth_method, err
+		return authMethod, err
 	}
 
 	req.Header.Add("Authorization", fmt.Sprintf("token %s", token))
 	res, err = client.Do(req)
 	if err != nil {
-		return auth_method, err
+		return authMethod, err
 	}
 
 	defer res.Body.Close()
 	err = json.NewDecoder(res.Body).Decode(&teams)
 
-	var teams_s []string
+	var teamsS []string
 
 	for _, team := range teams {
-		teams_s = append(teams_s, team.Id)
+		teamsS = append(teamsS, strconv.Itoa(team.Id))
 	}
 
-	ghUser.Teams = teams_s
+	ghUser.Teams = teamsS
 
-	if err != nil {
-		auth_method.Add("user", ghUser.Username)
-		auth_method.Add("teams", strings.Join(ghUser.Teams, ","))
+	if err == nil {
+		authMethod.Add("user", ghUser.Username)
+		authMethod.Add("teams", strings.Join(ghUser.Teams, ","))
 	}
 
-	return auth_method, err
+	return authMethod, err
 }

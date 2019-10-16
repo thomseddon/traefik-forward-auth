@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 )
 
 type Google struct {
@@ -68,23 +69,29 @@ func (g *Google) ExchangeCode(redirectUri, code string) (string, error) {
 	return token.Token, err
 }
 
-func (g *Google) GetUser(token string) (User, error) {
+func (g *Google) GetAuthMethod(token string) (url.Values, error) {
 	var user User
+	values := url.Values{}
 
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", g.UserURL.String(), nil)
 	if err != nil {
-		return user, err
+		return values, err
 	}
 
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token))
 	res, err := client.Do(req)
 	if err != nil {
-		return user, err
+		return values, err
 	}
 
 	defer res.Body.Close()
 	err = json.NewDecoder(res.Body).Decode(&user)
 
-	return user, err
+	values.Add("user", user.Id)
+	values.Add("email", user.Email)
+	values.Add("verified", strconv.FormatBool(user.Verified))
+	values.Add("hd", user.Hd)
+
+	return values, err
 }

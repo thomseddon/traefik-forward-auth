@@ -37,7 +37,6 @@ func (s *Server) buildRoutes() {
 	}
 
 	// Add callback handler
-	log.Info("config.Path=", config.Path)
 	s.router.Handle(config.Path, s.AuthCallbackHandler())
 
 	// Add a default handler
@@ -82,7 +81,7 @@ func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 		}
 
 		// Validate cookie
-		auth_method, err := ValidateCookie(r, c)
+		authMethod, err := ValidateCookie(r, c)
 		if err != nil {
 			if err.Error() == "Cookie has expired" {
 				logger.Info("Cookie has expired")
@@ -97,22 +96,28 @@ func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 		var user string
 
 		switch providerName {
-			case "github":
-			valid := ValidateTeams(auth_method)
-			if !valid {
-				logger.WithFields(logrus.Fields{
-					"auth_method": auth_method,
-				}).Errorf("Invalid auth_method")
-				http.Error(w, "Not authorized", 401)
+		case "github":
+			authMethod, err := url.ParseQuery(authMethod)
+			if err == nil {
+				valid := ValidateTeams(authMethod.Get("teams"))
+				if !valid {
+					logger.WithFields(logrus.Fields{
+						"authMethod": authMethod,
+					}).Errorf("Invalid authMethod")
+					http.Error(w, "Not authorized", 401)
+					return
+				}
+			} else {
+				http.Error(w, "Bad cookie", 400)
 				return
 			}
 
-			default:
+		default:
 			// Validate user
-			valid := ValidateEmail(auth_method)
+			valid := ValidateEmail(authMethod)
 			if !valid {
 				logger.WithFields(logrus.Fields{
-					"email": auth_method,
+					"email": authMethod,
 				}).Errorf("Invalid email")
 				http.Error(w, "Not authorized", 401)
 				return
@@ -167,16 +172,17 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 		}
 
 		// Get user
-		auth_method, err := p.GetAuthMethod(token)
+		authMethod, err := p.GetAuthMethod(token)
 		if err != nil {
 			logger.Errorf("Error getting user: %s", err)
+			http.Error(w, "Service unavailable", 503)
 			return
 		}
 
 		// Generate cookie
-		http.SetCookie(w, MakeCookie(r, auth_method))
+		http.SetCookie(w, MakeCookie(r, authMethod))
 		logger.WithFields(logrus.Fields{
-			"auth_method": auth_method,
+			"auth_method": authMethod,
 		}).Infof("Generated auth cookie")
 
 		// Redirect

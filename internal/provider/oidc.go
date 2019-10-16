@@ -1,7 +1,11 @@
 package provider
 
 import (
+	"context"
 	"errors"
+	"net/url"
+	"strconv"
+
 	// "context"
 	// "net/url"
 
@@ -79,13 +83,14 @@ func (o *OIDC) ExchangeCode(redirectUri, code string) (string, error) {
 	return rawIDToken, nil
 }
 
-func (o *OIDC) GetUser(token string) (User, error) {
+func (o *OIDC) GetAuthMethod(token string) (url.Values, error) {
 	var user User
+	var values = url.Values{}
 
 	// Parse & Verify ID Token
-	idToken, err := o.verifier.Verify(oauth2.NoContext, token)
+	idToken, err := o.verifier.Verify(context.Background(), token)
 	if err != nil {
-		return user, err
+		return values, err
 	}
 
 	// Extract custom claims
@@ -94,13 +99,16 @@ func (o *OIDC) GetUser(token string) (User, error) {
 		Verified bool   `json:"email_verified"`
 	}
 	if err := idToken.Claims(&claims); err != nil {
-		return user, err
+		return values, err
 	}
 
 	user.Email = claims.Email
 	user.Verified = claims.Verified
 
-	return user, nil
+	values.Add("email", claims.Email)
+	values.Add("verified", strconv.FormatBool(claims.Verified))
+
+	return values, nil
 
 	// client := &http.Client{}
 	// req, err := http.NewRequest("GET", g.UserURL.String(), nil)

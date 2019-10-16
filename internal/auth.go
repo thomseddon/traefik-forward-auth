@@ -92,8 +92,8 @@ func contains(s []string, e string) bool {
 }
 
 // Validate teams
-func ValidateTeams(teams_s string) bool {
-	teams := strings.Split(teams_s, ",")
+func ValidateTeams(teamsS string) bool {
+	teams := strings.Split(teamsS, ",")
 
 	if len(config.Teams) > 0 {
 		for _, team := range config.Teams {
@@ -240,6 +240,14 @@ func ValidateTeams(teams_s string) bool {
 func redirectBase(r *http.Request) string {
 	proto := r.Header.Get("X-Forwarded-Proto")
 	host := r.Header.Get("X-Forwarded-Host")
+	port := r.Header.Get("X-Forwarded-Port")
+
+	if port != "" {
+		port, err := strconv.Atoi(port)
+		if err == nil && port >= 1 && port <= 65535 {
+			return fmt.Sprintf("%s://%s:%d", proto, host, port)
+		}
+	}
 
 	return fmt.Sprintf("%s://%s", proto, host)
 }
@@ -255,6 +263,15 @@ func returnUrl(r *http.Request) string {
 func redirectUri(r *http.Request) string {
 	if use, _ := useAuthDomain(r); use {
 		proto := r.Header.Get("X-Forwarded-Proto")
+		port := r.Header.Get("X-Forwarded-Port")
+
+		if port != "" {
+			port, err := strconv.Atoi(port)
+			log.Info("Got port: ", port)
+			if err == nil && port >= 1 && port <= 65535 {
+				return fmt.Sprintf("%s://%s:%d%s", proto, config.AuthHost, port, config.Path)
+			}
+		}
 		return fmt.Sprintf("%s://%s%s", proto, config.AuthHost, config.Path)
 	}
 
@@ -280,10 +297,10 @@ func useAuthDomain(r *http.Request) (bool, string) {
 // Cookie methods
 
 // Create an auth cookie
-func MakeCookie(r *http.Request, auth_method url.Values) *http.Cookie {
+func MakeCookie(r *http.Request, authMethod url.Values) *http.Cookie {
 	expires := cookieExpiry()
-	mac := cookieSignature(r, auth_method.Encode(), fmt.Sprintf("%d", expires.Unix()))
-	value := fmt.Sprintf("%s|%d|%s", mac, expires.Unix(), auth_method)
+	mac := cookieSignature(r, authMethod.Encode(), fmt.Sprintf("%d", expires.Unix()))
+	value := fmt.Sprintf("%s|%d|%s", mac, expires.Unix(), authMethod.Encode())
 
 	return &http.Cookie{
 		Name:     config.CookieName,

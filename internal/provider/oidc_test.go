@@ -8,8 +8,8 @@ import (
 	"net/url"
 	"testing"
 
-	"golang.org/x/oauth2"
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/oauth2"
 )
 // Utilities
 
@@ -116,7 +116,7 @@ func TestOIDCExchangeCode(t *testing.T) {
 	assert.Equal("id_123456789", token)
 }
 
-func TestOIDCGetUser(t *testing.T) {
+func TestOIDCGetAuth(t *testing.T) {
 	assert := assert.New(t)
 
 	// Set up token server
@@ -134,13 +134,13 @@ func TestOIDCGetUser(t *testing.T) {
 		},
 	}
 
-	user, err := p.GetUser("123456789")
+	authMethod, err := p.GetAuthMethod("123456789")
 	assert.Nil(err)
 
-  assert.Equal("1", user.Id)
-  assert.Equal("example@example.com", user.Email)
-  assert.True(user.Verified)
-	assert.Equal("example.com", user.Hd)
+  assert.Equal("1", authMethod.Get("id"))
+  assert.Equal("example@example.com", authMethod.Get("email"))
+  assert.True(authMethod.Get("verified") == "true")
+	assert.Equal("example.com", authMethod.Get("hd"))
 	return
 
 	// assert := assert.New(t)

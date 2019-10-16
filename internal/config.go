@@ -36,7 +36,7 @@ type Config struct {
 	LifetimeString  int                  `long:"lifetime" env:"LIFETIME" default:"43200" description:"Lifetime in seconds"`
 	Path            string               `long:"url-path" env:"URL_PATH" default:"/_oauth" description:"Callback URL Path"`
 	SecretString    string               `long:"secret" env:"SECRET" description:"Secret used for signing (required)" json:"-"`
-	Teams			CommaSeparatedList   `long:"teams" env:"TEAMS" description:"Only allow given team, can be set multiple times"`
+	Teams           CommaSeparatedList   `long:"teams" env:"TEAMS" description:"Only allow given team, can be set multiple times"`
 	Whitelist       CommaSeparatedList   `long:"whitelist" env:"WHITELIST" description:"Only allow given email addresses, can be set multiple times"`
 
 	Providers provider.Providers `group:"providers" namespace:"providers" env-namespace:"PROVIDERS"`
@@ -99,7 +99,7 @@ func NewConfig(args []string) (Config, error) {
 					Host:   "github.com",
 					Path:   "/login/oauth/access_token",
 				},
-				UserURL:  &url.URL{
+				UserURL: &url.URL{
 					Scheme: "https",
 					Host:   "api.github.com",
 					Path:   "/user",
