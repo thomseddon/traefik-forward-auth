@@ -30,14 +30,21 @@ func (s *Server) buildRoutes() {
 	for name, rule := range config.Rules {
 		matchRule := rule.formattedRule()
 		if rule.Action == "allow" {
-			s.router.AddRoute(matchRule, 1, s.AllowHandler(name))
+			s.router.AddRoute(matchRule, 10, s.AllowHandler(name))
 		} else {
-			s.router.AddRoute(matchRule, 1, s.AuthHandler(rule.Provider, name))
+			s.router.AddRoute(matchRule, 10, s.AuthHandler(rule.Provider, name))
 		}
 	}
 
 	// Add callback handler
-	s.router.Handle(config.Path, s.AuthCallbackHandler())
+	// Callback Rule
+	r := NewRule()
+	r.Rule = "Host(`" + config.AuthHost + "`) && Path(`"+ config.Path +"`)"
+	r.Action = "allow"
+	fr := r.formattedRule()
+
+	logrus.Debug("FormattedRule=", fr)
+	s.router.AddRoute(fr, 1, s.AuthCallbackHandler())
 
 	// Add a default handler
 	if config.DefaultAction == "allow" {
@@ -51,7 +58,9 @@ func (s *Server) RootHandler(w http.ResponseWriter, r *http.Request) {
 	// Modify request
 	r.Method = r.Header.Get("X-Forwarded-Method")
 	r.Host = r.Header.Get("X-Forwarded-Host")
-	r.URL, _ = url.Parse(r.Header.Get("X-Forwarded-Uri"))
+	if r.Header.Get("X-Forwarded-Uri") != "" {
+		r.URL, _ = url.Parse(r.Header.Get("X-Forwarded-Uri"))
+	}
 
 	// Pass to mux
 	s.router.ServeHTTP(w, r)
@@ -93,8 +102,6 @@ func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 			return
 		}
 
-		var user string
-
 		switch providerName {
 		case "github":
 			authMethod, err := url.ParseQuery(authMethod)
@@ -125,7 +132,7 @@ func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 		}
 		// Valid request
 		logger.Debugf("Allowing valid request ")
-		w.Header().Set("X-Forwarded-User", user)
+		w.Header().Set("X-Forwarded-User", authMethod)
 		w.WriteHeader(200)
 	}
 }
