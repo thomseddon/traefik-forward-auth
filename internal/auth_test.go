@@ -32,24 +32,24 @@ func TestAuthValidateCookie(t *testing.T) {
 	c.Value = ""
 	_, err := ValidateCookie(r, c)
 	if assert.Error(err) {
-		assert.Equal("invalid cookie format", err.Error())
+		assert.Equal(ERRORS_INVALID_COOKIE_FORMAT, err.Error())
 	}
 	c.Value = "1|2"
 	_, err = ValidateCookie(r, c)
 	if assert.Error(err) {
-		assert.Equal("invalid cookie format", err.Error())
+		assert.Equal(ERRORS_INVALID_COOKIE_FORMAT, err.Error())
 	}
 	c.Value = "1|2|3|4"
 	_, err = ValidateCookie(r, c)
 	if assert.Error(err) {
-		assert.Equal("invalid cookie format", err.Error())
+		assert.Equal(ERRORS_INVALID_COOKIE_FORMAT, err.Error())
 	}
 
 	// Should catch invalid mac
 	c.Value = "MQ==|2|3"
 	_, err = ValidateCookie(r, c)
 	if assert.Error(err) {
-		assert.Equal("invalid cookie mac", err.Error())
+		assert.Equal(ERRORS_INVALID_COOKIE_MAC, err.Error())
 	}
 
 	// Should catch expired
@@ -59,7 +59,7 @@ func TestAuthValidateCookie(t *testing.T) {
 	c = MakeCookie(r, v)
 	_, err = ValidateCookie(r, c)
 	if assert.Error(err) {
-		assert.Equal("cookie has expired", err.Error())
+		assert.Equal(ERRORS_COOKIE_HAS_EXPIRED, err.Error())
 	}
 
 	// Should accept valid cookie
@@ -317,13 +317,13 @@ func TestAuthValidateCSRFCookie(t *testing.T) {
 	valid, _, _, err := ValidateCSRFCookie(r, c)
 	assert.False(valid)
 	if assert.Error(err) {
-		assert.Equal("Invalid CSRF cookie value", err.Error())
+		assert.Equal(ERRORS_INVALID_CSRF_COOKIE_VALUE, err.Error())
 	}
 	c.Value = "123456789012345678901234567890123"
 	valid, _, _, err = ValidateCSRFCookie(r, c)
 	assert.False(valid)
 	if assert.Error(err) {
-		assert.Equal("Invalid CSRF cookie value", err.Error())
+		assert.Equal(ERRORS_INVALID_CSRF_COOKIE_VALUE, err.Error())
 	}
 
 	// Should require valid state
@@ -332,7 +332,7 @@ func TestAuthValidateCSRFCookie(t *testing.T) {
 	valid, _, _, err = ValidateCSRFCookie(r, c)
 	assert.False(valid)
 	if assert.Error(err) {
-		assert.Equal("Invalid CSRF state value", err.Error())
+		assert.Equal(ERRORS_INVALID_CSRF_STATE_VALUE, err.Error())
 	}
 
 	// Should require provider
@@ -341,7 +341,7 @@ func TestAuthValidateCSRFCookie(t *testing.T) {
 	valid, _, _, err = ValidateCSRFCookie(r, c)
 	assert.False(valid)
 	if assert.Error(err) {
-		assert.Equal("Invalid CSRF state format", err.Error())
+		assert.Equal(ERRORS_INVALID_CSRF_FORMAT, err.Error())
 	}
 
 	// Should allow valid state

@@ -16,6 +16,19 @@ import (
 	"github.com/thomseddon/traefik-forward-auth/internal/provider"
 )
 
+const ERRORS_COOKIE_HAS_EXPIRED = "cookie has expired"
+const ERRORS_UNABLE_TO_PARSE_COOKIE_EXPIRY = "unable to parse cookie expiry"
+const ERRORS_INVALID_COOKIE_MAC = "invalid cookie mac"
+const ERRORS_UNABLE_TO_GENERATE_MAC = "unable to generate mac"
+const ERRORS_UNABLE_TO_DECODE_MAC = "unable to decode cookie mac"
+const ERRORS_INVALID_COOKIE_FORMAT = "invalid cookie format"
+
+const ERRORS_INVALID_CSRF_COOKIE_VALUE = "invalid CSRF cookie value"
+const ERRORS_INVALID_CSRF_STATE_VALUE = "invalid CSRF state value"
+const ERRORS_CSRF_COOKIES_DOESNT_MATCH = "csrf cookie does not match state"
+const ERRORS_INVALID_CSRF_FORMAT = "invalid CSRF state format"
+
+
 // Request Validation
 
 // Cookie = hash(secret, cookie domain, authmethod, expires)|expires|authmethod
@@ -23,34 +36,34 @@ func ValidateCookie(r *http.Request, c *http.Cookie) (string, error) {
 	parts := strings.Split(c.Value, "|")
 
 	if len(parts) != 3 {
-		return "", errors.New("invalid cookie format")
+		return "", errors.New(ERRORS_INVALID_COOKIE_FORMAT)
 	}
 
 	mac, err := base64.URLEncoding.DecodeString(parts[0])
 	if err != nil {
-		return "", errors.New("unable to decode cookie mac")
+		return "", errors.New(ERRORS_UNABLE_TO_DECODE_MAC)
 	}
 
 	expectedSignature := cookieSignature(r, parts[2], parts[1])
 	expected, err := base64.URLEncoding.DecodeString(expectedSignature)
 	if err != nil {
-		return "", errors.New("unable to generate mac")
+		return "", errors.New(ERRORS_UNABLE_TO_GENERATE_MAC)
 	}
 
 	// Valid token?
 	if !hmac.Equal(mac, expected) {
-		return "", errors.New("invalid cookie mac")
+		return "", errors.New(ERRORS_INVALID_COOKIE_MAC)
 	}
 
 	expires, err := strconv.ParseInt(parts[1], 10, 64)
 	if err != nil {
-		return "", errors.New("unable to parse cookie expiry")
+		return "", errors.New(ERRORS_UNABLE_TO_PARSE_COOKIE_EXPIRY)
 	}
 
 	// Has it expired?
 	now := time.Now()
 	if time.Unix(expires, 0).Before(now) {
-		return "", errors.New("cookie has expired")
+		return "", errors.New(ERRORS_COOKIE_HAS_EXPIRED)
 	}
 
 	// Looks valid
@@ -344,23 +357,23 @@ func ValidateCSRFCookie(r *http.Request, c *http.Cookie) (valid bool, provider s
 	state := r.URL.Query().Get("state")
 
 	if len(c.Value) != 32 {
-		return false, "", "", errors.New("Invalid CSRF cookie value")
+		return false, "", "", errors.New(ERRORS_INVALID_CSRF_COOKIE_VALUE)
 	}
 
 	if len(state) < 34 {
-		return false, "", "", errors.New("Invalid CSRF state value")
+		return false, "", "", errors.New(ERRORS_INVALID_CSRF_STATE_VALUE)
 	}
 
 	// Check nonce match
 	if c.Value != state[:32] {
-		return false, "", "", errors.New("CSRF cookie does not match state")
+		return false, "", "", errors.New(ERRORS_CSRF_COOKIES_DOESNT_MATCH)
 	}
 
 	// Extract provider
 	params := state[33:]
 	split := strings.Index(params, ":")
 	if split == -1 {
-		return false, "", "", errors.New("Invalid CSRF state format")
+		return false, "", "", errors.New(ERRORS_INVALID_CSRF_FORMAT)
 	}
 
 	// Valid, return provider and redirect

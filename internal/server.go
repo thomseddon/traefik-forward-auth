@@ -92,8 +92,8 @@ func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 		// Validate cookie
 		authMethod, err := ValidateCookie(r, c)
 		if err != nil {
-			if err.Error() == "Cookie has expired" {
-				logger.Info("Cookie has expired")
+			if err.Error() == ERRORS_COOKIE_HAS_EXPIRED {
+				logger.Info(ERRORS_COOKIE_HAS_EXPIRED)
 				s.authRedirect(logger, w, r, p)
 			} else {
 				logger.Errorf("Invalid cookie: %v", err)
