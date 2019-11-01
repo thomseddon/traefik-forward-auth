@@ -105,6 +105,7 @@ func TestServerAuthHandlerValid(t *testing.T) {
 	req := newDefaultHttpRequest("/foo")
 	c := MakeCookie(req, generateTestAuthMethod("test@example.com"))
 	config.Domains = []string{}
+	config.Whitelist = []string{"test@example.com"}
 
 	res, _ := doHttpRequest(req, c)
 	assert.Equal(200, res.StatusCode, "valid request should be allowed")

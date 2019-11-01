@@ -71,8 +71,20 @@ func ValidateCookie(r *http.Request, c *http.Cookie) (string, error) {
 }
 
 // Validate email
-func ValidateEmail(email string) bool {
+func ValidateEmail(authMethod string) bool {
 	found := false
+
+	values, err := url.ParseQuery(authMethod)
+
+	if err != nil {
+		return false
+	}
+
+	email := values.Get("email")
+	if email == "" {
+		return false
+	}
+
 	if len(config.Whitelist) > 0 {
 		for _, whitelist := range config.Whitelist {
 			if email == whitelist {
