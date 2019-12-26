@@ -6,61 +6,43 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"testing"
 )
 
 // Utilities
 
-type TokenServerHandler struct{
-	Body string
+type OAuthServer struct {
+	t    *testing.T
+	url  *url.URL
+	body map[string]string // method -> body
 }
 
-func NewTokenServer(params map[string]string) (*httptest.Server, *url.URL) {
-	var body string
-	if len(params) > 0 {
-		q := url.Values{}
-		for k, v := range params {
-			q.Set(k, v)
+func NewOAuthServer(t *testing.T, body map[string]string) (*httptest.Server, *url.URL) {
+	handler := &OAuthServer{t: t, body: body}
+	server := httptest.NewServer(handler)
+	handler.url, _ = url.Parse(server.URL)
+	return server, handler.url
+}
+
+func (s *OAuthServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	body, _ := ioutil.ReadAll(r.Body)
+	// fmt.Println("Got request:", r.URL, r.Method, string(body))
+
+	if r.Method == "POST" && r.URL.Path == "/token" {
+		if s.body["token"] != string(body) {
+			s.t.Fatal("Unexpected request body, expected", s.body["token"], "got", string(body))
 		}
-		body = q.Encode()
-	} else {
-		body = ""
-	}
 
-	handler := &TokenServerHandler{
-		Body: body,
-	}
-
-	server := httptest.NewServer(handler)
-	URL, _ := url.Parse(server.URL)
-	return server, URL
-}
-
-func (t *TokenServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	body, _ := ioutil.ReadAll(r.Body)
-	if r.Method == "POST" && (t.Body == "" || string(body) == t.Body) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"access_token":"123456789","id_token":"id_123456789"}`)
+		fmt.Fprintf(w, `{"access_token":"123456789"}`)
+	} else if r.Method == "GET" && r.URL.Path == "/userinfo" {
+		fmt.Fprint(w, `{
+			"id":"1",
+			"email":"example@example.com",
+			"verified_email":true,
+			"hd":"example.com"
+		}`)
 	} else {
-		http.Error(w, "Token server recieved bad request", http.StatusBadRequest)
+		s.t.Fatal("Unrecognised request: ", r.Method, r.URL, string(body))
 	}
-}
-
-type UserServerHandler struct{}
-
-func NewUserServer() (*httptest.Server, *url.URL) {
-	handler := &UserServerHandler{}
-	server := httptest.NewServer(handler)
-	URL, _ := url.Parse(server.URL)
-	return server, URL
-}
-
-func (t *UserServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	body, _ := ioutil.ReadAll(r.Body)
-	fmt.Println((string(body)))
-	fmt.Fprint(w, `{
-    "id":"1",
-    "email":"example@example.com",
-    "verified_email":true,
-    "hd":"example.com"
-  }`)
 }

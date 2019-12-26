@@ -1,7 +1,6 @@
 package provider
 
 import (
-	"net/http/httptest"
 	"net/url"
 	"testing"
 
@@ -61,24 +60,32 @@ func TestGoogleGetLoginURL(t *testing.T) {
 
 func TestGoogleExchangeCode(t *testing.T) {
 	assert := assert.New(t)
+
+	// Setup server
+	expected := url.Values{
+		"client_id":     []string{"idtest"},
+		"client_secret": []string{"sectest"},
+		"code":          []string{"code"},
+		"grant_type":    []string{"authorization_code"},
+		"redirect_uri":  []string{"http://example.com/_oauth"},
+	}
+	server, serverURL := NewOAuthServer(t, map[string]string{
+		"token": expected.Encode(),
+	})
+	defer server.Close()
+
+	// Setup provider
 	p := Google{
 		ClientId:     "idtest",
 		ClientSecret: "sectest",
 		Scope:        "scopetest",
 		Prompt:       "consent select_account",
-		LoginURL: &url.URL{
-			Scheme: "https",
-			Host:   "google.com",
-			Path:   "/auth",
+		TokenURL: &url.URL{
+			Scheme: serverURL.Scheme,
+			Host:   serverURL.Host,
+			Path:   "/token",
 		},
 	}
-
-	// Setup token server
-	tokenServerHandler := &TokenServerHandler{}
-	tokenServer := httptest.NewServer(tokenServerHandler)
-	defer tokenServer.Close()
-	tokenURL, _ := url.Parse(tokenServer.URL)
-	p.TokenURL = tokenURL
 
 	token, err := p.ExchangeCode("http://example.com/_oauth", "code")
 	assert.Nil(err)
@@ -87,30 +94,29 @@ func TestGoogleExchangeCode(t *testing.T) {
 
 func TestGoogleGetUser(t *testing.T) {
 	assert := assert.New(t)
+
+	// Setup server
+	server, serverURL := NewOAuthServer(t, nil)
+	defer server.Close()
+
+	// Setup provider
 	p := Google{
 		ClientId:     "idtest",
 		ClientSecret: "sectest",
 		Scope:        "scopetest",
 		Prompt:       "consent select_account",
-		LoginURL: &url.URL{
-			Scheme: "https",
-			Host:   "google.com",
-			Path:   "/auth",
+		UserURL: &url.URL{
+			Scheme: serverURL.Scheme,
+			Host:   serverURL.Host,
+			Path:   "/userinfo",
 		},
 	}
-
-	// Setup user server
-	userServerHandler := &UserServerHandler{}
-	userServer := httptest.NewServer(userServerHandler)
-	defer userServer.Close()
-	userURL, _ := url.Parse(userServer.URL)
-	p.UserURL = userURL
 
 	user, err := p.GetUser("123456789")
 	assert.Nil(err)
 
-  assert.Equal("1", user.Id)
-  assert.Equal("example@example.com", user.Email)
-  assert.True(user.Verified)
-  assert.Equal("example.com", user.Hd)
+	assert.Equal("1", user.ID)
+	assert.Equal("example@example.com", user.Email)
+	assert.True(user.Verified)
+	assert.Equal("example.com", user.Hd)
 }

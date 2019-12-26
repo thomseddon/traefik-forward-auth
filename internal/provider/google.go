@@ -27,6 +27,7 @@ func (g *Google) Validate() error {
 	if g.ClientId == "" || g.ClientSecret == "" {
 		return errors.New("providers.google.client-id, providers.google.client-secret must be set")
 	}
+
 	return nil
 }
 
