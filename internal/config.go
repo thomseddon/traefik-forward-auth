@@ -18,7 +18,7 @@ import (
 	"github.com/thomseddon/traefik-forward-auth/internal/provider"
 )
 
-var config Config
+var config *Config
 
 type Config struct {
 	LogLevel  string `long:"log-level" env:"LOG_LEVEL" default:"warn" choice:"trace" choice:"debug" choice:"info" choice:"warn" choice:"error" choice:"fatal" choice:"panic" description:"Log level"`
@@ -31,7 +31,7 @@ type Config struct {
 	CookieName      string               `long:"cookie-name" env:"COOKIE_NAME" default:"_forward_auth" description:"Cookie Name"`
 	CSRFCookieName  string               `long:"csrf-cookie-name" env:"CSRF_COOKIE_NAME" default:"_forward_auth_csrf" description:"CSRF Cookie Name"`
 	DefaultAction   string               `long:"default-action" env:"DEFAULT_ACTION" default:"auth" choice:"auth" choice:"allow" description:"Default action"`
-	DefaultProvider string               `long:"default-provider" env:"DEFAULT_PROVIDER" default:"google" choice:"google" choice:"odic" description:"Default provider"`
+	DefaultProvider string               `long:"default-provider" env:"DEFAULT_PROVIDER" default:"google" choice:"google" choice:"oidc" description:"Default provider"`
 	Domains         CommaSeparatedList   `long:"domain" env:"DOMAIN" description:"Only allow given email domains, can be set multiple times"`
 	LifetimeString  int                  `long:"lifetime" env:"LIFETIME" default:"43200" description:"Lifetime in seconds"`
 	Path            string               `long:"url-path" env:"URL_PATH" default:"/_oauth" description:"Callback URL Path"`
@@ -54,7 +54,7 @@ type Config struct {
 	PromptLegacy        string        `long:"prompt" env:"PROMPT" description:"DEPRECATED - Use \"providers.google.prompt\""`
 }
 
-func NewGlobalConfig() Config {
+func NewGlobalConfig() *Config {
 	var err error
 	config, err = NewConfig(os.Args[1:])
 	if err != nil {
@@ -65,8 +65,8 @@ func NewGlobalConfig() Config {
 	return config
 }
 
-func NewConfig(args []string) (Config, error) {
-	c := Config{
+func NewConfig(args []string) (*Config, error) {
+	c := &Config{
 		Rules: map[string]*Rule{},
 		Providers: provider.Providers{
 			Google: provider.Google{
