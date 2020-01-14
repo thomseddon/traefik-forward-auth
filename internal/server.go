@@ -38,14 +38,15 @@ func (s *Server) buildRoutes() {
 
 	// Add callback handler
 	// Callback Rule
-	r := NewRule()
-	r.Rule = "Host(`" + config.AuthHost + "`) && Path(`"+ config.Path +"`)"
-	r.Action = "allow"
-	fr := r.formattedRule()
+	if config.AuthHost != "" {
+		r := NewRule()
+		r.Rule = "Host(`" + config.AuthHost + "`) && Path(`" + config.Path + "`)"
+		r.Action = "allow"
+		fr := r.formattedRule()
 
-	logrus.Debug("FormattedRule=", fr)
-	s.router.AddRoute(fr, 1, s.AuthCallbackHandler())
-
+		logrus.Debug("FormattedRule=", fr)
+		s.router.AddRoute(fr, 1, s.AuthCallbackHandler())
+	}
 	// Add a default handler
 	if config.DefaultAction == "allow" {
 		s.router.NewRoute().Handler(s.AllowHandler("default"))
@@ -81,7 +82,6 @@ func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Logging setup
 		logger := s.logger(r, rule, "Authenticating request")
-
 		// Get auth cookie
 		c, err := r.Cookie(config.CookieName)
 		if err != nil {

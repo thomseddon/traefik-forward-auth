@@ -118,6 +118,7 @@ func TestServerAuthHandlerValid(t *testing.T) {
 func TestServerAuthCallback(t *testing.T) {
 	assert := assert.New(t)
 	config, _ = NewConfig([]string{})
+	config.AuthHost = "example.com"
 
 	// Setup token server
 	tokenServerHandler := &TokenServerHandler{}
