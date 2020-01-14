@@ -19,6 +19,7 @@ import (
  */
 
 func init() {
+	config, _ = NewConfig([]string{})
 	config.LogLevel = "panic"
 	log = NewDefaultLogger()
 }

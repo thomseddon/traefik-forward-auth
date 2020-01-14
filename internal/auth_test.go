@@ -266,14 +266,14 @@ func TestAuthMakeCSRFCookie(t *testing.T) {
 	assert.Equal("app.example.com", c.Domain)
 
 	// With cookie domain but no auth url
-	config = Config{
+	config = &Config{
 		CookieDomains: []CookieDomain{*NewCookieDomain("example.com")},
 	}
 	c = MakeCSRFCookie(r, "12345678901234567890123456789012")
 	assert.Equal("app.example.com", c.Domain)
 
 	// With cookie domain and auth url
-	config = Config{
+	config = &Config{
 		AuthHost:      "auth.example.com",
 		CookieDomains: []CookieDomain{*NewCookieDomain("example.com")},
 	}
