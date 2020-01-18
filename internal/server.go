@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/containous/traefik/pkg/rules"
+	"github.com/containous/traefik/v2/pkg/rules"
 	"github.com/sirupsen/logrus"
 	"github.com/thomseddon/traefik-forward-auth/internal/provider"
 )
