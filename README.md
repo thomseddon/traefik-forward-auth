@@ -2,11 +2,12 @@
 # Traefik Forward Auth [![Build Status](https://travis-ci.org/thomseddon/traefik-forward-auth.svg?branch=master)](https://travis-ci.org/thomseddon/traefik-forward-auth) [![Go Report Card](https://goreportcard.com/badge/github.com/thomseddon/traefik-forward-auth)](https://goreportcard.com/report/github.com/thomseddon/traefik-forward-auth) ![Docker Pulls](https://img.shields.io/docker/pulls/thomseddon/traefik-forward-auth.svg) [![GitHub release](https://img.shields.io/github/release/thomseddon/traefik-forward-auth.svg)](https://GitHub.com/thomseddon/traefik-forward-auth/releases/)
 
 
-A minimal forward authentication service that provides Google oauth based login and authentication for the [traefik](https://github.com/containous/traefik) reverse proxy/load balancer.
+A minimal forward authentication service that provides OAuth/SSO login and authentication for the [traefik](https://github.com/containous/traefik) reverse proxy/load balancer.
 
 ## Why?
 
 - Seamlessly overlays any http service with a single endpoint (see: `url-path` in [Configuration](#configuration))
+- Supports multiple providers including Google and OpenID Connect (supported by Azure, Github, Salesforce etc.)
 - Supports multiple domains/subdomains by dynamically generating redirect_uri's
 - Allows authentication to be selectively applied/bypassed based on request parameters (see `rules` in [Configuration](#configuration)))
 - Supports use of centralised authentication host/redirect_uri (see `auth-host` in [Configuration](#configuration)))
@@ -19,7 +20,7 @@ A minimal forward authentication service that provides Google oauth based login 
 - [Usage](#usage)
   - [Simple](#simple)
   - [Advanced](#advanced)
-  - [OAuth Configuration](#oauth-configuration)
+  - [Provider Setup](#provider-setup)
 - [Configuration](#configuration)
   - [Overview](#overview)
   - [Option Details](#option-details)
@@ -46,7 +47,7 @@ v2 was released in June 2019, whilst this is fully backwards compatible, a numbe
 
 #### Simple:
 
-See below for instructions on how to setup your [OAuth Configuration](#oauth-configuration).
+See below for instructions on how to setup your [Provider Setup](#provider-setup).
 
 docker-compose.yml:
 
@@ -65,8 +66,8 @@ services:
   traefik-forward-auth:
     image: thomseddon/traefik-forward-auth:2
     environment:
-      - CLIENT_ID=your-client-id
-      - CLIENT_SECRET=your-client-secret
+      - PROVIDERS_GOOGLE_CLIENT_ID=your-client-id
+      - PROVIDERS_GOOGLE_CLIENT_SECRET=your-client-secret
       - SECRET=something-random
       - INSECURE_COOKIE=true # Example assumes no https, do not use in production
 
@@ -98,13 +99,23 @@ Please see the examples directory for a more complete [docker-compose.yml](https
 
 Also in the examples directory is [docker-compose-auth-host.yml](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/docker-compose-auth-host.yml) which shows how to configure a central auth host, along with some other options.
 
-#### OAuth Configuration
+#### Provider Setup
+
+##### Google
 
 Head to https://console.developers.google.com and make sure you've switched to the correct email account.
 
 Create a new project then search for and select "Credentials" in the search bar. Fill out the "OAuth Consent Screen" tab.
 
 Click "Create Credentials" > "OAuth client ID". Select "Web Application", fill in the name of your app, skip "Authorized JavaScript origins" and fill "Authorized redirect URIs" with all the domains you will allow authentication from, appended with the `url-path` (e.g. https://app.test.com/_oauth)
+
+You must set the `providers.google.client-id` and `providers.google.client-secret` config options.
+
+##### OpenID Connect
+
+Any provider that supports OpenID Connect 1.0 can be configured via the OIDC config options below.
+
+You must set the `providers.oidc.issuer-url`, `providers.oidc.client-id` and `providers.oidc.client-secret` config options.
 
 ## Configuration
 
@@ -126,17 +137,23 @@ Application Options:
   --cookie-name=                                        Cookie Name (default: _forward_auth) [$COOKIE_NAME]
   --csrf-cookie-name=                                   CSRF Cookie Name (default: _forward_auth_csrf) [$CSRF_COOKIE_NAME]
   --default-action=[auth|allow]                         Default action (default: auth) [$DEFAULT_ACTION]
+  --default-provider=[google|oidc]                      Default provider (default: google) [$DEFAULT_PROVIDER]
   --domain=                                             Only allow given email domains, can be set multiple times [$DOMAIN]
   --lifetime=                                           Lifetime in seconds (default: 43200) [$LIFETIME]
   --url-path=                                           Callback URL Path (default: /_oauth) [$URL_PATH]
   --secret=                                             Secret used for signing (required) [$SECRET]
   --whitelist=                                          Only allow given email addresses, can be set multiple times [$WHITELIST]
-  --rule.<name>.<param>=                               Rule definitions, param can be: "action" or "rule"
+  --rule.<name>.<param>=                                Rule definitions, param can be: "action", "rule" or "provider"
 
 Google Provider:
   --providers.google.client-id=                         Client ID [$PROVIDERS_GOOGLE_CLIENT_ID]
   --providers.google.client-secret=                     Client Secret [$PROVIDERS_GOOGLE_CLIENT_SECRET]
   --providers.google.prompt=                            Space separated list of OpenID prompt options [$PROVIDERS_GOOGLE_PROMPT]
+
+OIDC Provider:
+  --providers.oidc.issuer-url=                          Issuer URL [$PROVIDERS_OIDC_ISSUER_URL]
+  --providers.oidc.client-id=                           Client ID [$PROVIDERS_OIDC_CLIENT_ID]
+  --providers.oidc.client-secret=                       Client Secret [$PROVIDERS_OIDC_CLIENT_SECRET]
 
 Help Options:
   -h, --help                                            Show this help message
@@ -210,6 +227,12 @@ All options can be supplied in any of the following ways, in the following prece
 
    Default: `auth` (i.e. all requests require authentication)
 
+- `default-provider`
+
+   Set the default provider to use for authentication, this can be overridden within [rules](#rules). Valid options are currently `google` or `oidc`.
+
+   Default: `google`
+
 - `domain`
 
    When set, only users matching a given domain will be permitted to access.
@@ -253,6 +276,9 @@ All options can be supplied in any of the following ways, in the following prece
        - `action` - same usage as [`default-action`](#default-action), supported values:
            - `auth` (default)
            - `allow`
+       - `provider` - same usage as [`default-provider`](#default-provider), supported values:
+           - `google`
+           - `oidc`
        - `rule` - a rule to match a request, this uses traefik's v2 rule parser for which you can find the documentation here: https://docs.traefik.io/v2.0/routing/routers/#rule, supported values are summarised here:
            - ``Headers(`key`, `value`)``
            - ``HeadersRegexp(`key`, `regexp`)``
@@ -265,14 +291,19 @@ All options can be supplied in any of the following ways, in the following prece
 
    For example:
    ```
+   # Allow requests that being with `/api/public` and contain the `Content-Type` header with a value of `application/json`
    rule.1.action = allow
    rule.1.rule = PathPrefix(`/api/public`) && Headers(`Content-Type`, `application/json`)
 
+   # Allow requests that have the exact path `/public`
    rule.two.action = allow
    rule.two.rule = Path(`/public`)
-   ```
 
-   In the above example, the first rule would allow requests that begin with `/api/public` and contain the `Content-Type` header with a value of `application/json`. It would also allow requests that had the exact path `/public`.
+   # Use OpenID Connect provider (must be configured) for requests that begin with `/github`
+   rule.oidc.action = auth
+   rule.oidc.provider = oidc
+   rule.oidc.rule = PathPrefix(`/github`)
+   ```
 
 ## Concepts
 
