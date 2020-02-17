@@ -133,6 +133,7 @@ Application Options:
   --auth-host=                                          Single host to use when returning from 3rd party auth [$AUTH_HOST]
   --config=                                             Path to config file [$CONFIG]
   --cookie-domain=                                      Domain to set auth cookie on, can be set multiple times [$COOKIE_DOMAIN]
+  --disable-httponly-cookie=[false|true]                If true, flag HTTPOnly is not set on cookie [$DISABLE_HTTPONLY_COOKIE]
   --insecure-cookie                                     Use insecure cookies [$INSECURE_COOKIE]
   --cookie-name=                                        Cookie Name (default: _forward_auth) [$COOKIE_NAME]
   --csrf-cookie-name=                                   CSRF Cookie Name (default: _forward_auth_csrf) [$CSRF_COOKIE_NAME]
@@ -208,6 +209,10 @@ All options can be supplied in any of the following ways, in the following prece
 - `insecure-cookie`
 
    If you are not using HTTPS between the client and traefik, you will need to pass the `insecure-cookie` option which will mean the `Secure` attribute on the cookie will not be set.
+
+- `disable-httponly-cookie`
+
+   If true, flag HTTPOnly is not set on cookie.
 
 - `cookie-name`
 
