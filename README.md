@@ -212,7 +212,9 @@ All options can be supplied in any of the following ways, in the following prece
 
 - `disable-httponly-cookie`
 
-   If true, flag HTTPOnly is not set on cookie.
+   If set to true, the flag HTTPOnly is not set on cookie.
+   
+   **This might be a security risk. Only use it, if you know, what you're doing.**
 
 - `cookie-name`
 
