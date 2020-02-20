@@ -1,9 +1,0 @@
-#Namespace override. Defaults to kube-system
-#namespace: traefik
-
-#Port override. Defaults to 80
-#port: 8080
-
-service:
-  labels: {}
-  annotations: {}
