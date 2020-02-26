@@ -97,7 +97,7 @@ network = "traefik"
 
 Please see the examples directory for a more complete [docker-compose.yml](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/docker-compose.yml) and full [traefik.toml](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/traefik.toml).
 
-Also in the examples directory is [docker-compose-auth-host.yml](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/docker-compose-auth-host.yml) which shows how to configure a central auth host, along with some other options.
+Also in the examples directory is [docker-compose-auth-host.yml](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/docker-compose-auth-host.yml) which shows how to configure a central auth host, along with some other options. If you want to use traefik v2, look at the example in [docker-compose-auth-host-traefik2.md](examples/docker-compose-auth-host-traefik2.md).
 
 #### Provider Setup
 
