@@ -1,0 +1,63 @@
+version: '3'
+
+services:
+  traefik:
+    image: traefik:2.1
+    ports:
+      - "8085:80"
+      - "8086:8080"
+      - "8087:443"
+    networks:
+      - traefik
+      - traefik-docker
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command:
+        - --api.dashboard=true
+        - --api.insecure=false
+        - --entrypoints.web.address=:80
+        - --entrypoints.web-secure.address=:443
+        - --providers.docker.exposedbydefault=false
+        - --log.level=DEBUG
+
+  whoami:
+    image: containous/whoami:latest
+    networks:
+      - traefik
+    labels:
+      traefik.enable: 'true'
+      traefik.http.routers.whoami.entrypoints: web
+      traefik.http.routers.whoami.middlewares: tfa-verify
+      traefik.http.routers.whoami.rule: "Host(`whoami.example.com`)"
+      traefik.http.services.whoami.loadbalancer.server.port: '80'
+
+  traefik-forward-auth:
+    image: thomseddon/traefik-forward-auth:2
+    labels:
+      traefik.enable: 'true'
+      traefik.docker.network: oauth-web
+      traefik.http.middlewares.tfa-verify.forwardAuth.address: http://traefik-forward-auth:4181
+      traefik.http.middlewares.tfa-verify.forwardAuth.trustForwardHeader: 'true'
+      traefik.http.middlewares.tfa-verify.forwardAuth.authResponseHeaders: X-Forwarded-User
+      traefik.http.routers.tfa.entrypoints: web
+      traefik.http.routers.tfa.middlewares: tfa-verify
+      traefik.http.routers.tfa.rule: "Host(`auth.example.com`)"
+      traefik.http.services.tfaloadbalancer.server.port: '4181'
+    networks:
+      - traefik
+    environment:
+      PROVIDERS_GOOGLE_CLIENT_ID: 'your-client-id'
+      PROVIDERS_GOOGLE_CLIENT_SECRET: 'your-client-secret'
+      SECRET: 'something-random'
+    command:
+      - ./traefik-forward-auth
+      - --rule.1.action=allow
+      - --rule.1.rule="Path(`/`)"
+      - --log-level=debug
+      - --auth-host=auth.example.com
+      - --cookie-domain=example.com
+      - --insecure-cookie
+
+networks:
+  traefik:
+  traefik-docker:
