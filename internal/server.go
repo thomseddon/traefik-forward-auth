@@ -5,8 +5,8 @@ import (
 	"net/url"
 
 	"github.com/containous/traefik/v2/pkg/rules"
+	"github.com/rajasoun/traefik-forward-auth/internal/provider"
 	"github.com/sirupsen/logrus"
-	"github.com/thomseddon/traefik-forward-auth/internal/provider"
 )
 
 type Server struct {
@@ -150,18 +150,21 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 			http.Error(w, "Service unavailable", 503)
 			return
 		}
-
 		// Get user
 		user, err := p.GetUser(token)
 		if err != nil {
 			logger.Errorf("Error getting user: %s", err)
 			return
 		}
-
+		logger.Debug("User ID--------------------------------------------------->" + user.ID)
+		logger.Debug("User Email--------------------------------------------------->" + user.Email)
 		// Generate cookie
 		http.SetCookie(w, MakeCookie(r, user.Email))
+		http.SetCookie(w, MakeCookie(r, user.ID))
+
 		logger.WithFields(logrus.Fields{
-			"user": user.Email,
+			"user_Email": user.Email,
+			"user_ID":    user.ID,
 		}).Infof("Generated auth cookie")
 
 		// Redirect
@@ -180,7 +183,7 @@ func (s *Server) authRedirect(logger *logrus.Entry, w http.ResponseWriter, r *ht
 
 	// Set the CSRF cookie
 	http.SetCookie(w, MakeCSRFCookie(r, nonce))
-	logger.Debug("Set CSRF cookie and redirecting to google login")
+	logger.Debug("Set CSRF cookie and redirecting to OIDC login")
 
 	// Forward them on
 	loginUrl := p.GetLoginURL(redirectUri(r), MakeState(r, p, nonce))

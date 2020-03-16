@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rajasoun/traefik-forward-auth/internal/provider"
 	"github.com/thomseddon/go-flags"
-	"github.com/thomseddon/traefik-forward-auth/internal/provider"
 )
 
 var config *Config
@@ -43,14 +43,6 @@ type Config struct {
 	// Filled during transformations
 	Secret   []byte `json:"-"`
 	Lifetime time.Duration
-
-	// Legacy
-	CookieDomainsLegacy CookieDomains `long:"cookie-domains" env:"COOKIE_DOMAINS" description:"DEPRECATED - Use \"cookie-domain\""`
-	CookieSecretLegacy  string        `long:"cookie-secret" env:"COOKIE_SECRET" description:"DEPRECATED - Use \"secret\""  json:"-"`
-	CookieSecureLegacy  string        `long:"cookie-secure" env:"COOKIE_SECURE" description:"DEPRECATED - Use \"insecure-cookie\""`
-	ClientIdLegacy      string        `long:"client-id" env:"CLIENT_ID" description:"DEPRECATED - Use \"providers.google.client-id\""`
-	ClientSecretLegacy  string        `long:"client-secret" env:"CLIENT_SECRET" description:"DEPRECATED - Use \"providers.google.client-id\""  json:"-"`
-	PromptLegacy        string        `long:"prompt" env:"PROMPT" description:"DEPRECATED - Use \"providers.google.prompt\""`
 }
 
 func NewGlobalConfig() *Config {
@@ -88,35 +80,6 @@ func NewConfig(args []string) (*Config, error) {
 			rule.Provider = c.DefaultProvider
 		}
 	}
-
-	// Backwards compatability
-	if c.CookieSecretLegacy != "" && c.SecretString == "" {
-		fmt.Println("cookie-secret config option is deprecated, please use secret")
-		c.SecretString = c.CookieSecretLegacy
-	}
-	if c.ClientIdLegacy != "" {
-		c.Providers.Google.ClientID = c.ClientIdLegacy
-	}
-	if c.ClientSecretLegacy != "" {
-		c.Providers.Google.ClientSecret = c.ClientSecretLegacy
-	}
-	if c.PromptLegacy != "" {
-		fmt.Println("prompt config option is deprecated, please use providers.google.prompt")
-		c.Providers.Google.Prompt = c.PromptLegacy
-	}
-	if c.CookieSecureLegacy != "" {
-		fmt.Println("cookie-secure config option is deprecated, please use insecure-cookie")
-		secure, err := strconv.ParseBool(c.CookieSecureLegacy)
-		if err != nil {
-			return c, err
-		}
-		c.InsecureCookie = !secure
-	}
-	if len(c.CookieDomainsLegacy) > 0 {
-		fmt.Println("cookie-domains config option is deprecated, please use cookie-domain")
-		c.CookieDomains = append(c.CookieDomains, c.CookieDomainsLegacy...)
-	}
-
 	// Transformations
 	if len(c.Path) > 0 && c.Path[0] != '/' {
 		c.Path = "/" + c.Path
@@ -265,8 +228,6 @@ func (c Config) String() string {
 // GetProvider returns the provider of the given name
 func (c *Config) GetProvider(name string) (provider.Provider, error) {
 	switch name {
-	case "google":
-		return &c.Providers.Google, nil
 	case "oidc":
 		return &c.Providers.OIDC, nil
 	}

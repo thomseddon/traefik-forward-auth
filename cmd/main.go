@@ -3,7 +3,7 @@ package main
 import (
 	"net/http"
 
-	internal "github.com/thomseddon/traefik-forward-auth/internal"
+	internal "github.com/rajasoun/traefik-forward-auth/internal"
 )
 
 // Main

@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 
+	"net/url"
+
 	"github.com/coreos/go-oidc"
 	"golang.org/x/oauth2"
 )
@@ -18,6 +20,7 @@ type OIDC struct {
 
 	provider *oidc.Provider
 	verifier *oidc.IDTokenVerifier
+	UserURL  *url.URL
 }
 
 // Name returns the name of the provider
@@ -55,6 +58,11 @@ func (o *OIDC) Setup() error {
 	o.verifier = o.provider.Verifier(&oidc.Config{
 		ClientID: o.ClientID,
 	})
+	o.UserURL = &url.URL{
+		Scheme: "https",
+		Host:   "cloudsso-test.cisco.com",
+		Path:   "/idp/userinfo.openid",
+	}
 
 	return nil
 }
