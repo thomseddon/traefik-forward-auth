@@ -131,6 +131,10 @@ func MakeCookie(r *http.Request, email string) *http.Cookie {
 	expires := cookieExpiry()
 	mac := cookieSignature(r, email, fmt.Sprintf("%d", expires.Unix()))
 	value := fmt.Sprintf("%s|%d|%s", mac, expires.Unix(), email)
+	samesite := http.SameSiteLaxMode
+	if !config.InsecureCookie {
+		samesite = http.SameSiteNoneMode
+	}
 
 	return &http.Cookie{
 		Name:     config.CookieName,
@@ -139,6 +143,7 @@ func MakeCookie(r *http.Request, email string) *http.Cookie {
 		Domain:   cookieDomain(r),
 		HttpOnly: true,
 		Secure:   !config.InsecureCookie,
+		SameSite: samesite,
 		Expires:  expires,
 	}
 }
