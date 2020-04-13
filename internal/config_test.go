@@ -197,14 +197,27 @@ func TestConfigParseEnvironment(t *testing.T) {
 	assert := assert.New(t)
 	os.Setenv("COOKIE_NAME", "env_cookie_name")
 	os.Setenv("PROVIDERS_GOOGLE_CLIENT_ID", "env_client_id")
+	os.Setenv("COOKIE_DOMAIN", "test1.com,example.org")
+	os.Setenv("DOMAIN", "test2.com,example.org")
+	os.Setenv("WHITELIST", "test3.com,example.org")
+
 	c, err := NewConfig([]string{})
 	assert.Nil(err)
 
 	assert.Equal("env_cookie_name", c.CookieName, "variable should be read from environment")
 	assert.Equal("env_client_id", c.Providers.Google.ClientID, "namespace variable should be read from environment")
+	assert.Equal([]CookieDomain{
+		*NewCookieDomain("test1.com"),
+		*NewCookieDomain("example.org"),
+	}, c.CookieDomains, "array variable should be read from environment COOKIE_DOMAIN")
+	assert.Equal(CommaSeparatedList{"test2.com", "example.org"}, c.Domains, "array variable should be read from environment DOMAIN")
+	assert.Equal(CommaSeparatedList{"test3.com", "example.org"}, c.Whitelist, "array variable should be read from environment WHITELIST")
 
 	os.Unsetenv("COOKIE_NAME")
 	os.Unsetenv("PROVIDERS_GOOGLE_CLIENT_ID")
+	os.Unsetenv("COOKIE_DOMAIN")
+	os.Unsetenv("DOMAIN")
+	os.Unsetenv("WHITELIST")
 }
 
 func TestConfigParseEnvironmentBackwardsCompatability(t *testing.T) {
