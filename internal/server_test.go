@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TODO:
@@ -298,6 +299,41 @@ func TestServerRouteQuery(t *testing.T) {
 	req = newHttpRequest("GET", "https://api.example.com/", "/?q=test123")
 	res, _ = doHttpRequest(req, nil)
 	assert.Equal(200, res.StatusCode, "request matching allow rule should be allowed")
+}
+
+func TestServerAuthCallbackWithRules(t *testing.T) {
+	assert := assert.New(t)
+	config, _ = NewConfig([]string{})
+	config.Rules = map[string]*Rule{
+		"1": {
+			Action: "auth",
+			Rule:   "Host(`example.com`) && Path(`/private`)",
+		},
+		"2": {
+			Action: "allow",
+			Rule:   "Host(`example.com`)",
+		},
+	}
+	// Should allow /test request
+	req := newHttpRequest("GET", "https://example.com/", "/test")
+	res, _ := doHttpRequest(req, nil)
+	assert.Equal(200, res.StatusCode, "request matching allow rule should be allowed")
+
+	// Should block /private request
+	req = newHttpRequest("GET", "https://example.com/", "/private")
+	res, _ = doHttpRequest(req, nil)
+	assert.Equal(307, res.StatusCode, "request matching auth rule should require auth")
+
+	// Should allow callback request
+	req = newHttpRequest("GET", "https://example.com/", "/_oauth?state=12345678901234567890123456789012:https://example.com/private")
+	c := MakeCSRFCookie(req, "12345678901234567890123456789012")
+	res, _ = doHttpRequest(req, c)
+	require.Equal(t, 307, res.StatusCode, "callback request should be redirected")
+
+	fwd, _ := res.Location()
+	assert.Equal("http", fwd.Scheme, "callback request should be correctly redirected")
+	assert.Equal("example.com", fwd.Host, "callback request should be correctly redirected")
+	assert.Equal("/private", fwd.Path, "callback request should be correctly redirected")
 }
 
 /**

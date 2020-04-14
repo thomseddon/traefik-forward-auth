@@ -55,6 +55,7 @@ github.com/stretchr/objx v0.2.0/go.mod h1:qt09Ya8vawLte6SNmTgCsAVtYtaKzEcn8ATUoH
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/stretchr/testify v1.3.0 h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0Q=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
+github.com/stretchr/testify v1.5.1 h1:nOGnQDM7FYENwehXlg/kFVnos3rEvtKTjRvOWSzb6H4=
 github.com/thomseddon/go-flags v1.4.0 h1:cHj56pbnQxlGo2lx2P8f0Dph4TRYKBJzoPuF2lqNvW4=
 github.com/thomseddon/go-flags v1.4.0/go.mod h1:NK9eZpNBmSKVxvyB/MExg6jW0Bo9hQyAuCP+b8MJFow=
 github.com/thomseddon/go-flags v1.4.1-0.20190507181358-ce437f05b7fb h1:L311/fJ7WXmFDDtuhf22PkVJqZpqLbEsmGSTEGv7ZQY=
