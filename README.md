@@ -86,7 +86,7 @@ traefik.toml:
 
     [entryPoints.http.auth.forward]
     address = "http://traefik-forward-auth:4181"
-    authResponseHeaders = ["X-Forwarded-User"]
+    authResponseHeaders = ["X-Forwarded-User", "X-Oidc-Token"]
 
 [docker]
 endpoint = "unix:///var/run/docker.sock"
@@ -319,6 +319,9 @@ Note, if you pass `whitelist` then only this is checked and `domain` is effectiv
 ### Forwarded Headers
 
 The authenticated user is set in the `X-Forwarded-User` header, to pass this on add this to the `authResponseHeaders` config option in traefik, as shown [here](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/docker-compose-dev.yml).
+
+The OIDC/JWT token is set in the `X-Oidc-Token` header, to pass this on add this to the `authResponseHeaders` config option in traefik; the value is encrypt,
+and need to be decrypted.
 
 ### Operation Modes
 
