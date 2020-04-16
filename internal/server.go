@@ -143,6 +143,16 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 		// Clear CSRF cookie
 		http.SetCookie(w, ClearCSRFCookie(r))
 
+		// Validate redirect
+		err = ValidateRedirect(r, redirect)
+		if err != nil {
+			logger.WithFields(logrus.Fields{
+				"receieved_redirect": redirect,
+			}).Warnf("Invalid redirect in CSRF. %v", err)
+			http.Error(w, "Not authorized", 401)
+			return
+		}
+
 		// Exchange code for token
 		token, err := p.ExchangeCode(redirectUri(r), r.URL.Query().Get("code"))
 		if err != nil {
@@ -193,7 +203,8 @@ func (s *Server) authRedirect(logger *logrus.Entry, w http.ResponseWriter, r *ht
 func (s *Server) logger(r *http.Request, rule, msg string) *logrus.Entry {
 	// Create logger
 	logger := log.WithFields(logrus.Fields{
-		"source_ip": r.Header.Get("X-Forwarded-For"),
+		"source_ip":    r.Header.Get("X-Forwarded-For"),
+		"request_host": r.Header.Get("X-Forwarded-Host"),
 	})
 
 	// Log request

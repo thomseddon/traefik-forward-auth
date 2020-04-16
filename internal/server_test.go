@@ -141,20 +141,20 @@ func TestServerAuthCallback(t *testing.T) {
 	assert.Equal(401, res.StatusCode, "auth callback without cookie shouldn't be authorised")
 
 	// Should catch invalid csrf cookie
-	req = newDefaultHttpRequest("/_oauth?state=12345678901234567890123456789012:http://redirect")
+	req = newDefaultHttpRequest("/_oauth?state=12345678901234567890123456789012:http://example.com")
 	c := MakeCSRFCookie(req, "nononononononononononononononono")
 	res, _ = doHttpRequest(req, c)
 	assert.Equal(401, res.StatusCode, "auth callback with invalid cookie shouldn't be authorised")
 
 	// Should redirect valid request
-	req = newDefaultHttpRequest("/_oauth?state=12345678901234567890123456789012:google:http://redirect")
+	req = newDefaultHttpRequest("/_oauth?state=12345678901234567890123456789012:google:http://example.com")
 	c = MakeCSRFCookie(req, "12345678901234567890123456789012")
 	res, _ = doHttpRequest(req, c)
-	assert.Equal(307, res.StatusCode, "valid auth callback should be allowed")
+	require.Equal(t, 307, res.StatusCode, "valid auth callback should be allowed")
 
 	fwd, _ := res.Location()
 	assert.Equal("http", fwd.Scheme, "valid request should be redirected to return url")
-	assert.Equal("redirect", fwd.Host, "valid request should be redirected to return url")
+	assert.Equal("example.com", fwd.Host, "valid request should be redirected to return url")
 	assert.Equal("", fwd.Path, "valid request should be redirected to return url")
 }
 

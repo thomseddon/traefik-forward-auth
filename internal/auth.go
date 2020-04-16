@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -81,9 +82,35 @@ func ValidateEmail(email string) bool {
 	return found
 }
 
+// ValidateRedirect validates that the given redirect is valid and permitted for
+// the given request
+func ValidateRedirect(r *http.Request, redirect string) error {
+	redirectURL, err := url.Parse(redirect)
+
+	if err != nil {
+		return errors.New("Unable to parse redirect")
+	}
+
+	// If we're using an auth domain?
+	if use, base := useAuthDomain(r); use {
+		// If we are using an auth domain, they redirect must share a common
+		// suffix with the requested redirect
+		if !strings.HasSuffix(redirectURL.Host, base) {
+			return errors.New("Redirect host does not match any expected hosts (should match cookie domain when using auth host)")
+		}
+	} else {
+		// If not, we should only ever redirect to the same domain
+		if redirectURL.Host != r.Header.Get("X-Forwarded-Host") {
+			return errors.New("Redirect host does not match request host (must match when not using auth host)")
+		}
+	}
+
+	return nil
+}
+
 // Utility methods
 
-// Get the redirect base
+// Get the request base from forwarded request
 func redirectBase(r *http.Request) string {
 	proto := r.Header.Get("X-Forwarded-Proto")
 	host := r.Header.Get("X-Forwarded-Host")
