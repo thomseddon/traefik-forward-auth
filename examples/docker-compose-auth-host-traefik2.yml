@@ -42,7 +42,7 @@ services:
       traefik.http.routers.tfa.entrypoints: web
       traefik.http.routers.tfa.middlewares: tfa-verify
       traefik.http.routers.tfa.rule: "Host(`auth.example.com`)"
-      traefik.http.services.tfaloadbalancer.server.port: '4181'
+      traefik.http.services.tfa.loadbalancer.server.port: '4181'
     networks:
       - traefik
     environment:
