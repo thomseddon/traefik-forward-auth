@@ -170,6 +170,25 @@ func TestServerAuthCallback(t *testing.T) {
 	assert.Equal("", fwd.Path, "valid request should be redirected to return url")
 }
 
+func TestServerLogout(t *testing.T) {
+	require := require.New(t)
+	config = newDefaultConfig()
+
+	req := newDefaultHttpRequest("/_oauth/logout")
+	res, _ := doHttpRequest(req, nil)
+	require.Equal(401, res.StatusCode, "should return a 401")
+
+	// Check for cookie
+	var cookie *http.Cookie
+	for _, c := range res.Cookies() {
+		if c.Name == config.CookieName {
+			cookie = c
+		}
+	}
+	require.NotNil(cookie)
+	require.Less(cookie.Expires.Local().Unix(), time.Now().Local().Unix()-50, "cookie should have expired")
+}
+
 func TestServerDefaultAction(t *testing.T) {
 	assert := assert.New(t)
 	config = newDefaultConfig()
