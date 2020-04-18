@@ -93,6 +93,30 @@ func TestAuthValidateEmail(t *testing.T) {
 	config.Whitelist = []string{"test@test.com"}
 	v = ValidateEmail("test@test.com")
 	assert.True(v, "should allow user in whitelist")
+
+	// Should allow only matching email address when
+	// MatchWhitelistOrDomain is disabled
+	config.Domains = []string{"example.com"}
+	config.Whitelist = []string{"test@test.com"}
+	config.MatchWhitelistOrDomain = false
+	v = ValidateEmail("test@test.com")
+	assert.True(v, "should allow user in whitelist")
+	v = ValidateEmail("test@example.com")
+	assert.False(v, "should not allow user from valid domain")
+	v = ValidateEmail("one@two.com")
+	assert.False(v, "should not allow user not in either")
+
+	// Should allow either matching domain or email address when
+	// MatchWhitelistOrDomain is enabled
+	config.Domains = []string{"example.com"}
+	config.Whitelist = []string{"test@test.com"}
+	config.MatchWhitelistOrDomain = true
+	v = ValidateEmail("test@test.com")
+	assert.True(v, "should allow user in whitelist")
+	v = ValidateEmail("test@example.com")
+	assert.True(v, "should allow user from valid domain")
+	v = ValidateEmail("one@two.com")
+	assert.False(v, "should not allow user not in either")
 }
 
 func TestRedirectUri(t *testing.T) {
