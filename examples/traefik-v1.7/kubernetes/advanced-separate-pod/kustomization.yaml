@@ -1,0 +1,3 @@
+resources:
+- traefik-forward-auth
+- whoami

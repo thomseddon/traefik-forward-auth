@@ -27,6 +27,11 @@ A minimal forward authentication service that provides OAuth/SSO login and authe
 - [Concepts](#concepts)
   - [Forwarded Headers](#forwarded-headers)
   - [User Restriction](#user-restriction)
+  - [Applying Authentication](#applying-authentication)
+    - [Universal Authentication](#universal-authentication)
+    - [Individual Ingress Authentication in Kubernetes](#individual-ingress-authentication-in-kubernetes)
+    - [Individual Container Authentication in Swarm](#individual-container-authentication-in-swarm)
+    - [Rules Based Authentication](#rules-based-authentication)
   - [Operation Modes](#operation-modes)
     - [Overlay Mode](#overlay-mode)
     - [Auth Host Mode](#auth-host-mode)
@@ -92,14 +97,13 @@ traefik.toml:
 
 [docker]
 endpoint = "unix:///var/run/docker.sock"
-network = "traefik"
 ```
 
 #### Advanced:
 
-Please see the examples directory for a more complete [docker-compose.yml](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/docker-compose.yml) and full [traefik.toml](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/traefik.toml).
+Please see the examples directory for a more complete [docker-compose.yml](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/traefik-v1.7/swarm/docker-compose.yml) or [kubernetes/simple-separate-pod](https://github.com/thomseddon/traefik-forward-auth/blob/masterexamples/traefik-v1.7/kubernetes/simple-separate-pod/) and full [traefik.toml](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/traefik-v1.7/swarm/traefik.toml).
 
-Also in the examples directory is [docker-compose-auth-host.yml](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/docker-compose-auth-host.yml) which shows how to configure a central auth host, along with some other options.
+Also in the examples directory is [docker-compose-auth-host.yml](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/traefik-v1.7/swarm/docker-compose-auth-host.yml) and [kubernetes/advanced-separate-pod](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/traefik-v1.7/kubernetes/advanced-separate-pod/) which shows how to configure a central auth host, along with some other options.
 
 #### Provider Setup
 
@@ -320,7 +324,104 @@ Note, if you pass `whitelist` then only this is checked and `domain` is effectiv
 
 ### Forwarded Headers
 
-The authenticated user is set in the `X-Forwarded-User` header, to pass this on add this to the `authResponseHeaders` config option in traefik, as shown [here](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/docker-compose-dev.yml).
+The authenticated user is set in the `X-Forwarded-User` header, to pass this on add this to the `authResponseHeaders` config option in traefik, as shown below in the [Applying Authentication](#applying-authentication) section.
+
+### Applying Authentication
+
+Authentication can be applied in a variety of ways, either universally across all requests, or to individual containers/ingresses.
+
+#### Universal Authentication
+
+This can be achieved by enabling forward authentication for an entire entrypoint, for example, with http only:
+
+```toml
+[entryPoints]
+    [entryPoints.http]
+    address = ":80"
+
+    [entryPoints.http.auth.forward]
+    address = "http://traefik-forward-auth:4181"
+    authResponseHeaders = ["X-Forwarded-User"]
+```
+
+Or https:
+
+```
+[entryPoints]
+  [entryPoints.http]
+  address = ":80"
+
+    [entryPoints.http.redirect]
+    entryPoint = "https"
+
+  [entryPoints.https]
+  address = ":443"
+
+    [entryPoints.https.tls]
+
+    [entryPoints.https.auth.forward]
+    address = "http://traefik-forward-auth:4181"
+    authResponseHeaders = ["X-Forwarded-User"]
+```
+
+#### Individual Ingress Authentication in Kubernetes
+
+If you choose not to enable forward authentication for a specific entrypoint, you can apply annotations to selected ingresses:
+
+```
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: whoami
+  labels:
+    app: whoami
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    ingress.kubernetes.io/auth-type: forward
+    ingress.kubernetes.io/auth-url: http://traefik-forward-auth:4181
+    ingress.kubernetes.io/auth-response-headers: X-Forwarded-User
+spec:
+  rules:
+  - host: whoami.example.com
+    http:
+      paths:
+      - backend:
+          serviceName: whoami
+          servicePort: http
+```
+
+See the examples directory for more examples.
+
+#### Individual Container Authentication in Swarm
+
+You can apply labels to selected containers:
+
+```
+whoami:
+  image: containous/whoami
+  labels:
+    - traefik.frontend.rule=Host:whoami.example.com
+    - traefik.port=80
+    - traefik.frontend.auth.forward.address=http://traefik-forward-auth:4181
+    - traefik.frontend.auth.forward.authResponseHeaders=X-Forwarded-User
+    - traefik.frontend.auth.forward.trustForwardHeader=true
+```
+
+See the examples directory for more examples.
+
+#### Rules Based Authentication
+
+You can also leverage the `rules` config to selectively apply authentication via traefik-forward-auth. For example if you enabled universal authentication by enabling forward authentication for an entire entrypoint, you can still exclude some patterns from requiring authentication:
+
+```
+# Allow requests to 'dash.example.com'
+rule.1.action = allow
+rule.1.rule = Host(`dash.example.com`)
+
+# Allow requests to `app.example.com/public`
+rule.two.action = allow
+rule.two.rule = Host(`app.example.com`) && Path(`/public`)
+```
 
 ### Operation Modes
 
@@ -341,7 +442,7 @@ As the hostname in the `redirect_uri` is dynamically generated based on the orig
 
 #### Auth Host Mode
 
-This is an optional mode of operation that is useful when dealing with a large number of subdomains, it is activated by using the `auth-host` config option (see [this example docker-compose.yml](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/docker-compose-auth-host.yml)).
+This is an optional mode of operation that is useful when dealing with a large number of subdomains, it is activated by using the `auth-host` config option (see [this example docker-compose.yml](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/traefik-v1.7/swarm/docker-compose-auth-host.yml)).
 
 For example, if you have a few applications: `app1.test.com`, `app2.test.com`, `appN.test.com`, adding every domain to Google's console can become laborious.
 To utilise an auth host, permit domain level cookies by setting the cookie domain to `test.com` then set the `auth-host` to: `auth.test.com`.
@@ -362,7 +463,7 @@ Two criteria must be met for an `auth-host` to be used:
 1. Request matches given `cookie-domain`
 2. `auth-host` is also subdomain of same `cookie-domain`
 
-Please note: For Auth Host mode to work, you must ensure that requests to your auth-host are routed to the traefik-forward-auth container, as demonstrated with the service labels in the [docker-compose-auth.yml](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/docker-compose-auth-host.yml) example.
+Please note: For Auth Host mode to work, you must ensure that requests to your auth-host are routed to the traefik-forward-auth container, as demonstrated with the service labels in the [docker-compose-auth.yml](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/traefik-v1.7/swarm/docker-compose-auth-host.yml) example.
 
 ## Copyright
 

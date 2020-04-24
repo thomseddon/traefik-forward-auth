@@ -1,0 +1,92 @@
+#
+# Traefik + Traefik Forward Auth Deployment
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traefik
+  labels:
+    app: traefik
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: traefik
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: traefik
+    spec:
+      serviceAccountName: traefik
+      terminationGracePeriodSeconds: 60
+      containers:
+      - image: traefik:1.7.12
+        name: traefik
+        args:
+        - --configfile=/config/traefik.toml
+        ports:
+        - name: http
+          containerPort: 80
+          hostPort: 80
+          protocol: TCP
+        - name: https
+          containerPort: 443
+          hostPort: 443
+          protocol: TCP
+        - name: dash
+          containerPort: 8080
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /config
+          name: configs
+        - mountPath: /acme
+          name: acme
+
+      - image: thomseddon/traefik-forward-auth:2
+        name: traefik-forward-auth
+        ports:
+        - containerPort: 4181
+          protocol: TCP
+        env:
+        - name: CONFIG
+          value: "/config"
+        - name: COOKIE_DOMAIN
+          value: "example.com"
+        - name: DOMAIN
+          value: "example.com"
+        - name: AUTH_HOST
+          value: "auth.example.com"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: PROVIDERS_GOOGLE_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: secrets
+              key: google-client-id
+        - name: PROVIDERS_GOOGLE_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: secrets
+              key: google-client-secret
+        - name: COOKIE_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: secrets
+              key: cookie-secret
+        volumeMounts:
+        - name: configs
+          mountPath: /config
+          subPath: traefik-forward-auth.ini
+
+      volumes:
+      - name: configs
+        configMap:
+          name: configs
+      - name: secrets
+        secret:
+          secretName: secrets
+      - name: acme
+        persistentVolumeClaim:
+          claimName: traefik-acme

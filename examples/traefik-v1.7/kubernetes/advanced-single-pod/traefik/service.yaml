@@ -1,0 +1,36 @@
+#
+# Auth Service
+#
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik-forward-auth
+  labels:
+    app: traefik
+spec:
+  type: ClusterIP
+  selector:
+    app: traefik
+  ports:
+  - name: auth-http
+    port: 4181
+    targetPort: 4181
+
+---
+#
+# Dash Service
+#
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik-dashboard
+  labels:
+    app: traefik
+spec:
+  type: ClusterIP
+  selector:
+    app: traefik
+  ports:
+  - name: dashboard-http
+    port: 8080
+    targetPort: 8080
