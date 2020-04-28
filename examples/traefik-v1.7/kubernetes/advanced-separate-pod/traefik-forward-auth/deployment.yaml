@@ -28,6 +28,9 @@ spec:
           value: "/config"
         - name: DOMAIN
           value: "example.com"
+        # INSECURE_COOKIE is required unless using https entrypoint
+        - name: INSECURE_COOKIE
+          value: "true"
         # Remove COOKIE_DOMAIN if not using auth host mode
         - name: COOKIE_DOMAIN
           value: "example.com"
@@ -46,11 +49,11 @@ spec:
             secretKeyRef:
               name: secrets
               key: google-client-secret
-        - name: COOKIE_SECRET
+        - name: SECRET
           valueFrom:
             secretKeyRef:
               name: secrets
-              key: cookie-secret
+              key: secret
         volumeMounts:
         - name: configs
           mountPath: /config

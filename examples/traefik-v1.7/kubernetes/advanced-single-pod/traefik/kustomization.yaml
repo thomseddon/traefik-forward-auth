@@ -18,7 +18,7 @@ configMapGenerator:
 - name: configs
   files:
     - configs/traefik.toml
-    - config/traefik-forward-auth.ini
+    - configs/traefik-forward-auth.ini
 
 #
 # Secrets

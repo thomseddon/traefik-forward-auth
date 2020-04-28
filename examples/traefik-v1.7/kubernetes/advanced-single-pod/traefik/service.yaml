@@ -1,4 +1,26 @@
 #
+# Traefik Service
+#
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik
+  labels:
+    app: traefik
+spec:
+  # Use NodePort if required
+  type: LoadBalancer
+  selector:
+    app: traefik
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+  - name: https
+    port: 443
+    targetPort: 443
+---
+#
 # Auth Service
 #
 apiVersion: v1
