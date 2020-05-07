@@ -1,0 +1,19 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: whoami
+  labels:
+    app: whoami
+spec:
+  entryPoints:
+    - https
+  routes:
+  - match: Host(`whoami.example.com`)
+    kind: Rule
+    services:
+      - name: whoami
+        port: 80
+    middlewares:
+      - name: traefik-forward-auth
+  tls:
+    certresolver: default
