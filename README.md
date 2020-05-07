@@ -28,7 +28,7 @@ A minimal forward authentication service that provides OAuth/SSO login and authe
   - [Forwarded Headers](#forwarded-headers)
   - [User Restriction](#user-restriction)
   - [Applying Authentication](#applying-authentication)
-    - [Universal Authentication](#universal-authentication)
+    - [Global Authentication](#global-authentication)
     - [Individual Ingress Authentication in Kubernetes](#individual-ingress-authentication-in-kubernetes)
     - [Individual Container Authentication in Swarm](#individual-container-authentication-in-swarm)
     - [Rules Based Authentication](#rules-based-authentication)
@@ -328,9 +328,9 @@ The authenticated user is set in the `X-Forwarded-User` header, to pass this on 
 
 ### Applying Authentication
 
-Authentication can be applied in a variety of ways, either universally across all requests, or to individual containers/ingresses.
+Authentication can be applied in a variety of ways, either globally across all requests, or to individual containers/ingresses.
 
-#### Universal Authentication
+#### Global Authentication
 
 This can be achieved by enabling forward authentication for an entire entrypoint, for example, with http only:
 
@@ -411,7 +411,7 @@ See the examples directory for more examples.
 
 #### Rules Based Authentication
 
-You can also leverage the `rules` config to selectively apply authentication via traefik-forward-auth. For example if you enabled universal authentication by enabling forward authentication for an entire entrypoint, you can still exclude some patterns from requiring authentication:
+You can also leverage the `rules` config to selectively apply authentication via traefik-forward-auth. For example if you enabled global authentication by enabling forward authentication for an entire entrypoint, you can still exclude some patterns from requiring authentication:
 
 ```
 # Allow requests to 'dash.example.com'
