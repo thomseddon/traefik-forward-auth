@@ -311,6 +311,8 @@ All options can be supplied in any of the following ways, in the following prece
    rule.oidc.rule = PathPrefix(`/github`)
    ```
 
+   Note: It is possible to break your redirect flow with rules, please be careful not to create an `allow` rule that matches your redirect_uri unless you know what you're doing. This limitation is being tracked in in #101 and the behaviour will change in future releases.
+
 ## Concepts
 
 ### User Restriction
