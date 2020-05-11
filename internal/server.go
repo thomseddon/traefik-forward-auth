@@ -64,7 +64,7 @@ func (s *Server) RootHandler(w http.ResponseWriter, r *http.Request) {
 // AllowHandler Allows requests
 func (s *Server) AllowHandler(rule string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		s.logger(r, rule, "Allowing request")
+		s.logger(r, "Allow", rule, "Allowing request")
 		w.WriteHeader(200)
 	}
 }
@@ -75,7 +75,7 @@ func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Logging setup
-		logger := s.logger(r, rule, "Authenticating request")
+		logger := s.logger(r, "Auth", rule, "Authenticating request")
 
 		// Get auth cookie
 		c, err := r.Cookie(config.CookieName)
@@ -91,7 +91,7 @@ func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 				logger.Info("Cookie has expired")
 				s.authRedirect(logger, w, r, p)
 			} else {
-				logger.Errorf("Invalid cookie: %v", err)
+				logger.WithField("error", err).Warn("Invalid cookie")
 				http.Error(w, "Not authorized", 401)
 			}
 			return
@@ -100,15 +100,13 @@ func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 		// Validate user
 		valid := ValidateEmail(email)
 		if !valid {
-			logger.WithFields(logrus.Fields{
-				"email": email,
-			}).Errorf("Invalid email")
+			logger.WithField("email", email).Warn("Invalid email")
 			http.Error(w, "Not authorized", 401)
 			return
 		}
 
 		// Valid request
-		logger.Debugf("Allowing valid request ")
+		logger.Debug("Allowing valid request")
 		w.Header().Set("X-Forwarded-User", email)
 		w.WriteHeader(200)
 	}
@@ -118,12 +116,12 @@ func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Logging setup
-		logger := s.logger(r, "default", "Handling callback")
+		logger := s.logger(r, "AuthCallback", "default", "Handling callback")
 
 		// Check for CSRF cookie
 		c, err := r.Cookie(config.CSRFCookieName)
 		if err != nil {
-			logger.Warn("Missing csrf cookie")
+			logger.Info("Missing csrf cookie")
 			http.Error(w, "Not authorized", 401)
 			return
 		}
@@ -131,7 +129,10 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 		// Validate state
 		valid, providerName, redirect, err := ValidateCSRFCookie(r, c)
 		if !valid {
-			logger.Warnf("Error validating csrf cookie: %v", err)
+			logger.WithFields(logrus.Fields{
+				"error":       err,
+				"csrf_cookie": c,
+			}).Warn("Error validating csrf cookie")
 			http.Error(w, "Not authorized", 401)
 			return
 		}
@@ -139,7 +140,11 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 		// Get provider
 		p, err := config.GetConfiguredProvider(providerName)
 		if err != nil {
-			logger.Warnf("Invalid provider in csrf cookie: %s, %v", providerName, err)
+			logger.WithFields(logrus.Fields{
+				"error":       err,
+				"csrf_cookie": c,
+				"provider":    providerName,
+			}).Warn("Invalid provider in csrf cookie")
 			http.Error(w, "Not authorized", 401)
 			return
 		}
@@ -150,7 +155,7 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 		// Exchange code for token
 		token, err := p.ExchangeCode(redirectUri(r), r.URL.Query().Get("code"))
 		if err != nil {
-			logger.Errorf("Code exchange failed with: %v", err)
+			logger.WithField("error", err).Error("Code exchange failed with provider")
 			http.Error(w, "Service unavailable", 503)
 			return
 		}
@@ -158,15 +163,17 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 		// Get user
 		user, err := p.GetUser(token)
 		if err != nil {
-			logger.Errorf("Error getting user: %s", err)
+			logger.WithField("error", err).Error("Error getting user")
 			return
 		}
 
 		// Generate cookie
 		http.SetCookie(w, MakeCookie(r, user.Email))
 		logger.WithFields(logrus.Fields{
-			"user": user.Email,
-		}).Infof("Generated auth cookie")
+			"provider": providerName,
+			"redirect": redirect,
+			"user":     user.Email,
+		}).Info("Successfully generated auth cookie, redirecting user.")
 
 		// Redirect
 		http.Redirect(w, r, redirect, http.StatusTemporaryRedirect)
@@ -177,33 +184,39 @@ func (s *Server) authRedirect(logger *logrus.Entry, w http.ResponseWriter, r *ht
 	// Error indicates no cookie, generate nonce
 	err, nonce := Nonce()
 	if err != nil {
-		logger.Errorf("Error generating nonce, %v", err)
+		logger.WithField("error", err).Error("Error generating nonce")
 		http.Error(w, "Service unavailable", 503)
 		return
 	}
 
 	// Set the CSRF cookie
-	http.SetCookie(w, MakeCSRFCookie(r, nonce))
-	logger.Debug("Set CSRF cookie and redirecting to google login")
+	csrf := MakeCSRFCookie(r, nonce)
+	http.SetCookie(w, csrf)
 
 	// Forward them on
-	loginUrl := p.GetLoginURL(redirectUri(r), MakeState(r, p, nonce))
-	http.Redirect(w, r, loginUrl, http.StatusTemporaryRedirect)
+	loginURL := p.GetLoginURL(redirectUri(r), MakeState(r, p, nonce))
+	http.Redirect(w, r, loginURL, http.StatusTemporaryRedirect)
 
-	logger.Debug("Done")
-	return
+	logger.WithFields(logrus.Fields{
+		"csrf_cookie": csrf,
+		"login_url":   loginURL,
+	}).Debug("Set CSRF cookie and redirected to provider login url")
 }
 
-func (s *Server) logger(r *http.Request, rule, msg string) *logrus.Entry {
+func (s *Server) logger(r *http.Request, handler, rule, msg string) *logrus.Entry {
 	// Create logger
 	logger := log.WithFields(logrus.Fields{
+		"handler":   handler,
+		"rule":      rule,
+		"method":    r.Header.Get("X-Forwarded-Method"),
+		"host":      r.Header.Get("X-Forwarded-Host"),
+		"uri":       r.Header.Get("X-Forwarded-Uri"),
 		"source_ip": r.Header.Get("X-Forwarded-For"),
 	})
 
 	// Log request
 	logger.WithFields(logrus.Fields{
-		"rule":    rule,
-		"headers": r.Header,
+		"cookies": r.Cookies(),
 	}).Debug(msg)
 
 	return logger
