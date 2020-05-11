@@ -9,10 +9,12 @@ import (
 	"github.com/thomseddon/traefik-forward-auth/internal/provider"
 )
 
+// Server contains router and handler methods
 type Server struct {
 	router *rules.Router
 }
 
+// NewServer creates a new server object and builds router
 func NewServer() *Server {
 	s := &Server{}
 	s.buildRoutes()
@@ -47,6 +49,8 @@ func (s *Server) buildRoutes() {
 	}
 }
 
+// RootHandler Overwrites the request method, host and URL with those from the
+// forwarded request so it's correctly routed by mux
 func (s *Server) RootHandler(w http.ResponseWriter, r *http.Request) {
 	// Modify request
 	r.Method = r.Header.Get("X-Forwarded-Method")
@@ -57,7 +61,7 @@ func (s *Server) RootHandler(w http.ResponseWriter, r *http.Request) {
 	s.router.ServeHTTP(w, r)
 }
 
-// Handler that allows requests
+// AllowHandler Allows requests
 func (s *Server) AllowHandler(rule string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s.logger(r, rule, "Allowing request")
@@ -65,7 +69,7 @@ func (s *Server) AllowHandler(rule string) http.HandlerFunc {
 	}
 }
 
-// Authenticate requests
+// AuthHandler Authenticates requests
 func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 	p, _ := config.GetConfiguredProvider(providerName)
 
@@ -110,7 +114,7 @@ func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 	}
 }
 
-// Handle auth callback
+// AuthCallbackHandler Handles auth callback request
 func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Logging setup

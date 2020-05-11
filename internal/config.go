@@ -19,6 +19,7 @@ import (
 
 var config *Config
 
+// Config holds the runtime application config
 type Config struct {
 	LogLevel  string `long:"log-level" env:"LOG_LEVEL" default:"warn" choice:"trace" choice:"debug" choice:"info" choice:"warn" choice:"error" choice:"fatal" choice:"panic" description:"Log level"`
 	LogFormat string `long:"log-format"  env:"LOG_FORMAT" default:"text" choice:"text" choice:"json" choice:"pretty" description:"Log format"`
@@ -53,6 +54,7 @@ type Config struct {
 	PromptLegacy        string        `long:"prompt" env:"PROMPT" description:"DEPRECATED - Use \"providers.google.prompt\""`
 }
 
+// NewGlobalConfig creates a new global config, parsed from command arguments
 func NewGlobalConfig() *Config {
 	var err error
 	config, err = NewConfig(os.Args[1:])
@@ -66,6 +68,7 @@ func NewGlobalConfig() *Config {
 
 // TODO: move config parsing into new func "NewParsedConfig"
 
+// NewConfig parses and validates provided configuration into a config object
 func NewConfig(args []string) (*Config, error) {
 	c := &Config{
 		Rules: map[string]*Rule{},
@@ -236,6 +239,7 @@ func convertLegacyToIni(name string) (io.Reader, error) {
 	return bytes.NewReader(legacyFileFormat.ReplaceAll(b, []byte("$1=$2"))), nil
 }
 
+// Validate validates a config object
 func (c *Config) Validate() {
 	// Check for show stopper errors
 	if len(c.Secret) == 0 {
@@ -317,12 +321,14 @@ func (c *Config) setupProvider(name string) error {
 	return nil
 }
 
+// Rule holds defined rules
 type Rule struct {
 	Action   string
 	Rule     string
 	Provider string
 }
 
+// NewRule creates a new rule object
 func NewRule() *Rule {
 	return &Rule{
 		Action: "auth",
@@ -335,6 +341,7 @@ func (r *Rule) formattedRule() string {
 	return strings.ReplaceAll(r.Rule, "Host(", "HostRegexp(")
 }
 
+// Validate validates a rule
 func (r *Rule) Validate(c *Config) error {
 	if r.Action != "auth" && r.Action != "allow" {
 		return errors.New("invalid rule action, must be \"auth\" or \"allow\"")
@@ -345,13 +352,16 @@ func (r *Rule) Validate(c *Config) error {
 
 // Legacy support for comma separated lists
 
+// CommaSeparatedList provides legacy support for config values provided as csv
 type CommaSeparatedList []string
 
+// UnmarshalFlag converts a comma separated list to an array
 func (c *CommaSeparatedList) UnmarshalFlag(value string) error {
 	*c = append(*c, strings.Split(value, ",")...)
 	return nil
 }
 
+// MarshalFlag converts an array back to a comma separated list
 func (c *CommaSeparatedList) MarshalFlag() (string, error) {
 	return strings.Join(*c, ","), nil
 }
