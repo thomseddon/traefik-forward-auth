@@ -35,6 +35,8 @@ func TestConfigDefaults(t *testing.T) {
 	assert.Equal(time.Second*time.Duration(43200), c.Lifetime)
 	assert.Equal("/_oauth", c.Path)
 	assert.Len(c.Whitelist, 0)
+
+	assert.Equal("select_account", c.Providers.Google.Prompt)
 }
 
 func TestConfigParseArgs(t *testing.T) {
