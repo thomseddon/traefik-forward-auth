@@ -193,6 +193,12 @@ func (s *Server) authRedirect(logger *logrus.Entry, w http.ResponseWriter, r *ht
 	csrf := MakeCSRFCookie(r, nonce)
 	http.SetCookie(w, csrf)
 
+	if !config.InsecureCookie && r.Header.Get("X-Forwarded-Proto") != "https" {
+		logger.Warn("You are using \"secure\" cookies for a request that was not " +
+			"received via https. You should either redirect to https or pass the " +
+			"\"insecure-cookie\" config option to permit cookies via http.")
+	}
+
 	// Forward them on
 	loginURL := p.GetLoginURL(redirectUri(r), MakeState(r, p, nonce))
 	http.Redirect(w, r, loginURL, http.StatusTemporaryRedirect)
@@ -209,6 +215,7 @@ func (s *Server) logger(r *http.Request, handler, rule, msg string) *logrus.Entr
 		"handler":   handler,
 		"rule":      rule,
 		"method":    r.Header.Get("X-Forwarded-Method"),
+		"proto":     r.Header.Get("X-Forwarded-Proto"),
 		"host":      r.Header.Get("X-Forwarded-Host"),
 		"uri":       r.Header.Get("X-Forwarded-Uri"),
 		"source_ip": r.Header.Get("X-Forwarded-For"),
