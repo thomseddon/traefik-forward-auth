@@ -63,11 +63,11 @@ version: '3'
 
 services:
   traefik:
-    image: traefik:1.7
+    image: traefik:v2.2
+    command: --providers.docker
     ports:
       - "8085:80"
     volumes:
-      - ./traefik.toml:/traefik.toml
       - /var/run/docker.sock:/var/run/docker.sock
 
   traefik-forward-auth:
@@ -77,33 +77,23 @@ services:
       - PROVIDERS_GOOGLE_CLIENT_SECRET=your-client-secret
       - SECRET=something-random
       - INSECURE_COOKIE=true # Example assumes no https, do not use in production
+    labels:
+      - "traefik.http.middlewares.traefik-forward-auth.forwardauth.address=http://traefik-forward-auth:4181"
+      - "traefik.http.middlewares.traefik-forward-auth.forwardauth.authResponseHeaders=X-Forwarded-User"
+      - "traefik.http.services.traefik-forward-auth.loadbalancer.server.port=4181"
 
   whoami:
-    image: emilevauge/whoami:latest
+    image: containous/whoami
     labels:
-      - "traefik.frontend.rule=Host:whoami.mycompany.com"
-```
-
-traefik.toml:
-
-```toml
-[entryPoints]
-    [entryPoints.http]
-    address = ":80"
-
-    [entryPoints.http.auth.forward]
-    address = "http://traefik-forward-auth:4181"
-    authResponseHeaders = ["X-Forwarded-User"]
-
-[docker]
-endpoint = "unix:///var/run/docker.sock"
+      - "traefik.http.routers.whoami.rule=Host(`whoami.mycompany.com`)"
+      - "traefik.http.routers.whoami.middlewares=traefik-forward-auth"
 ```
 
 #### Advanced:
 
-Please see the examples directory for a more complete [docker-compose.yml](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/traefik-v1.7/swarm/docker-compose.yml) or [kubernetes/simple-separate-pod](https://github.com/thomseddon/traefik-forward-auth/blob/masterexamples/traefik-v1.7/kubernetes/simple-separate-pod/) and full [traefik.toml](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/traefik-v1.7/swarm/traefik.toml).
+Please see the examples directory for a more complete [docker-compose.yml](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/traefik-v2/swarm/docker-compose.yml) or [kubernetes/simple-separate-pod](https://github.com/thomseddon/traefik-forward-auth/blob/masterexamples/traefik-v2/kubernetes/simple-separate-pod/).
 
-Also in the examples directory is [docker-compose-auth-host.yml](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/traefik-v1.7/swarm/docker-compose-auth-host.yml) and [kubernetes/advanced-separate-pod](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/traefik-v1.7/kubernetes/advanced-separate-pod/) which shows how to configure a central auth host, along with some other options.
+Also in the examples directory is [docker-compose-auth-host.yml](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/traefik-v2/swarm/docker-compose-auth-host.yml) and [kubernetes/advanced-separate-pod](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/traefik-v2/kubernetes/advanced-separate-pod/) which shows how to configure a central auth host, along with some other options.
 
 #### Provider Setup
 
@@ -336,60 +326,45 @@ Authentication can be applied in a variety of ways, either globally across all r
 
 This can be achieved by enabling forward authentication for an entire entrypoint, for example, with http only:
 
-```toml
-[entryPoints]
-    [entryPoints.http]
-    address = ":80"
-
-    [entryPoints.http.auth.forward]
-    address = "http://traefik-forward-auth:4181"
-    authResponseHeaders = ["X-Forwarded-User"]
+```ini
+--entryPoints.http.address=:80
+--entrypoints.http.http.middlewares=traefik-forward-auth # "default-traefik-forward-auth" on kubernetes
 ```
 
 Or https:
 
+```ini
+--entryPoints.http.address=:80
+--entryPoints.http.http.redirections.entryPoint.to=https
+--entryPoints.http.http.redirections.entryPoint.scheme=https
+--entryPoints.https.address=:443
+--entrypoints.https.http.middlewares=traefik-forward-auth # "default-traefik-forward-auth" on kubernetes
 ```
-[entryPoints]
-  [entryPoints.http]
-  address = ":80"
 
-    [entryPoints.http.redirect]
-    entryPoint = "https"
-
-  [entryPoints.https]
-  address = ":443"
-
-    [entryPoints.https.tls]
-
-    [entryPoints.https.auth.forward]
-    address = "http://traefik-forward-auth:4181"
-    authResponseHeaders = ["X-Forwarded-User"]
-```
+Note: Traefik prepends the namespace to the name of middleware defined via a kubernetes resource. This is handled automatically when referencing the middleware from another resource in the same namespace (so the namespace does not need to be prepended when referenced). However the full name, including the namespace, must be used when referenced from static configuration (e.g. command arguments or config file), hence you must prepend the namespace to your traefik-forward-auth middleware reference, as shown in the comments above (e.g. `default-traefik-forward-auth` if your middleware is named `traefik-forward-auth` and is defined in the `default` namespace).
 
 #### Individual Ingress Authentication in Kubernetes
 
-If you choose not to enable forward authentication for a specific entrypoint, you can apply annotations to selected ingresses:
+If you choose not to enable forward authentication for a specific entrypoint, you can apply the middleware to selected ingressroutes:
 
-```
-apiVersion: extensions/v1beta1
-kind: Ingress
+```yaml
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
 metadata:
   name: whoami
   labels:
     app: whoami
-  annotations:
-    kubernetes.io/ingress.class: traefik
-    ingress.kubernetes.io/auth-type: forward
-    ingress.kubernetes.io/auth-url: http://traefik-forward-auth:4181
-    ingress.kubernetes.io/auth-response-headers: X-Forwarded-User
 spec:
-  rules:
-  - host: whoami.example.com
-    http:
-      paths:
-      - backend:
-          serviceName: whoami
-          servicePort: http
+  entryPoints:
+    - http
+  routes:
+  - match: Host(`whoami.example.com`)
+    kind: Rule
+    services:
+      - name: whoami
+        port: 80
+    middlewares:
+      - name: traefik-forward-auth
 ```
 
 See the examples directory for more examples.
@@ -398,15 +373,12 @@ See the examples directory for more examples.
 
 You can apply labels to selected containers:
 
-```
+```yaml
 whoami:
   image: containous/whoami
   labels:
-    - traefik.frontend.rule=Host:whoami.example.com
-    - traefik.port=80
-    - traefik.frontend.auth.forward.address=http://traefik-forward-auth:4181
-    - traefik.frontend.auth.forward.authResponseHeaders=X-Forwarded-User
-    - traefik.frontend.auth.forward.trustForwardHeader=true
+    - "traefik.http.routers.whoami.rule=Host(`whoami.example.com`)"
+    - "traefik.http.routers.whoami.middlewares=traefik-forward-auth"
 ```
 
 See the examples directory for more examples.
@@ -415,7 +387,7 @@ See the examples directory for more examples.
 
 You can also leverage the `rules` config to selectively apply authentication via traefik-forward-auth. For example if you enabled global authentication by enabling forward authentication for an entire entrypoint, you can still exclude some patterns from requiring authentication:
 
-```
+```ini
 # Allow requests to 'dash.example.com'
 rule.1.action = allow
 rule.1.rule = Host(`dash.example.com`)
@@ -444,7 +416,7 @@ As the hostname in the `redirect_uri` is dynamically generated based on the orig
 
 #### Auth Host Mode
 
-This is an optional mode of operation that is useful when dealing with a large number of subdomains, it is activated by using the `auth-host` config option (see [this example docker-compose.yml](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/traefik-v1.7/swarm/docker-compose-auth-host.yml)).
+This is an optional mode of operation that is useful when dealing with a large number of subdomains, it is activated by using the `auth-host` config option (see [this example docker-compose.yml](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/traefik-v2/swarm/docker-compose-auth-host.yml) or [this kubernetes example](https://github.com/thomseddon/traefik-forward-auth/tree/master/examples/traefik-v2/kubernetes/advanced-separate-pod)).
 
 For example, if you have a few applications: `app1.test.com`, `app2.test.com`, `appN.test.com`, adding every domain to Google's console can become laborious.
 To utilise an auth host, permit domain level cookies by setting the cookie domain to `test.com` then set the `auth-host` to: `auth.test.com`.
@@ -465,7 +437,7 @@ Two criteria must be met for an `auth-host` to be used:
 1. Request matches given `cookie-domain`
 2. `auth-host` is also subdomain of same `cookie-domain`
 
-Please note: For Auth Host mode to work, you must ensure that requests to your auth-host are routed to the traefik-forward-auth container, as demonstrated with the service labels in the [docker-compose-auth.yml](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/traefik-v1.7/swarm/docker-compose-auth-host.yml) example.
+Please note: For Auth Host mode to work, you must ensure that requests to your auth-host are routed to the traefik-forward-auth container, as demonstrated with the service labels in the [docker-compose-auth.yml](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/traefik-v2/swarm/docker-compose-auth-host.yml) example and the [ingressroute resource](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/traefik-v2/kubernetes/advanced-separate-pod/traefik-forward-auth/ingress.yaml) in a kubernetes example.
 
 ## Copyright
 

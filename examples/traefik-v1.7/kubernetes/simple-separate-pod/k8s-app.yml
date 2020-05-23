@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: whoami
-        image: emilevauge/whoami
+        image: containous/whoami
 ---
 #
 # Service

@@ -14,7 +14,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
 
   whoami1:
-    image: emilevauge/whoami
+    image: containous/whoami
     networks:
       - traefik
     labels:
@@ -23,7 +23,7 @@ services:
       - "traefik.frontend.rule=Host:whoami.yourdomain.com"
 
   traefik-forward-auth:
-    image: thomseddon/traefik-forward-auth
+    image: thomseddon/traefik-forward-auth:2
     environment:
       - PROVIDERS_GOOGLE_CLIENT_ID=your-client-id
       - PROVIDERS_GOOGLE_CLIENT_SECRET=your-client-secret

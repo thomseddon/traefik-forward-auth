@@ -11,9 +11,10 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
 
   whoami:
-    image: emilevauge/whoami
+    image: containous/whoami
     labels:
       - "traefik.http.routers.whoami.rule=Host(`whoami.localhost.com`)"
+      # This example uses "Individual Authentication"
       - "traefik.http.routers.whoami.middlewares=traefik-forward-auth"
 
   traefik-forward-auth:
