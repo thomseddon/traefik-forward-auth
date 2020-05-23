@@ -42,17 +42,17 @@ spec:
         - name: PROVIDERS_GOOGLE_CLIENT_ID
           valueFrom:
             secretKeyRef:
-              name: secrets
+              name: traefik-forward-auth-secrets
               key: google-client-id
         - name: PROVIDERS_GOOGLE_CLIENT_SECRET
           valueFrom:
             secretKeyRef:
-              name: secrets
+              name: traefik-forward-auth-secrets
               key: google-client-secret
         - name: SECRET
           valueFrom:
             secretKeyRef:
-              name: secrets
+              name: traefik-forward-auth-secrets
               key: secret
         volumeMounts:
         - name: configs
@@ -63,6 +63,6 @@ spec:
       - name: configs
         configMap:
           name: configs
-      - name: secrets
+      - name: traefik-forward-auth-secrets
         secret:
           secretName: secrets
