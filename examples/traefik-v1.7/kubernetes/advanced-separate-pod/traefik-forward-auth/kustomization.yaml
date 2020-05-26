@@ -18,5 +18,5 @@ configMapGenerator:
 # Secrets
 #
 secretGenerator:
-- name: secrets
+- name: traefik-forward-auth-secrets
   env: traefik-forward-auth.env
