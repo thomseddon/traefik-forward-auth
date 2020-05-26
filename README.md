@@ -35,6 +35,7 @@ A minimal forward authentication service that provides OAuth/SSO login and authe
   - [Operation Modes](#operation-modes)
     - [Overlay Mode](#overlay-mode)
     - [Auth Host Mode](#auth-host-mode)
+  - [Logging Out](#logging-out)
 - [Copyright](#copyright)
 - [License](#license)
 
@@ -442,6 +443,12 @@ Two criteria must be met for an `auth-host` to be used:
 2. `auth-host` is also subdomain of same `cookie-domain`
 
 Please note: For Auth Host mode to work, you must ensure that requests to your auth-host are routed to the traefik-forward-auth container, as demonstrated with the service labels in the [docker-compose-auth.yml](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/traefik-v2/swarm/docker-compose-auth-host.yml) example and the [ingressroute resource](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/traefik-v2/kubernetes/advanced-separate-pod/traefik-forward-auth/ingress.yaml) in a kubernetes example.
+
+### Logging Out
+
+The service provides an endpoint to clear a users session and "log them out". The path is created by appending `/logout` to your configured `path` and so with the default settings it will be: `/_oauth/logout`.
+
+Note: This only clears the auth cookie from the users browser and as this service is stateless, it does not invalidate the cookie against future use. So if the cookie was recorded, for example, it could continue to be used for the duration of the cookie lifetime.
 
 ## Copyright
 
