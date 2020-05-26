@@ -183,13 +183,14 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 	}
 }
 
-// LogoutHandler signs a user out
+// LogoutHandler logs a user out
 func (s *Server) LogoutHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Clear cookie
 		http.SetCookie(w, ClearCookie(r))
 
-		s.logger(r, "default", "Handling logout").Infof("Logged out user")
+		logger := s.logger(r, "Logout", "default", "Handling logout")
+		logger.Info("Logged out user")
 
 		http.Error(w, "You have been logged out", 401)
 	}
