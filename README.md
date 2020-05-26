@@ -29,8 +29,8 @@ A minimal forward authentication service that provides OAuth/SSO login and authe
   - [User Restriction](#user-restriction)
   - [Applying Authentication](#applying-authentication)
     - [Global Authentication](#global-authentication)
-    - [Individual Ingress Authentication in Kubernetes](#individual-ingress-authentication-in-kubernetes)
-    - [Individual Container Authentication in Swarm](#individual-container-authentication-in-swarm)
+    - [Selective Ingress Authentication in Kubernetes](#selective-ingress-authentication-in-kubernetes)
+    - [Selective Container Authentication in Swarm](#selective-container-authentication-in-swarm)
     - [Rules Based Authentication](#rules-based-authentication)
   - [Operation Modes](#operation-modes)
     - [Overlay Mode](#overlay-mode)
@@ -320,7 +320,7 @@ The authenticated user is set in the `X-Forwarded-User` header, to pass this on 
 
 ### Applying Authentication
 
-Authentication can be applied in a variety of ways, either globally across all requests, or to individual containers/ingresses.
+Authentication can be applied in a variety of ways, either globally across all requests, or selectively to specific containers/ingresses.
 
 #### Global Authentication
 
@@ -343,7 +343,7 @@ Or https:
 
 Note: Traefik prepends the namespace to the name of middleware defined via a kubernetes resource. This is handled automatically when referencing the middleware from another resource in the same namespace (so the namespace does not need to be prepended when referenced). However the full name, including the namespace, must be used when referenced from static configuration (e.g. command arguments or config file), hence you must prepend the namespace to your traefik-forward-auth middleware reference, as shown in the comments above (e.g. `default-traefik-forward-auth` if your middleware is named `traefik-forward-auth` and is defined in the `default` namespace).
 
-#### Individual Ingress Authentication in Kubernetes
+#### Selective Ingress Authentication in Kubernetes
 
 If you choose not to enable forward authentication for a specific entrypoint, you can apply the middleware to selected ingressroutes:
 
@@ -369,7 +369,7 @@ spec:
 
 See the examples directory for more examples.
 
-#### Individual Container Authentication in Swarm
+#### Selective Container Authentication in Swarm
 
 You can apply labels to selected containers:
 

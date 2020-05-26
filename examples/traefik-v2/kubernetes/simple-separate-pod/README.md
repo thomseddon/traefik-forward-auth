@@ -3,7 +3,7 @@
 
 This is a simple example of how to deploy traefik-forward-auth in it's own pod with minimal configuration. This example is a good starting point for those who already have traefik deployed (e.g. using helm).
 
-This example uses [Individual Authentication](https://github.com/thomseddon/traefik-forward-auth/blob/master/README.md#individual-ingress-authentication-in-kubernetes) to apply forward authentication to selected ingresses. This means ingresses will not be protected by default. Authentication can be applied by adding the `traefik-forward-auth` middleware, for example:
+This example uses [Selective Authentication](https://github.com/thomseddon/traefik-forward-auth/blob/master/README.md#selective-ingress-authentication-in-kubernetes) to apply forward authentication to selected ingresses. This means ingresses will not be protected by default. Authentication can be applied by adding the `traefik-forward-auth` middleware, for example:
 
 ```
 apiVersion: traefik.containo.us/v1alpha1

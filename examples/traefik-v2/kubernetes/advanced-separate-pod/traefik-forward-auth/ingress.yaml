@@ -16,5 +16,7 @@ spec:
     services:
     - name: traefik-forward-auth
       port: 4181
+    middlewares:
+      - name: traefik-forward-auth
   tls:
     certresolver: default
