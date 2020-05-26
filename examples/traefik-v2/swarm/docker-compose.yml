@@ -14,7 +14,7 @@ services:
     image: containous/whoami
     labels:
       - "traefik.http.routers.whoami.rule=Host(`whoami.localhost.com`)"
-      # This example uses "Individual Authentication"
+      # This example uses "Selective Authentication"
       - "traefik.http.routers.whoami.middlewares=traefik-forward-auth"
 
   traefik-forward-auth:
