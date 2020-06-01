@@ -1,0 +1,94 @@
+#
+# Traefik + Traefik Forward Auth Deployment
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traefik
+  labels:
+    app: traefik
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: traefik
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: traefik
+    spec:
+      serviceAccountName: traefik
+      terminationGracePeriodSeconds: 60
+      containers:
+      - image: traefik:1.7.12
+        name: traefik
+        args:
+        - --configfile=/config/traefik.toml
+        ports:
+        - name: http
+          containerPort: 80
+          protocol: TCP
+        - name: https
+          containerPort: 443
+          protocol: TCP
+        - name: dash
+          containerPort: 8080
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /config
+          name: configs
+        - mountPath: /acme
+          name: acme
+
+      - image: thomseddon/traefik-forward-auth:2
+        name: traefik-forward-auth
+        ports:
+        - containerPort: 4181
+          protocol: TCP
+        env:
+        - name: CONFIG
+          value: "/config"
+        - name: DOMAIN
+          value: "example.com"
+        # INSECURE_COOKIE is required if not using a https entrypoint
+        # - name: INSECURE_COOKIE
+        #   value: "true"
+        # Remove COOKIE_DOMAIN if not using auth host mode
+        - name: COOKIE_DOMAIN
+          value: "example.com"
+        - name: AUTH_HOST
+          value: "auth.example.com"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: PROVIDERS_GOOGLE_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: traefik-forward-auth-secrets
+              key: google-client-id
+        - name: PROVIDERS_GOOGLE_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: traefik-forward-auth-secrets
+              key: google-client-secret
+        - name: SECRET
+          valueFrom:
+            secretKeyRef:
+              name: traefik-forward-auth-secrets
+              key: secret
+        volumeMounts:
+        - name: configs
+          mountPath: /config
+          subPath: traefik-forward-auth.ini
+
+      volumes:
+      - name: configs
+        configMap:
+          name: configs
+      - name: traefik-forward-auth-secrets
+        secret:
+          secretName: secrets
+      - name: acme
+        persistentVolumeClaim:
+          claimName: traefik-acme

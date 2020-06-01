@@ -1,0 +1,17 @@
+# Source: traefik/templates/acme-pvc.yaml
+#
+# PVC
+#
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: traefik-acme
+  labels:
+    app: traefik
+spec:
+  accessModes:
+    - "ReadWriteOnce"
+  resources:
+    requests:
+      storage: "1Gi"
+  storageClassName: "local-traefik-acme"

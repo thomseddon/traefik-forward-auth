@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/url"
 	"os"
 	"regexp"
 	"strconv"
@@ -18,27 +17,29 @@ import (
 	"github.com/thomseddon/traefik-forward-auth/internal/provider"
 )
 
-var config Config
+var config *Config
 
+// Config holds the runtime application config
 type Config struct {
 	LogLevel  string `long:"log-level" env:"LOG_LEVEL" default:"warn" choice:"trace" choice:"debug" choice:"info" choice:"warn" choice:"error" choice:"fatal" choice:"panic" description:"Log level"`
 	LogFormat string `long:"log-format"  env:"LOG_FORMAT" default:"text" choice:"text" choice:"json" choice:"pretty" description:"Log format"`
 
-	AuthHost       string               `long:"auth-host" env:"AUTH_HOST" description:"Single host to use when returning from 3rd party auth"`
-	Config         func(s string) error `long:"config" env:"CONFIG" description:"Path to config file" json:"-"`
-	CookieDomains  []CookieDomain       `long:"cookie-domain" env:"COOKIE_DOMAIN" description:"Domain to set auth cookie on, can be set multiple times"`
-	InsecureCookie bool                 `long:"insecure-cookie" env:"INSECURE_COOKIE" description:"Use insecure cookies"`
-	CookieName     string               `long:"cookie-name" env:"COOKIE_NAME" default:"_forward_auth" description:"Cookie Name"`
-	CSRFCookieName string               `long:"csrf-cookie-name" env:"CSRF_COOKIE_NAME" default:"_forward_auth_csrf" description:"CSRF Cookie Name"`
-	DefaultAction  string               `long:"default-action" env:"DEFAULT_ACTION" default:"auth" choice:"auth" choice:"allow" description:"Default action"`
-	Domains        CommaSeparatedList   `long:"domain" env:"DOMAIN" description:"Only allow given email domains, can be set multiple times"`
-	LifetimeString int                  `long:"lifetime" env:"LIFETIME" default:"43200" description:"Lifetime in seconds"`
-	Path           string               `long:"url-path" env:"URL_PATH" default:"/_oauth" description:"Callback URL Path"`
-	SecretString   string               `long:"secret" env:"SECRET" description:"Secret used for signing (required)" json:"-"`
-	Whitelist      CommaSeparatedList   `long:"whitelist" env:"WHITELIST" description:"Only allow given email addresses, can be set multiple times"`
+	AuthHost        string               `long:"auth-host" env:"AUTH_HOST" description:"Single host to use when returning from 3rd party auth"`
+	Config          func(s string) error `long:"config" env:"CONFIG" description:"Path to config file" json:"-"`
+	CookieDomains   []CookieDomain       `long:"cookie-domain" env:"COOKIE_DOMAIN" env-delim:"," description:"Domain to set auth cookie on, can be set multiple times"`
+	InsecureCookie  bool                 `long:"insecure-cookie" env:"INSECURE_COOKIE" description:"Use insecure cookies"`
+	CookieName      string               `long:"cookie-name" env:"COOKIE_NAME" default:"_forward_auth" description:"Cookie Name"`
+	CSRFCookieName  string               `long:"csrf-cookie-name" env:"CSRF_COOKIE_NAME" default:"_forward_auth_csrf" description:"CSRF Cookie Name"`
+	DefaultAction   string               `long:"default-action" env:"DEFAULT_ACTION" default:"auth" choice:"auth" choice:"allow" description:"Default action"`
+	DefaultProvider string               `long:"default-provider" env:"DEFAULT_PROVIDER" default:"google" choice:"google" choice:"oidc" description:"Default provider"`
+	Domains         CommaSeparatedList   `long:"domain" env:"DOMAIN" env-delim:"," description:"Only allow given email domains, can be set multiple times"`
+	LifetimeString  int                  `long:"lifetime" env:"LIFETIME" default:"43200" description:"Lifetime in seconds"`
+	Path            string               `long:"url-path" env:"URL_PATH" default:"/_oauth" description:"Callback URL Path"`
+	SecretString    string               `long:"secret" env:"SECRET" description:"Secret used for signing (required)" json:"-"`
+	Whitelist       CommaSeparatedList   `long:"whitelist" env:"WHITELIST" env-delim:"," description:"Only allow given email addresses, can be set multiple times"`
 
 	Providers provider.Providers `group:"providers" namespace:"providers" env-namespace:"PROVIDERS"`
-	Rules     map[string]*Rule   `long:"rules.<name>.<param>" description:"Rule definitions, param can be: \"action\" or \"rule\""`
+	Rules     map[string]*Rule   `long:"rule.<name>.<param>" description:"Rule definitions, param can be: \"action\", \"rule\" or \"provider\""`
 
 	// Filled during transformations
 	Secret   []byte `json:"-"`
@@ -48,12 +49,13 @@ type Config struct {
 	CookieDomainsLegacy CookieDomains `long:"cookie-domains" env:"COOKIE_DOMAINS" description:"DEPRECATED - Use \"cookie-domain\""`
 	CookieSecretLegacy  string        `long:"cookie-secret" env:"COOKIE_SECRET" description:"DEPRECATED - Use \"secret\""  json:"-"`
 	CookieSecureLegacy  string        `long:"cookie-secure" env:"COOKIE_SECURE" description:"DEPRECATED - Use \"insecure-cookie\""`
-	ClientIdLegacy      string        `long:"client-id" env:"CLIENT_ID" group:"DEPs" description:"DEPRECATED - Use \"providers.google.client-id\""`
+	ClientIdLegacy      string        `long:"client-id" env:"CLIENT_ID" description:"DEPRECATED - Use \"providers.google.client-id\""`
 	ClientSecretLegacy  string        `long:"client-secret" env:"CLIENT_SECRET" description:"DEPRECATED - Use \"providers.google.client-id\""  json:"-"`
 	PromptLegacy        string        `long:"prompt" env:"PROMPT" description:"DEPRECATED - Use \"providers.google.prompt\""`
 }
 
-func NewGlobalConfig() Config {
+// NewGlobalConfig creates a new global config, parsed from command arguments
+func NewGlobalConfig() *Config {
 	var err error
 	config, err = NewConfig(os.Args[1:])
 	if err != nil {
@@ -64,29 +66,12 @@ func NewGlobalConfig() Config {
 	return config
 }
 
-func NewConfig(args []string) (Config, error) {
-	c := Config{
+// TODO: move config parsing into new func "NewParsedConfig"
+
+// NewConfig parses and validates provided configuration into a config object
+func NewConfig(args []string) (*Config, error) {
+	c := &Config{
 		Rules: map[string]*Rule{},
-		Providers: provider.Providers{
-			Google: provider.Google{
-				Scope: "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email",
-				LoginURL: &url.URL{
-					Scheme: "https",
-					Host:   "accounts.google.com",
-					Path:   "/o/oauth2/auth",
-				},
-				TokenURL: &url.URL{
-					Scheme: "https",
-					Host:   "www.googleapis.com",
-					Path:   "/oauth2/v3/token",
-				},
-				UserURL: &url.URL{
-					Scheme: "https",
-					Host:   "www.googleapis.com",
-					Path:   "/oauth2/v2/userinfo",
-				},
-			},
-		},
 	}
 
 	err := c.parseFlags(args)
@@ -97,13 +82,23 @@ func NewConfig(args []string) (Config, error) {
 	// TODO: as log flags have now been parsed maybe we should return here so
 	// any further errors can be logged via logrus instead of printed?
 
+	// TODO: Rename "Validate" method to "Setup" and move all below logic
+
+	// Setup
+	// Set default provider on any rules where it's not specified
+	for _, rule := range c.Rules {
+		if rule.Provider == "" {
+			rule.Provider = c.DefaultProvider
+		}
+	}
+
 	// Backwards compatability
 	if c.CookieSecretLegacy != "" && c.SecretString == "" {
 		fmt.Println("cookie-secret config option is deprecated, please use secret")
 		c.SecretString = c.CookieSecretLegacy
 	}
 	if c.ClientIdLegacy != "" {
-		c.Providers.Google.ClientId = c.ClientIdLegacy
+		c.Providers.Google.ClientID = c.ClientIdLegacy
 	}
 	if c.ClientSecretLegacy != "" {
 		c.Providers.Google.ClientSecret = c.ClientSecretLegacy
@@ -161,7 +156,7 @@ func (c *Config) parseFlags(args []string) error {
 
 	_, err := p.ParseArgs(args)
 	if err != nil {
-		return handlFlagError(err)
+		return handleFlagError(err)
 	}
 
 	return nil
@@ -222,7 +217,7 @@ func (c *Config) parseUnknownFlag(option string, arg flags.SplitArgument, args [
 			list.UnmarshalFlag(val)
 			rule.Domains = list
 		default:
-			return args, fmt.Errorf("inavlid route param: %v", option)
+			return args, fmt.Errorf("invalid route param: %v", option)
 		}
 	} else {
 		return args, fmt.Errorf("unknown flag: %v", option)
@@ -231,7 +226,7 @@ func (c *Config) parseUnknownFlag(option string, arg flags.SplitArgument, args [
 	return args, nil
 }
 
-func handlFlagError(err error) error {
+func handleFlagError(err error) error {
 	flagsErr, ok := err.(*flags.Error)
 	if ok && flagsErr.Type == flags.ErrHelp {
 		// Library has just printed cli help
@@ -252,19 +247,25 @@ func convertLegacyToIni(name string) (io.Reader, error) {
 	return bytes.NewReader(legacyFileFormat.ReplaceAll(b, []byte("$1=$2"))), nil
 }
 
+// Validate validates a config object
 func (c *Config) Validate() {
 	// Check for show stopper errors
 	if len(c.Secret) == 0 {
-		log.Fatal("\"secret\" option must be set.")
+		log.Fatal("\"secret\" option must be set")
 	}
 
-	if c.Providers.Google.ClientId == "" || c.Providers.Google.ClientSecret == "" {
-		log.Fatal("providers.google.client-id, providers.google.client-secret must be set")
+	// Setup default provider
+	err := c.setupProvider(c.DefaultProvider)
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	// Check rules
+	// Check rules (validates the rule and the rule provider)
 	for _, rule := range c.Rules {
-		rule.Validate()
+		err = rule.Validate(c)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }
 
@@ -273,6 +274,62 @@ func (c Config) String() string {
 	return string(jsonConf)
 }
 
+// GetProvider returns the provider of the given name
+func (c *Config) GetProvider(name string) (provider.Provider, error) {
+	switch name {
+	case "google":
+		return &c.Providers.Google, nil
+	case "oidc":
+		return &c.Providers.OIDC, nil
+	}
+
+	return nil, fmt.Errorf("Unknown provider: %s", name)
+}
+
+// GetConfiguredProvider returns the provider of the given name, if it has been
+// configured. Returns an error if the provider is unknown, or hasn't been configured
+func (c *Config) GetConfiguredProvider(name string) (provider.Provider, error) {
+	// Check the provider has been configured
+	if !c.providerConfigured(name) {
+		return nil, fmt.Errorf("Unconfigured provider: %s", name)
+	}
+
+	return c.GetProvider(name)
+}
+
+func (c *Config) providerConfigured(name string) bool {
+	// Check default provider
+	if name == c.DefaultProvider {
+		return true
+	}
+
+	// Check rule providers
+	for _, rule := range c.Rules {
+		if name == rule.Provider {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (c *Config) setupProvider(name string) error {
+	// Check provider exists
+	p, err := c.GetProvider(name)
+	if err != nil {
+		return err
+	}
+
+	// Setup
+	err = p.Setup()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Rule holds defined rules
 type Rule struct {
 	Action    string
 	Rule      string
@@ -281,10 +338,10 @@ type Rule struct {
 	Domains   CommaSeparatedList
 }
 
+// NewRule creates a new rule object
 func NewRule() *Rule {
 	return &Rule{
-		Action:   "auth",
-		Provider: "google", // TODO: Use default provider
+		Action: "auth",
 	}
 }
 
@@ -294,26 +351,27 @@ func (r *Rule) formattedRule() string {
 	return strings.ReplaceAll(r.Rule, "Host(", "HostRegexp(")
 }
 
-func (r *Rule) Validate() {
+// Validate validates a rule
+func (r *Rule) Validate(c *Config) error {
 	if r.Action != "auth" && r.Action != "allow" {
-		log.Fatal("invalid rule action, must be \"auth\" or \"allow\"")
+		return errors.New("invalid rule action, must be \"auth\" or \"allow\"")
 	}
 
-	// TODO: Update with more provider support
-	if r.Provider != "google" {
-		log.Fatal("invalid rule provider, must be \"google\"")
-	}
+	return c.setupProvider(r.Provider)
 }
 
 // Legacy support for comma separated lists
 
+// CommaSeparatedList provides legacy support for config values provided as csv
 type CommaSeparatedList []string
 
+// UnmarshalFlag converts a comma separated list to an array
 func (c *CommaSeparatedList) UnmarshalFlag(value string) error {
 	*c = append(*c, strings.Split(value, ",")...)
 	return nil
 }
 
+// MarshalFlag converts an array back to a comma separated list
 func (c *CommaSeparatedList) MarshalFlag() (string, error) {
 	return strings.Join(*c, ","), nil
 }

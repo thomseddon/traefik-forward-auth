@@ -1,0 +1,110 @@
+#
+# Traefik + Traefik Forward Auth Deployment
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traefik
+  labels:
+    app: traefik
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: traefik
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: traefik
+    spec:
+      serviceAccountName: traefik-ingress-controller
+      terminationGracePeriodSeconds: 60
+      containers:
+      - image: traefik:2.2
+        name: traefik
+        args:
+          - --api.dashboard
+          - --accesslog
+          - --entryPoints.http.address=:80
+          - --entryPoints.http.http.redirections.entryPoint.to=https
+          - --entryPoints.http.http.redirections.entryPoint.scheme=https
+          - --entryPoints.https.address=:443
+          # We're using "global authentication", so the middleware is defined here on the entrypoint
+          # When a kubernetescrd middleware is applied globally it should take the form <kubernetes-namespace>-<middleware>
+          - --entrypoints.https.http.middlewares=default-traefik-forward-auth
+          - --providers.kubernetescrd
+          - --log.level=info
+          - --log.format=json
+          - --certificatesresolvers.default.acme.email=foo@you.com
+          - --certificatesresolvers.default.acme.storage=/acme/acme.json
+          - --certificatesresolvers.default.acme.storage=/acme/acme.json
+          - --certificatesresolvers.default.acme.httpchallenge.entrypoint=http
+          # Please note that this is the staging Let's Encrypt server.
+          # Once you get things working, you should remove that whole line altogether.
+          - --certificatesresolvers.default.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory
+        ports:
+        - name: http
+          containerPort: 80
+          protocol: TCP
+        - name: https
+          containerPort: 443
+          protocol: TCP
+        - name: dash
+          containerPort: 8080
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /acme
+          name: acme
+
+      - image: thomseddon/traefik-forward-auth:2
+        name: traefik-forward-auth
+        ports:
+        - containerPort: 4181
+          protocol: TCP
+        env:
+        - name: CONFIG
+          value: "/config"
+        - name: DOMAIN
+          value: "example.com"
+        # INSECURE_COOKIE is required if not using a https entrypoint
+        # - name: INSECURE_COOKIE
+        #   value: "true"
+        # Remove COOKIE_DOMAIN if not using auth host mode
+        - name: COOKIE_DOMAIN
+          value: "example.com"
+        - name: AUTH_HOST
+          value: "auth.example.com"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: PROVIDERS_GOOGLE_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: traefik-forward-auth-secrets
+              key: google-client-id
+        - name: PROVIDERS_GOOGLE_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: traefik-forward-auth-secrets
+              key: google-client-secret
+        - name: SECRET
+          valueFrom:
+            secretKeyRef:
+              name: traefik-forward-auth-secrets
+              key: secret
+        volumeMounts:
+        - name: configs
+          mountPath: /config
+          subPath: traefik-forward-auth.ini
+
+      volumes:
+      - name: configs
+        configMap:
+          name: configs
+      - name: traefik-forward-auth-secrets
+        secret:
+          secretName: traefik-forward-auth-secrets
+      - name: acme
+        persistentVolumeClaim:
+          claimName: traefik-acme

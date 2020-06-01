@@ -2,7 +2,7 @@ version: '3'
 
 services:
   traefik:
-    image: traefik
+    image: traefik:1.7
     command: -c /traefik.toml --logLevel=DEBUG
     ports:
       - "8085:80"
@@ -14,31 +14,26 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
 
   whoami1:
-    image: emilevauge/whoami
+    image: containous/whoami
     networks:
       - traefik
     labels:
       - "traefik.backend=whoami"
       - "traefik.enable=true"
-      - "traefik.frontend.rule=Host:whoami.yourdomain.com"
+      - "traefik.frontend.rule=Host:whoami.localhost.com"
 
   traefik-forward-auth:
-    image: thomseddon/traefik-forward-auth
+    build: thomseddon/traefik-forward-auth:2
+    command: ./traefik-forward-auth --rule.1.action=allow --rule.1.rule="Path(`/public`)"
     environment:
       - PROVIDERS_GOOGLE_CLIENT_ID=your-client-id
       - PROVIDERS_GOOGLE_CLIENT_SECRET=your-client-secret
       - SECRET=something-random
       - INSECURE_COOKIE=true
       - DOMAIN=yourcompany.com
-      - AUTH_HOST=auth.yourdomain.com
+      - LOG_LEVEL=debug
     networks:
       - traefik
-    # When using an auth host, the below must be added
-    labels:
-      - traefik.enable=true
-      - traefik.port=4181
-      - traefik.backend=traefik-forward-auth
-      - traefik.frontend.rule=Host:auth.yourdomain.com
 
 networks:
   traefik:

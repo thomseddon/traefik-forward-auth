@@ -128,138 +128,69 @@ func TestAuthValidateEmail(t *testing.T) {
 	assert.False(v, "should not allow user not in the rule")
 }
 
-// TODO: Split google tests out
-func TestAuthGetLoginURL(t *testing.T) {
+func TestRedirectUri(t *testing.T) {
 	assert := assert.New(t)
-	google := provider.Google{
-		ClientId:     "idtest",
-		ClientSecret: "sectest",
-		Scope:        "scopetest",
-		Prompt:       "consent select_account",
-		LoginURL: &url.URL{
-			Scheme: "https",
-			Host:   "test.com",
-			Path:   "/auth",
-		},
-	}
-
-	config, _ = NewConfig([]string{})
-	config.Providers.Google = google
 
 	r, _ := http.NewRequest("GET", "http://example.com", nil)
 	r.Header.Add("X-Forwarded-Proto", "http")
-	r.Header.Add("X-Forwarded-Host", "example.com")
+	r.Header.Add("X-Forwarded-Host", "app.example.com")
 	r.Header.Add("X-Forwarded-Uri", "/hello")
 
-	// Check url
-	uri, err := url.Parse(GetLoginURL(r, "nonce"))
-	assert.Nil(err)
-	assert.Equal("https", uri.Scheme)
-	assert.Equal("test.com", uri.Host)
-	assert.Equal("/auth", uri.Path)
+	//
+	// No Auth Host
+	//
+	config, _ = NewConfig([]string{})
 
-	// Check query string
-	qs := uri.Query()
-	expectedQs := url.Values{
-		"client_id":     []string{"idtest"},
-		"redirect_uri":  []string{"http://example.com/_oauth"},
-		"response_type": []string{"code"},
-		"scope":         []string{"scopetest"},
-		"prompt":        []string{"consent select_account"},
-		"state":         []string{"nonce:http://example.com/hello"},
-	}
-	assert.Equal(expectedQs, qs)
+	uri, err := url.Parse(redirectUri(r))
+	assert.Nil(err)
+	assert.Equal("http", uri.Scheme)
+	assert.Equal("app.example.com", uri.Host)
+	assert.Equal("/_oauth", uri.Path)
 
 	//
 	// With Auth URL but no matching cookie domain
 	// - will not use auth host
 	//
-	config, _ = NewConfig([]string{})
 	config.AuthHost = "auth.example.com"
-	config.Providers.Google = google
 
-	// Check url
-	uri, err = url.Parse(GetLoginURL(r, "nonce"))
+	uri, err = url.Parse(redirectUri(r))
 	assert.Nil(err)
-	assert.Equal("https", uri.Scheme)
-	assert.Equal("test.com", uri.Host)
-	assert.Equal("/auth", uri.Path)
-
-	// Check query string
-	qs = uri.Query()
-	expectedQs = url.Values{
-		"client_id":     []string{"idtest"},
-		"redirect_uri":  []string{"http://example.com/_oauth"},
-		"response_type": []string{"code"},
-		"scope":         []string{"scopetest"},
-		"prompt":        []string{"consent select_account"},
-		"state":         []string{"nonce:http://example.com/hello"},
-	}
-	assert.Equal(expectedQs, qs)
+	assert.Equal("http", uri.Scheme)
+	assert.Equal("app.example.com", uri.Host)
+	assert.Equal("/_oauth", uri.Path)
 
 	//
 	// With correct Auth URL + cookie domain
 	//
-	config, _ = NewConfig([]string{})
 	config.AuthHost = "auth.example.com"
 	config.CookieDomains = []CookieDomain{*NewCookieDomain("example.com")}
-	config.Providers.Google = google
 
 	// Check url
-	uri, err = url.Parse(GetLoginURL(r, "nonce"))
+	uri, err = url.Parse(redirectUri(r))
 	assert.Nil(err)
-	assert.Equal("https", uri.Scheme)
-	assert.Equal("test.com", uri.Host)
-	assert.Equal("/auth", uri.Path)
-
-	// Check query string
-	qs = uri.Query()
-	expectedQs = url.Values{
-		"client_id":     []string{"idtest"},
-		"redirect_uri":  []string{"http://auth.example.com/_oauth"},
-		"response_type": []string{"code"},
-		"scope":         []string{"scopetest"},
-		"state":         []string{"nonce:http://example.com/hello"},
-		"prompt":        []string{"consent select_account"},
-	}
-	assert.Equal(expectedQs, qs)
+	assert.Equal("http", uri.Scheme)
+	assert.Equal("auth.example.com", uri.Host)
+	assert.Equal("/_oauth", uri.Path)
 
 	//
 	// With Auth URL + cookie domain, but from different domain
 	// - will not use auth host
 	//
 	r, _ = http.NewRequest("GET", "http://another.com", nil)
-	r.Header.Add("X-Forwarded-Proto", "http")
+	r.Header.Add("X-Forwarded-Proto", "https")
 	r.Header.Add("X-Forwarded-Host", "another.com")
 	r.Header.Add("X-Forwarded-Uri", "/hello")
 
+	config.AuthHost = "auth.example.com"
+	config.CookieDomains = []CookieDomain{*NewCookieDomain("example.com")}
+
 	// Check url
-	uri, err = url.Parse(GetLoginURL(r, "nonce"))
+	uri, err = url.Parse(redirectUri(r))
 	assert.Nil(err)
 	assert.Equal("https", uri.Scheme)
-	assert.Equal("test.com", uri.Host)
-	assert.Equal("/auth", uri.Path)
-
-	// Check query string
-	qs = uri.Query()
-	expectedQs = url.Values{
-		"client_id":     []string{"idtest"},
-		"redirect_uri":  []string{"http://another.com/_oauth"},
-		"response_type": []string{"code"},
-		"scope":         []string{"scopetest"},
-		"state":         []string{"nonce:http://another.com/hello"},
-		"prompt":        []string{"consent select_account"},
-	}
-	assert.Equal(expectedQs, qs)
+	assert.Equal("another.com", uri.Host)
+	assert.Equal("/_oauth", uri.Path)
 }
-
-// TODO
-// func TestAuthExchangeCode(t *testing.T) {
-// }
-
-// TODO
-// func TestAuthGetUser(t *testing.T) {
-// }
 
 func TestAuthMakeCookie(t *testing.T) {
 	assert := assert.New(t)
@@ -298,14 +229,14 @@ func TestAuthMakeCSRFCookie(t *testing.T) {
 	assert.Equal("app.example.com", c.Domain)
 
 	// With cookie domain but no auth url
-	config = Config{
+	config = &Config{
 		CookieDomains: []CookieDomain{*NewCookieDomain("example.com")},
 	}
 	c = MakeCSRFCookie(r, "12345678901234567890123456789012")
 	assert.Equal("app.example.com", c.Domain)
 
 	// With cookie domain and auth url
-	config = Config{
+	config = &Config{
 		AuthHost:      "auth.example.com",
 		CookieDomains: []CookieDomain{*NewCookieDomain("example.com")},
 	}
@@ -337,13 +268,13 @@ func TestAuthValidateCSRFCookie(t *testing.T) {
 	// Should require 32 char string
 	r := newCsrfRequest("")
 	c.Value = ""
-	valid, _, err := ValidateCSRFCookie(r, c)
+	valid, _, _, err := ValidateCSRFCookie(r, c)
 	assert.False(valid)
 	if assert.Error(err) {
 		assert.Equal("Invalid CSRF cookie value", err.Error())
 	}
 	c.Value = "123456789012345678901234567890123"
-	valid, _, err = ValidateCSRFCookie(r, c)
+	valid, _, _, err = ValidateCSRFCookie(r, c)
 	assert.False(valid)
 	if assert.Error(err) {
 		assert.Equal("Invalid CSRF cookie value", err.Error())
@@ -352,19 +283,48 @@ func TestAuthValidateCSRFCookie(t *testing.T) {
 	// Should require valid state
 	r = newCsrfRequest("12345678901234567890123456789012:")
 	c.Value = "12345678901234567890123456789012"
-	valid, _, err = ValidateCSRFCookie(r, c)
+	valid, _, _, err = ValidateCSRFCookie(r, c)
 	assert.False(valid)
 	if assert.Error(err) {
 		assert.Equal("Invalid CSRF state value", err.Error())
 	}
 
-	// Should allow valid state
+	// Should require provider
 	r = newCsrfRequest("12345678901234567890123456789012:99")
 	c.Value = "12345678901234567890123456789012"
-	valid, state, err := ValidateCSRFCookie(r, c)
+	valid, _, _, err = ValidateCSRFCookie(r, c)
+	assert.False(valid)
+	if assert.Error(err) {
+		assert.Equal("Invalid CSRF state format", err.Error())
+	}
+
+	// Should allow valid state
+	r = newCsrfRequest("12345678901234567890123456789012:p99:url123")
+	c.Value = "12345678901234567890123456789012"
+	valid, provider, redirect, err := ValidateCSRFCookie(r, c)
 	assert.True(valid, "valid request should return valid")
 	assert.Nil(err, "valid request should not return an error")
-	assert.Equal("99", state, "valid request should return correct state")
+	assert.Equal("p99", provider, "valid request should return correct provider")
+	assert.Equal("url123", redirect, "valid request should return correct redirect")
+}
+
+func TestMakeState(t *testing.T) {
+	assert := assert.New(t)
+
+	r, _ := http.NewRequest("GET", "http://example.com", nil)
+	r.Header.Add("X-Forwarded-Proto", "http")
+	r.Header.Add("X-Forwarded-Host", "example.com")
+	r.Header.Add("X-Forwarded-Uri", "/hello")
+
+	// Test with google
+	p := provider.Google{}
+	state := MakeState(r, &p, "nonce")
+	assert.Equal("nonce:google:http://example.com/hello", state)
+
+	// Test with OIDC
+	p2 := provider.OIDC{}
+	state = MakeState(r, &p2, "nonce")
+	assert.Equal("nonce:oidc:http://example.com/hello", state)
 }
 
 func TestAuthNonce(t *testing.T) {
@@ -389,6 +349,8 @@ func TestAuthCookieDomainMatch(t *testing.T) {
 
 	// Subdomain should match
 	assert.True(cd.Match("test.example.com"), "subdomain should match")
+	assert.True(cd.Match("twolevels.test.example.com"), "subdomain should match")
+	assert.True(cd.Match("many.many.levels.test.example.com"), "subdomain should match")
 
 	// Derived domain should not match
 	assert.False(cd.Match("testexample.com"), "derived domain should not match")
