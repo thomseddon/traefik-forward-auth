@@ -138,7 +138,7 @@ func MakeCookie(r *http.Request, email string) *http.Cookie {
 		Value:    value,
 		Path:     "/",
 		Domain:   cookieDomain(r),
-		HttpOnly: true,
+		HttpOnly: !config.DisableHTTPOnlyCookie,
 		Secure:   !config.InsecureCookie,
 		Expires:  expires,
 	}
@@ -151,7 +151,7 @@ func MakeCSRFCookie(r *http.Request, nonce string) *http.Cookie {
 		Value:    nonce,
 		Path:     "/",
 		Domain:   csrfCookieDomain(r),
-		HttpOnly: true,
+		HttpOnly: !config.DisableHTTPOnlyCookie,
 		Secure:   !config.InsecureCookie,
 		Expires:  cookieExpiry(),
 	}
@@ -164,7 +164,7 @@ func ClearCSRFCookie(r *http.Request) *http.Cookie {
 		Value:    "",
 		Path:     "/",
 		Domain:   csrfCookieDomain(r),
-		HttpOnly: true,
+		HttpOnly: !config.DisableHTTPOnlyCookie,
 		Secure:   !config.InsecureCookie,
 		Expires:  time.Now().Local().Add(time.Hour * -1),
 	}
