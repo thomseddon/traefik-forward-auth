@@ -56,30 +56,43 @@ func ValidateCookie(r *http.Request, c *http.Cookie) (string, error) {
 	return parts[2], nil
 }
 
-// ValidateEmail verifies that an email is permitted by the current config
+// ValidateEmail checks if the given email address matches either a whitelisted
+// email address, as defined by the "whitelist" config parameter. Or is part of
+// a permitted domain, as defined by the "domains" config parameter
 func ValidateEmail(email string) bool {
-	found := false
+	// Do we have any validation to perform?
+	if len(config.Whitelist) == 0 && len(config.Domains) == 0 {
+		return true
+	}
+
+	// Email whitelist validation
 	if len(config.Whitelist) > 0 {
 		for _, whitelist := range config.Whitelist {
 			if email == whitelist {
-				found = true
+				return true
 			}
 		}
-	} else if len(config.Domains) > 0 {
+
+		// If we're not matching *either*, stop here
+		if !config.MatchWhitelistOrDomain {
+			return false
+		}
+	}
+
+	// Domain validation
+	if len(config.Domains) > 0 {
 		parts := strings.Split(email, "@")
 		if len(parts) < 2 {
 			return false
 		}
 		for _, domain := range config.Domains {
 			if domain == parts[1] {
-				found = true
+				return true
 			}
 		}
-	} else {
-		return true
 	}
 
-	return found
+	return false
 }
 
 // Utility methods

@@ -249,6 +249,16 @@ All options can be supplied in any of the following ways, in the following prece
 
    When set, users will be redirected to this URL following logout.
 
+- `match-whitelist-or-domain`
+
+   When enabled, users will be permitted if they match *either* the `whitelist` or `domain` parameters.
+
+   This will be enabled by default in v3, but is disabled by default in v2 to maintain backwards compatibility.
+
+   Default: `false`
+
+   For more details, please also read [User Restriction](#user-restriction) in the concepts section.
+
 - `url-path`
 
    Customise the path that this service uses to handle the callback following authentication.
@@ -318,7 +328,7 @@ You can restrict who can login with the following parameters:
 * `domain` - Use this to limit logins to a specific domain, e.g. test.com only
 * `whitelist` - Use this to only allow specific users to login e.g. thom@test.com only
 
-Note, if you pass `whitelist` then only this is checked and `domain` is effectively ignored.
+Note, if you pass both `whitelist` and `domain`, then the default behaviour is for only `whitelist` to be used and `domain` will be effectively ignored. You can allow users matching *either* `whitelist` or `domain` by passing the `match-whitelist-or-domain` parameter (this will be the default behaviour in v3).
 
 ### Forwarded Headers
 
