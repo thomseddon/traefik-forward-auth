@@ -35,6 +35,7 @@ A minimal forward authentication service that provides OAuth/SSO login and authe
   - [Operation Modes](#operation-modes)
     - [Overlay Mode](#overlay-mode)
     - [Auth Host Mode](#auth-host-mode)
+  - [Logging Out](#logging-out)
 - [Copyright](#copyright)
 - [License](#license)
 
@@ -136,6 +137,7 @@ Application Options:
   --default-provider=[google|oidc]                      Default provider (default: google) [$DEFAULT_PROVIDER]
   --domain=                                             Only allow given email domains, can be set multiple times [$DOMAIN]
   --lifetime=                                           Lifetime in seconds (default: 43200) [$LIFETIME]
+  --logout-redirect=                                    URL to redirect to following logout [$LOGOUT_REDIRECT]
   --url-path=                                           Callback URL Path (default: /_oauth) [$URL_PATH]
   --secret=                                             Secret used for signing (required) [$SECRET]
   --whitelist=                                          Only allow given email addresses, can be set multiple times [$WHITELIST]
@@ -242,6 +244,10 @@ All options can be supplied in any of the following ways, in the following prece
    How long a successful authentication session should last, in seconds.
 
    Default: `43200` (12 hours)
+
+- `logout-redirect`
+
+   When set, users will be redirected to this URL following logout.
 
 - `url-path`
 
@@ -442,6 +448,14 @@ Two criteria must be met for an `auth-host` to be used:
 2. `auth-host` is also subdomain of same `cookie-domain`
 
 Please note: For Auth Host mode to work, you must ensure that requests to your auth-host are routed to the traefik-forward-auth container, as demonstrated with the service labels in the [docker-compose-auth.yml](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/traefik-v2/swarm/docker-compose-auth-host.yml) example and the [ingressroute resource](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/traefik-v2/kubernetes/advanced-separate-pod/traefik-forward-auth/ingress.yaml) in a kubernetes example.
+
+### Logging Out
+
+The service provides an endpoint to clear a users session and "log them out". The path is created by appending `/logout` to your configured `path` and so with the default settings it will be: `/_oauth/logout`.
+
+You can use the `logout-redirect` config option to redirect users to another URL following logout (note: the user will not have a valid auth cookie after being logged out).
+
+Note: This only clears the auth cookie from the users browser and as this service is stateless, it does not invalidate the cookie against future use. So if the cookie was recorded, for example, it could continue to be used for the duration of the cookie lifetime.
 
 ## Copyright
 
