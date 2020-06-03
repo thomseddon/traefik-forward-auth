@@ -10,11 +10,11 @@ import (
 
 // OIDC provider
 type OIDC struct {
-	OAuthProvider
-
 	IssuerURL    string `long:"issuer-url" env:"ISSUER_URL" description:"Issuer URL"`
 	ClientID     string `long:"client-id" env:"CLIENT_ID" description:"Client ID"`
 	ClientSecret string `long:"client-secret" env:"CLIENT_SECRET" description:"Client Secret" json:"-"`
+
+	OAuthProvider
 
 	provider *oidc.Provider
 	verifier *oidc.IDTokenVerifier
