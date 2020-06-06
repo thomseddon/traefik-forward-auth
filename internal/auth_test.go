@@ -72,6 +72,72 @@ func TestAuthValidateEmail(t *testing.T) {
 	v = ValidateEmail("one@two.com")
 	assert.True(v, "should allow any domain if email domain is not defined")
 
+	// Should allow email specified in a whitelist rule
+	config.Rules = map[string]*Rule{
+		"whitelisted-from-rule": {
+			Rule:      "test-whitelist-rule",
+			Whitelist: []string{"whitelisted-from-rule@example.com"},
+		},
+	}
+
+	v = ValidateEmail("whitelisted-from-rule@example.com")
+	assert.True(v, "should allow email from whitelist rule")
+
+	// Should allow multiple emails specified in a whitelist rule
+	config.Rules = map[string]*Rule{
+		"whitelist-multiple-emails": {
+			Rule: "whitelist-rule",
+			Whitelist: []string{"allowed-from-whitelist-multiple-emails1@example.com",
+				"allowed-from-whitelist-multiple-emails2@example.com"},
+		},
+	}
+
+	v1 := ValidateEmail("allowed-from-whitelist-multiple-emails@example.com")
+	v2 := ValidateEmail("allowed-from-whitelist-multiple-emails@example.com")
+	assert.True((v1 == v2), "should allow emails from a whitelist rule")
+
+	// Should allow multiple whitelist rules
+	config.Rules = map[string]*Rule{
+		"allowed-from-whitelist-rule1": {
+			Rule:      "whitelist-rule1",
+			Whitelist: []string{"allowed-from-whitelist-rule1@example.com"},
+		},
+		"allowed-from-whitelist-rule2": {
+			Rule:      "whitelist-rule2",
+			Whitelist: []string{"allowed-from-whitelist-rule2@example.com"},
+		},
+	}
+	v1 = ValidateEmail("allowed-from-whitelist-rule1@example.com")
+	v2 = ValidateEmail("allowed-from-whitelist-rule2@example.com")
+	assert.True((v1 == v2), "should allow emails from multiple whitelist rules")
+
+	// Should allow domain to be specified in a rule
+	config.Rules = map[string]*Rule{
+		"allowed-from-domain-rule": {
+			Rule:    "domain-rule1",
+			Domains: []string{"example.com"},
+		},
+	}
+
+	v = ValidateEmail("whitelisted-from-domain@example.com")
+	assert.True(v, "should allow email from domain rule")
+
+	// Should allow multiple domains to be specified in a rule
+	config.Rules = map[string]*Rule{
+		"allowed-from-domain-rule-1": {
+			Rule:    "domain-rule1",
+			Domains: []string{"example.com"},
+		},
+		"allowed-from-domain-rule2": {
+			Rule:    "domain-rule2",
+			Domains: []string{"example.org"},
+		},
+	}
+
+	v1 = ValidateEmail("allowed-from-domain-rule1@example.org")
+	v2 = ValidateEmail("allowed-from-domain-rule2@example.com")
+	assert.True((v1 == v2), "Should allow emails from multiple domain rules")
+
 	// Should block non matching domain
 	config.Domains = []string{"test.com"}
 	v = ValidateEmail("one@two.com")
@@ -99,26 +165,59 @@ func TestAuthValidateEmail(t *testing.T) {
 	config.Domains = []string{"example.com"}
 	config.Whitelist = []string{"test@test.com"}
 	config.MatchWhitelistOrDomain = false
-	v = ValidateEmail("test@test.com")
-	assert.True(v, "should allow user in whitelist")
-	v = ValidateEmail("test@example.com")
-	assert.False(v, "should not allow user from valid domain")
-	v = ValidateEmail("one@two.com")
-	assert.False(v, "should not allow user not in either")
 
-	// Should allow either matching domain or email address when
-	// MatchWhitelistOrDomain is enabled
-	config.Domains = []string{"example.com"}
-	config.Whitelist = []string{"test@test.com"}
+	v = ValidateEmail("test@test.com")
+	assert.True(v, "should allow user from whitelist config if MatchWhitelistOrDomain is disabled")
+
+	v = ValidateEmail("test@example.com")
+	assert.False(v, "should not allow user from domain config if a whitelist is specified and MatchWhitelistOrDomain is disabled")
+
+	// Should allow only matching email address when
+	// MatchWhitelistOrDomain is disabled
+	config.Rules = map[string]*Rule{
+		"allowed-from-whitelist-rule": {
+			Rule:      "whitelist-rule",
+			Whitelist: []string{"allowed-from-whitelist-rule@example.com"},
+		},
+		"allowed-from-domain-rule": {
+			Rule:    "domain-rule",
+			Domains: []string{"example.org"},
+		},
+	}
+	config.MatchWhitelistOrDomain = false
+
+	v = ValidateEmail("allowed-from-whitelist-rule@example.com")
+	assert.True(v, "should allow user from whitelist rule if MatchWhitelistOrDomain is disabled")
+
+	v = ValidateEmail("not-allowed-from-domain-rule@example.org")
+	assert.False(v, "should not allow user from domain rule if MatchWhitelistOrDomain is disabled")
+
+	v = ValidateEmail("one@two.com")
+	assert.False(v, "should not allow user not in whitelist or domain")
+
+	// Should allow matching email address or domain from a rule
+	// when MatchWhitelistOrDomain is enabled
+	config.Rules = map[string]*Rule{
+		"allowed-from-whitelist-rule": {
+			Rule:      "whitelist-rule",
+			Whitelist: []string{"allowed-from-whitelist-rule@example.com"},
+		},
+		"allowed-from-domain-rule": {
+			Rule:    "domain-rule",
+			Domains: []string{"example.org"},
+		},
+	}
 	config.MatchWhitelistOrDomain = true
-	v = ValidateEmail("test@test.com")
-	assert.True(v, "should allow user in whitelist")
-	v = ValidateEmail("test@example.com")
-	assert.True(v, "should allow user from valid domain")
-	v = ValidateEmail("one@two.com")
-	assert.False(v, "should not allow user not in either")
-}
 
+	v = ValidateEmail("allowed-from-whitelist-rule@example.com")
+	assert.True(v, "should allow user from whitelist rule if MatchWhitelistOrDomain is true")
+
+	v = ValidateEmail("not-allowed-from-domain-rule@example.org")
+	assert.True(v, "should allow user from domain rule if MatchWhitelistOrDomain is enabled")
+
+	v = ValidateEmail("one@two.com")
+	assert.False(v, "should not allow user not in whitelist or domain rule")
+}
 func TestRedirectUri(t *testing.T) {
 	assert := assert.New(t)
 

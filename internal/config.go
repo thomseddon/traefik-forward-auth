@@ -210,6 +210,12 @@ func (c *Config) parseUnknownFlag(option string, arg flags.SplitArgument, args [
 			rule.Rule = val
 		case "provider":
 			rule.Provider = val
+		case "whitelist":
+			list := CommaSeparatedList{}
+			rule.Whitelist = list
+		case "domains":
+			list := CommaSeparatedList{}
+			rule.Domains = list
 		default:
 			return args, fmt.Errorf("invalid route param: %v", option)
 		}
@@ -325,9 +331,11 @@ func (c *Config) setupProvider(name string) error {
 
 // Rule holds defined rules
 type Rule struct {
-	Action   string
-	Rule     string
-	Provider string
+	Action    string
+	Rule      string
+	Provider  string
+	Whitelist []string
+	Domains   []string
 }
 
 // NewRule creates a new rule object

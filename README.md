@@ -330,6 +330,8 @@ You can restrict who can login with the following parameters:
 
 Note, if you pass both `whitelist` and `domain`, then the default behaviour is for only `whitelist` to be used and `domain` will be effectively ignored. You can allow users matching *either* `whitelist` or `domain` by passing the `match-whitelist-or-domain` parameter (this will be the default behaviour in v3).
 
+Domains and whitelists that are set in rules will obey the `match-whitelist-or-domain` parameter
+
 ### Forwarded Headers
 
 The authenticated user is set in the `X-Forwarded-User` header, to pass this on add this to the `authResponseHeaders` config option in traefik, as shown below in the [Applying Authentication](#applying-authentication) section.
