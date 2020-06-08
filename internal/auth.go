@@ -57,49 +57,44 @@ func ValidateCookie(r *http.Request, c *http.Cookie) (string, error) {
 }
 
 // ValidateEmail verifies that an email is permitted by the current config
-func ValidateEmail(email string, rule string) bool {
-	found := false
+func ValidateEmail(email string, ruleName string) bool {
+	rule, ruleExists := config.Rules[ruleName]
 
-	_, ruleExists := config.Rules[rule]
-	if ruleExists && len(config.Rules[rule].Whitelist) > 0 {
-		found = ValidateWhitelist(email, config.Rules[rule].Whitelist)
-	} else if ruleExists && len(config.Rules[rule].Domains) > 0 {
-		found = ValidateDomains(email, config.Rules[rule].Domains)
+	if ruleExists && len(rule.Whitelist) > 0 {
+		return ValidateWhitelist(email, rule.Whitelist)
+	} else if ruleExists && len(rule.Domains) > 0 {
+		return ValidateDomains(email, rule.Domains)
 	} else if len(config.Whitelist) > 0 {
-		found = ValidateWhitelist(email, config.Whitelist)
+		return ValidateWhitelist(email, config.Whitelist)
 	} else if len(config.Domains) > 0 {
-		found = ValidateDomains(email, config.Domains)
+		return ValidateDomains(email, config.Domains)
 	} else {
 		return true
 	}
-
-	return found
 }
 
-// Validate email is in whitelist
+// ValidateWhitelist checks if the email is in whitelist
 func ValidateWhitelist(email string, whitelist CommaSeparatedList) bool {
-	found := false
 	for _, whitelist := range whitelist {
 		if email == whitelist {
-			found = true
+			return true
 		}
 	}
-	return found
+	return false
 }
 
-// Validate email match a domains
+// ValidateDomains checks if the email matches a whitelisted domain
 func ValidateDomains(email string, domains CommaSeparatedList) bool {
-	found := false
 	parts := strings.Split(email, "@")
 	if len(parts) < 2 {
 		return false
 	}
 	for _, domain := range domains {
 		if domain == parts[1] {
-			found = true
+			return true
 		}
 	}
-	return found
+	return false
 }
 
 // Utility methods
