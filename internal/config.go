@@ -212,10 +212,8 @@ func (c *Config) parseUnknownFlag(option string, arg flags.SplitArgument, args [
 			rule.Provider = val
 		case "whitelist":
 			list := CommaSeparatedList{}
+			list.UnmarshalFlag(val)
 			rule.Whitelist = list
-		case "domains":
-			list := CommaSeparatedList{}
-			rule.Domains = list
 		default:
 			return args, fmt.Errorf("invalid route param: %v", option)
 		}
@@ -335,7 +333,6 @@ type Rule struct {
 	Rule      string
 	Provider  string
 	Whitelist []string
-	Domains   []string
 }
 
 // NewRule creates a new rule object
@@ -358,6 +355,27 @@ func (r *Rule) Validate(c *Config) error {
 	}
 
 	return c.setupProvider(r.Provider)
+}
+//EntryInWhitelist is true if it is explicitly listed, 
+//or if it matches a whitelisted domain and Config.MatchWhitelistOrDomain is true 
+func (r *Rule) EntryInWhitelist(entry string) bool {
+	if r == nil {
+		return false
+	}
+	for _, whitelisted := range r.Whitelist {
+		if entry == whitelisted {
+			return true
+		}
+		if config.MatchWhitelistOrDomain {
+			parts := strings.Split(entry, "@")
+			domain := parts[1]
+			if domain == whitelisted {
+				return true
+			}
+
+		}
+	}
+	return false
 }
 
 // Legacy support for comma separated lists

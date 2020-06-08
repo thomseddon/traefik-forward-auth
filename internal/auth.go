@@ -59,57 +59,39 @@ func ValidateCookie(r *http.Request, c *http.Cookie) (string, error) {
 // ValidateEmail checks if the given email address matches either a whitelisted
 // email address, as defined by the "whitelist" config parameter. Or is part of
 // a permitted domain, as defined by the "domains" config parameter
-// if an email or domain is added by a rule, it is merged with the config before being evaluated
-// in order to respect the match whitelist or domain parameter
 func ValidateEmail(email string) bool {
-
 	// Do we have any validation to perform?
-	if len(config.Whitelist) == 0 && len(config.Domains) == 0 && len(config.Rules) == 0 {
+	if len(config.Whitelist) == 0 && len(config.Domains) == 0 {
 		return true
 	}
-	var whitelists []string
-	var domains []string
-
-	// rule validation
-	for _, rule := range config.Rules {
-		for _, whitelisted := range rule.Whitelist {
-			whitelists = append(whitelists, whitelisted)
-		}
-		for _, domain := range rule.Domains {
-			domains = append(domains, domain)
-		}
-	}
-	domains = append(domains, config.Domains...)
-	whitelists = append(whitelists, config.Whitelist...)
 
 	// Email whitelist validation
-	for _, whitelist := range whitelists {
-		if email == whitelist {
-			return true
+	if len(config.Whitelist) > 0 {
+		for _, whitelist := range config.Whitelist {
+			if email == whitelist {
+				return true
+			}
 		}
-	}
 
-	// If there's a whitelist and we're not matching *either*, stop here
-	if len(whitelists) > 0 && !config.MatchWhitelistOrDomain {
-		return false
+		// If we're not matching *either*, stop here
+		if !config.MatchWhitelistOrDomain {
+			return false
+		}
 	}
 
 	// Domain validation
-	for _, domain := range domains {
-		if emailIsInDomain(email, domain) {
-			return true
+	if len(config.Domains) > 0 {
+		parts := strings.Split(email, "@")
+		if len(parts) < 2 {
+			return false
+		}
+		for _, domain := range config.Domains {
+			if domain == parts[1] {
+				return true
+			}
 		}
 	}
-	return false
-}
-func emailIsInDomain(email string, domain string) bool {
-	parts := strings.Split(email, "@")
-	if len(parts) < 2 {
-		return false
-	}
-	if parts[1] == domain {
-		return true
-	}
+
 	return false
 }
 

@@ -99,15 +99,17 @@ func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 			}
 			return
 		}
-
-		// Validate user
-		valid := ValidateEmail(email)
-		if !valid {
-			logger.WithField("email", email).Warn("Invalid email")
-			http.Error(w, "Not authorized", 401)
-			return
+		//Validate Whitelist
+		whitelisted := config.Rules[rule].EntryInWhitelist(email)
+		if !whitelisted {
+			// Validate user
+			valid := ValidateEmail(email)
+			if !valid {
+				logger.WithField("email", email).Warn("Invalid email")
+				http.Error(w, "Not authorized", 401)
+				return
+			}
 		}
-
 		// Valid request
 		logger.Debug("Allowing valid request")
 		w.Header().Set("X-Forwarded-User", email)
