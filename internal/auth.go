@@ -95,6 +95,32 @@ func ValidateEmail(email string) bool {
 	return false
 }
 
+//ValidateWhitelist is true if it is explicitly listed,
+//or if it matches a whitelisted domain and Config.MatchWhitelistOrDomain is true
+func ValidateWhitelist(entry string, whitelistItems []string) bool {
+	if len(whitelistItems) == 0 {
+		return false
+	}
+	for _, whitelisted := range whitelistItems {
+		if entry == whitelisted {
+			return true
+		}
+		if config.MatchWhitelistOrDomain {
+			parts := strings.Split(entry, "@")
+			if len(parts) == 1 {
+			//a string that was not already a matched domain or an address
+			return false
+			}
+			domain := parts[1]
+			if domain == whitelisted {
+				return true
+			}
+
+		}
+	}
+	return false
+}
+
 // Utility methods
 
 // Get the redirect base

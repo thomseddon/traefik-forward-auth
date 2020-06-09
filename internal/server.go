@@ -99,8 +99,11 @@ func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 			}
 			return
 		}
-		//Validate Whitelist
-		whitelisted := config.Rules[rule].EntryInWhitelist(email)
+		//Validate whitelist
+		var whitelisted bool
+		if config.Rules[rule] != nil {
+			whitelisted = ValidateWhitelist(email, config.Rules[rule].Whitelist)
+		}
 		if !whitelisted {
 			// Validate user
 			valid := ValidateEmail(email)
