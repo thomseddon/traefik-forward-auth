@@ -32,9 +32,9 @@ func (s *Server) buildRoutes() {
 	for name, rule := range config.Rules {
 		matchRule := rule.formattedRule()
 		if rule.Action == "allow" {
-			s.router.AddRoute(matchRule, 1, s.AllowHandler(name))
+			s.router.AddRoute(matchRule, 1, s.AllowHandler(&name))
 		} else {
-			s.router.AddRoute(matchRule, 1, s.AuthHandler(rule.Provider, name))
+			s.router.AddRoute(matchRule, 1, s.AuthHandler(rule.Provider, &name))
 		}
 	}
 
@@ -46,9 +46,9 @@ func (s *Server) buildRoutes() {
 
 	// Add a default handler
 	if config.DefaultAction == "allow" {
-		s.router.NewRoute().Handler(s.AllowHandler("default"))
+		s.router.NewRoute().Handler(s.AllowHandler(nil))
 	} else {
-		s.router.NewRoute().Handler(s.AuthHandler(config.DefaultProvider, "default"))
+		s.router.NewRoute().Handler(s.AuthHandler(config.DefaultProvider, nil))
 	}
 }
 
@@ -65,7 +65,7 @@ func (s *Server) RootHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // AllowHandler Allows requests
-func (s *Server) AllowHandler(rule string) http.HandlerFunc {
+func (s *Server) AllowHandler(rule *string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s.logger(r, "Allow", rule, "Allowing request")
 		w.WriteHeader(200)
@@ -73,7 +73,7 @@ func (s *Server) AllowHandler(rule string) http.HandlerFunc {
 }
 
 // AuthHandler Authenticates requests
-func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
+func (s *Server) AuthHandler(providerName string, rule *string) http.HandlerFunc {
 	p, _ := config.GetConfiguredProvider(providerName)
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -119,7 +119,7 @@ func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Logging setup
-		logger := s.logger(r, "AuthCallback", "default", "Handling callback")
+		logger := s.logger(r, "AuthCallback", nil, "Handling callback")
 
 		// Check for CSRF cookie
 		c, err := r.Cookie(config.CSRFCookieName)
@@ -189,7 +189,7 @@ func (s *Server) LogoutHandler() http.HandlerFunc {
 		// Clear cookie
 		http.SetCookie(w, ClearCookie(r))
 
-		logger := s.logger(r, "Logout", "default", "Handling logout")
+		logger := s.logger(r, "Logout", nil, "Handling logout")
 		logger.Info("Logged out user")
 
 		if config.LogoutRedirect != "" {
@@ -229,7 +229,7 @@ func (s *Server) authRedirect(logger *logrus.Entry, w http.ResponseWriter, r *ht
 	}).Debug("Set CSRF cookie and redirected to provider login url")
 }
 
-func (s *Server) logger(r *http.Request, handler, rule, msg string) *logrus.Entry {
+func (s *Server) logger(r *http.Request, handler string, rule *string, msg string) *logrus.Entry {
 	// Create logger
 	logger := log.WithFields(logrus.Fields{
 		"handler":   handler,
