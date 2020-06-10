@@ -60,15 +60,36 @@ func ValidateCookie(r *http.Request, c *http.Cookie) (string, error) {
 func ValidateEmail(email string, ruleName string) bool {
 	rule, ruleExists := config.Rules[ruleName]
 
-	if ruleExists && len(rule.Whitelist) > 0 {
-		return ValidateWhitelist(email, rule.Whitelist)
-	} else if ruleExists && len(rule.Domains) > 0 {
-		return ValidateDomains(email, rule.Domains)
-	} else if len(config.Whitelist) > 0 {
-		return ValidateWhitelist(email, config.Whitelist)
-	} else if len(config.Domains) > 0 {
-		return ValidateDomains(email, config.Domains)
-	} else {
+	// Do we need to apply rule-level validation?
+	if ruleExists && (len(rule.Whitelist) > 0 || len(rule.Domains) > 0) {
+		if len(rule.Whitelist) > 0 && ValidateWhitelist(email, rule.Whitelist) {
+			return true
+		} else if config.MatchWhitelistOrDomain && len(rule.Domains) > 0 && ValidateDomains(email, rule.Domains) {
+			return true
+		} else {
+			return false
+		}
+	}
+
+	// Do we have any validation to perform?
+	if len(config.Whitelist) == 0 && len(config.Domains) == 0 {
+		return true
+	}
+
+	// Email whitelist validation
+	if len(config.Whitelist) > 0 {
+		if ValidateWhitelist(email, config.Whitelist) {
+			return true
+		}
+
+		// If we're not matching *either*, stop here
+		if !config.MatchWhitelistOrDomain {
+			return false
+		}
+	}
+
+	// Domain validation
+	if len(config.Domains) > 0 && ValidateDomains(email, config.Domains) {
 		return true
 	}
 }
