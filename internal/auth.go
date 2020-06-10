@@ -63,7 +63,7 @@ func ValidateEmail(email string, ruleName string) bool {
 	rule, ruleExists := config.Rules[ruleName]
 
 	// Do we need to apply rule-level validation?
-	if ruleExists && !(len(rule.Whitelist) == 0 && len(rule.Domains) == 0) {
+	if ruleExists && (len(rule.Whitelist) > 0 || len(rule.Domains) > 0) {
 		if len(rule.Whitelist) > 0 && ValidateWhitelist(email, rule.Whitelist) {
 			return true
 		} else if config.MatchWhitelistOrDomain && len(rule.Domains) > 0 && ValidateDomains(email, rule.Domains) {
