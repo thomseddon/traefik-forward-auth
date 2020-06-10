@@ -330,7 +330,7 @@ You can restrict who can login with the following parameters:
 * `domain` - Use this to limit logins to a specific domain, e.g. test.com only
 * `whitelist` - Use this to only allow specific users to login e.g. thom@test.com only
 
-Note, if you pass both `whitelist` and `domain`, then the default behaviour is for only `whitelist` to be used and `domain` will be effectively ignored. You can allow users matching *either* `whitelist` or `domain` by passing the `match-whitelist-or-domain` parameter (this will be the default behaviour in v3). If you set `domains` or `whitelist` on a rules, the global configuration is ignored.
+Note, if you pass both `whitelist` and `domain`, then the default behaviour is for only `whitelist` to be used and `domain` will be effectively ignored. You can allow users matching *either* `whitelist` or `domain` by passing the `match-whitelist-or-domain` parameter (this will be the default behaviour in v3). If you set `domains` or `whitelist` on a rule, the global configuration is ignored.
 
 ### Forwarded Headers
 
