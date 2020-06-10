@@ -41,6 +41,9 @@ func (s *Server) buildRoutes() {
 	// Add callback handler
 	s.router.Handle(config.Path, s.AuthCallbackHandler())
 
+	// Add logout handler
+	s.router.Handle(config.Path+"/logout", s.LogoutHandler())
+
 	// Add a default handler
 	if config.DefaultAction == "allow" {
 		s.router.NewRoute().Handler(s.AllowHandler("default"))
@@ -177,6 +180,23 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 
 		// Redirect
 		http.Redirect(w, r, redirect, http.StatusTemporaryRedirect)
+	}
+}
+
+// LogoutHandler logs a user out
+func (s *Server) LogoutHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Clear cookie
+		http.SetCookie(w, ClearCookie(r))
+
+		logger := s.logger(r, "Logout", "default", "Handling logout")
+		logger.Info("Logged out user")
+
+		if config.LogoutRedirect != "" {
+			http.Redirect(w, r, config.LogoutRedirect, http.StatusTemporaryRedirect)
+		} else {
+			http.Error(w, "You have been logged out", 401)
+		}
 	}
 }
 

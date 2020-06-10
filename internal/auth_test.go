@@ -94,38 +94,77 @@ func TestAuthValidateEmail(t *testing.T) {
 	v = ValidateEmail("test@test.com", "default")
 	assert.True(v, "should allow user in whitelist")
 
-	// Should allow matching whitelisted in rules email address 
-	config.Domains = []string{"globaltestdomain.com"}
-	config.Whitelist = []string{}
-	config.Rules = map[string]*Rule{"test": NewRule()}
-	config.Rules["test"].Whitelist = []string{"test@test.com"}
-	// Validation for user in the rule whitelist
-	v = ValidateEmail("test@test.com", "test")
-	assert.True(v, "should allow user in rule whitelist")
-	// Validation for user not in the rule whitelist
-	v = ValidateEmail("test2@test.com", "test")
-	assert.False(v, "should not allow user not in rule whitelist")
-	// Validation for user in global domain but not in rule
-	v = ValidateEmail("test@globaltestdomain.com", "test")
-	assert.False(v, "should not allow user in global but not in rule")
-	// Validation for user in the whitelist, but that not this rule
+	// Should allow only matching email address when
+	// MatchWhitelistOrDomain is disabled
+	config.Domains = []string{"example.com"}
+	config.Whitelist = []string{"test@test.com"}
+	config.MatchWhitelistOrDomain = false
 	v = ValidateEmail("test@test.com", "default")
-	assert.False(v, "should not allow user not in the rule whitelisted")
+	assert.True(v, "should allow user in whitelist")
+	v = ValidateEmail("test@example.com", "default")
+	assert.False(v, "should not allow user from valid domain")
+	v = ValidateEmail("one@two.com", "default")
+	assert.False(v, "should not allow user not in either")
 
-	// Should allow matching domains
-	config.Domains = []string{"globaltestdomain.com"}
-	config.Whitelist = []string{}
+	// Should allow only matching email address when
+	// MatchWhitelistOrDomain is disabled with Rules
+	config.Domains = []string{"example.com"}
+	config.Whitelist = []string{"test@test.com"}
 	config.Rules = map[string]*Rule{"test": NewRule()}
-	config.Rules["test"].Domains = []string{"test.com"}
-	// Validation for user in the rule domains
+	config.Rules["test"].Whitelist = []string{"test@testrule.com"}
+	config.Rules["test"].Domains = []string{"testruledomain.com"}
+	config.MatchWhitelistOrDomain = false
+	v = ValidateEmail("test@testrule.com", "test")
+	assert.True(v, "should allow user in rule whitelist")
 	v = ValidateEmail("test@test.com", "test")
-	assert.True(v, "should allow user in rule domains")
-	// Validation for user not in the rule whitelist
-	v = ValidateEmail("test@test2.com", "test")
-	assert.False(v, "should not allow user not in rule domains")
-	// Validation for user in the whitelist, but that not this rule
+	assert.False(v, "should not allow user in global whitelist")
+	v = ValidateEmail("test@testruledomain.com", "test")
+	assert.False(v, "should not allow user in rule domain list")
+	v = ValidateEmail("test@example.com", "test")
+	assert.False(v, "should not allow user from valid global domain")
+	v = ValidateEmail("one@two.com", "test")
+	assert.False(v, "should not allow user not in either")
+
+	// Should allow either matching domain or email address when
+	// MatchWhitelistOrDomain is enabled
+	config.Domains = []string{"example.com"}
+	config.Whitelist = []string{"test@test.com"}
+	config.MatchWhitelistOrDomain = true
 	v = ValidateEmail("test@test.com", "default")
-	assert.False(v, "should not allow user not in the rule")
+	assert.True(v, "should allow user in whitelist")
+	v = ValidateEmail("test@example.com", "default")
+	assert.True(v, "should allow user from valid domain")
+	v = ValidateEmail("one@two.com", "default")
+	assert.False(v, "should not allow user not in either")
+
+	// Should allow either matching domain or email address when
+	// MatchWhitelistOrDomain is enabled with Rules
+	config.Domains = []string{"example.com"}
+	config.Whitelist = []string{"test@test.com"}
+	config.Rules = map[string]*Rule{"test": NewRule()}
+	config.Rules["test"].Whitelist = []string{"test@testrule.com"}
+	config.Rules["test"].Domains = []string{"testruledomain.com"}
+	config.MatchWhitelistOrDomain = true
+	v = ValidateEmail("test@testrule.com", "test")
+	assert.True(v, "should allow user in rule whitelist")
+	v = ValidateEmail("test@test.com", "test")
+	assert.False(v, "should not allow user in global whitelist")
+	v = ValidateEmail("test@testruledomain.com", "test")
+	assert.True(v, "should allow user in rule domain list")
+	v = ValidateEmail("test@example.com", "test")
+	assert.False(v, "should not allow user from valid global domain")
+	v = ValidateEmail("one@two.com", "test")
+	assert.False(v, "should not allow user not in either")
+
+	// Rules should use global whitelist/domains config when not specified
+	config.Domains = []string{"example.com"}
+	config.Whitelist = []string{"test@test.com"}
+	config.Rules = map[string]*Rule{"test": NewRule()}
+	config.MatchWhitelistOrDomain = true
+	v = ValidateEmail("test@test.com", "test")
+	assert.True(v, "should allow user in global whitelist")
+	v = ValidateEmail("test@example.com", "test")
+	assert.True(v, "should allow user from valid global domain")
 }
 
 func TestRedirectUri(t *testing.T) {

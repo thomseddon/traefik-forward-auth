@@ -56,21 +56,46 @@ func ValidateCookie(r *http.Request, c *http.Cookie) (string, error) {
 	return parts[2], nil
 }
 
-// ValidateEmail verifies that an email is permitted by the current config
+// ValidateEmail checks if the given email address matches either a whitelisted
+// email address, as defined by the "whitelist" config parameter. Or is part of
+// a permitted domain, as defined by the "domains" config parameter
 func ValidateEmail(email string, ruleName string) bool {
 	rule, ruleExists := config.Rules[ruleName]
 
-	if ruleExists && len(rule.Whitelist) > 0 {
-		return ValidateWhitelist(email, rule.Whitelist)
-	} else if ruleExists && len(rule.Domains) > 0 {
-		return ValidateDomains(email, rule.Domains)
-	} else if len(config.Whitelist) > 0 {
-		return ValidateWhitelist(email, config.Whitelist)
-	} else if len(config.Domains) > 0 {
-		return ValidateDomains(email, config.Domains)
-	} else {
+	// Do we need to apply rule-level validation?
+	if ruleExists && !(len(rule.Whitelist) == 0 && len(rule.Domains) == 0) {
+		if len(rule.Whitelist) > 0 && ValidateWhitelist(email, rule.Whitelist) {
+			return true
+		} else if config.MatchWhitelistOrDomain && len(rule.Domains) > 0 && ValidateDomains(email, rule.Domains) {
+			return true
+		} else {
+			return false
+		}
+	}
+
+	// Do we have any validation to perform?
+	if len(config.Whitelist) == 0 && len(config.Domains) == 0 {
 		return true
 	}
+
+	// Email whitelist validation
+	if len(config.Whitelist) > 0 {
+		if ValidateWhitelist(email, config.Whitelist) {
+			return true
+		}
+
+		// If we're not matching *either*, stop here
+		if !config.MatchWhitelistOrDomain {
+			return false
+		}
+	}
+
+	// Domain validation
+	if len(config.Domains) > 0 && ValidateDomains(email, config.Domains) {
+		return true
+	}
+
+	return false
 }
 
 // ValidateWhitelist checks if the email is in whitelist
@@ -156,6 +181,19 @@ func MakeCookie(r *http.Request, email string) *http.Cookie {
 		HttpOnly: true,
 		Secure:   !config.InsecureCookie,
 		Expires:  expires,
+	}
+}
+
+// ClearCookie clears the auth cookie
+func ClearCookie(r *http.Request) *http.Cookie {
+	return &http.Cookie{
+		Name:     config.CookieName,
+		Value:    "",
+		Path:     "/",
+		Domain:   cookieDomain(r),
+		HttpOnly: true,
+		Secure:   !config.InsecureCookie,
+		Expires:  time.Now().Local().Add(time.Hour * -1),
 	}
 }
 
