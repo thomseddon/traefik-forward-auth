@@ -36,6 +36,8 @@ type User struct {
 
 // OAuthProvider is a provider using the oauth2 library
 type OAuthProvider struct {
+	Resource string `long:"resource" env:"RESOURCE" description:"Optional resource indicator"`
+
 	Config *oauth2.Config
 	ctx    context.Context
 }
@@ -51,6 +53,11 @@ func (p *OAuthProvider) ConfigCopy(redirectURI string) oauth2.Config {
 // OAuthGetLoginURL provides a base "GetLoginURL" for proiders using OAauth2
 func (p *OAuthProvider) OAuthGetLoginURL(redirectURI, state string) string {
 	config := p.ConfigCopy(redirectURI)
+
+	if p.Resource != "" {
+		return config.AuthCodeURL(state, oauth2.SetAuthURLParam("resource", p.Resource))
+	}
+
 	return config.AuthCodeURL(state)
 }
 
