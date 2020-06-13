@@ -126,13 +126,11 @@ func TestAuthValidateWhitelist(t *testing.T) {
 	var goodAddress2 string = "good2@good2.example.com"
 
 	var badAddress string = "bad@bad.example.com"
-	//var badAddress2 string = "bad2@bad2.example.com"
 
 	var goodDomain string = "good.example.com"
 	var goodDomain2 string = "good2.example.com"
 
 	var badDomain string = "bad.example.com"
-	//var badDomain2 string = "bad2.example.com"
 
 	ruleName := "whitelist-rule"
 
