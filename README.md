@@ -98,6 +98,8 @@ Also in the examples directory is [docker-compose-auth-host.yml](https://github.
 
 #### Provider Setup
 
+Below are some general notes on provider setup, specific instructions and examples for a number of providers can be found on the [Provider Setup](https://github.com/thomseddon/traefik-forward-auth/wiki/Provider-Setup) wiki page.
+
 ##### Google
 
 Head to https://console.developers.google.com and make sure you've switched to the correct email account.
@@ -114,9 +116,11 @@ Any provider that supports OpenID Connect 1.0 can be configured via the OIDC con
 
 You must set the `providers.oidc.issuer-url`, `providers.oidc.client-id` and `providers.oidc.client-secret` config options.
 
-##### Generic Oauth
+Please see the [Provider Setup](https://github.com/thomseddon/traefik-forward-auth/wiki/Provider-Setup) wiki page for examples.
 
-For providers that don't support OpenID Connect, we also have the Generic OAuth provider where you can statically configure the OAuth2 and "user" endpoints.
+##### Generic OAuth2
+
+For providers that don't support OpenID Connect, we also have the Generic OAuth2 provider where you can statically configure the OAuth2 and "user" endpoints.
 
 You must set:
 - `providers.generic-oauth.auth-url` - URL the client should be sent to authenticate the authenticate
@@ -129,6 +133,7 @@ You can also set:
 - `providers.generic-oauth.scope`- Any scopes that should be included in the request (default: profile, email)
 - `providers.generic-oauth.token-style` - How token is presented when querying the User URL. Can be `header` or `query`, defaults to `header`. With `header` the token is provided in an Authorization header, with query the token is provided in the `access_token` query string value.
 
+Please see the [Provider Setup](https://github.com/thomseddon/traefik-forward-auth/wiki/Provider-Setup) wiki page for examples.
 
 ## Configuration
 
