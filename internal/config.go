@@ -275,6 +275,8 @@ func (c *Config) GetProvider(name string) (provider.Provider, error) {
 		return &c.Providers.Google, nil
 	case "oidc":
 		return &c.Providers.OIDC, nil
+	case "generic-oauth":
+		return &c.Providers.GenericOAuth, nil
 	}
 
 	return nil, fmt.Errorf("Unknown provider: %s", name)

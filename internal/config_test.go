@@ -366,6 +366,11 @@ func TestConfigGetProvider(t *testing.T) {
 	assert.Nil(err)
 	assert.Equal(&c.Providers.OIDC, p)
 
+	// Should be able to get "generic-oauth" provider
+	p, err = c.GetProvider("generic-oauth")
+	assert.Nil(err)
+	assert.Equal(&c.Providers.GenericOAuth, p)
+
 	// Should catch unknown provider
 	p, err = c.GetProvider("bad")
 	if assert.Error(err) {

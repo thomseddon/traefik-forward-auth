@@ -9,9 +9,9 @@ import (
 
 // Providers contains all the implemented providers
 type Providers struct {
-	GenericOAuth GenericOAuth `group:"Generic OAuth2 Provider" namespace:"generic-oauth" env-namespace:"GENERIC_OAUTH"`
 	Google       Google       `group:"Google Provider" namespace:"google" env-namespace:"GOOGLE"`
 	OIDC         OIDC         `group:"OIDC Provider" namespace:"oidc" env-namespace:"OIDC"`
+	GenericOAuth GenericOAuth `group:"Generic OAuth2 Provider" namespace:"generic-oauth" env-namespace:"GENERIC_OAUTH"`
 }
 
 // Provider is used to authenticate users
