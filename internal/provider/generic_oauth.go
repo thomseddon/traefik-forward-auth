@@ -18,6 +18,7 @@ type GenericOAuth struct {
 	ClientID     string   `long:"client-id" env:"CLIENT_ID" description:"Client ID"`
 	ClientSecret string   `long:"client-secret" env:"CLIENT_SECRET" description:"Client Secret" json:"-"`
 	Scopes       []string `long:"scope" env:"SCOPE" env-delim:"," default:"profile" default:"email" description:"Scopes"`
+	TokenStyle   string   `long:"token-style" env:"TOKEN_STYLE" default:"header" choice:"header" choice:"query_string" description:"How token is presented when querying the User URL"`
 
 	OAuthProvider
 }
@@ -69,13 +70,20 @@ func (o *GenericOAuth) ExchangeCode(redirectURI, code string) (string, error) {
 func (o *GenericOAuth) GetUser(token string) (User, error) {
 	var user User
 
-	client := &http.Client{}
 	req, err := http.NewRequest("GET", o.UserURL, nil)
 	if err != nil {
 		return user, err
 	}
 
-	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token))
+	if o.TokenStyle == "header" {
+		req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token))
+	} else if o.TokenStyle == "query" {
+		q := req.URL.Query()
+		q.Add("access_token", token)
+		req.URL.RawQuery = q.Encode()
+	}
+
+	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
 		return user, err

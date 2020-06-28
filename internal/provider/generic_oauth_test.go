@@ -22,12 +22,12 @@ func TestGenericOAuthSetup(t *testing.T) {
 	// Check validation
 	err := p.Setup()
 	if assert.Error(err) {
-		assert.Equal("providers.generic-oauth.login-url, providers.generic-oauth.token-url, providers.generic-oauth.user-url, providers.generic-oauth.client-id, providers.generic-oauth.client-secret must be set", err.Error())
+		assert.Equal("providers.generic-oauth.auth-url, providers.generic-oauth.token-url, providers.generic-oauth.user-url, providers.generic-oauth.client-id, providers.generic-oauth.client-secret must be set", err.Error())
 	}
 
 	// Check setup
 	p = GenericOAuth{
-		LoginURL:     "https://provider.com/oauth2/login",
+		AuthURL:      "https://provider.com/oauth2/auth",
 		TokenURL:     "https://provider.com/oauth2/token",
 		UserURL:      "https://provider.com/oauth2/user",
 		ClientID:     "id",
@@ -40,7 +40,7 @@ func TestGenericOAuthSetup(t *testing.T) {
 func TestGenericOAuthGetLoginURL(t *testing.T) {
 	assert := assert.New(t)
 	p := GenericOAuth{
-		LoginURL:     "https://provider.com/oauth2/login",
+		AuthURL:      "https://provider.com/oauth2/auth",
 		TokenURL:     "https://provider.com/oauth2/token",
 		UserURL:      "https://provider.com/oauth2/user",
 		ClientID:     "idtest",
@@ -57,7 +57,7 @@ func TestGenericOAuthGetLoginURL(t *testing.T) {
 	assert.Nil(err)
 	assert.Equal("https", uri.Scheme)
 	assert.Equal("provider.com", uri.Host)
-	assert.Equal("/oauth2/login", uri.Path)
+	assert.Equal("/oauth2/auth", uri.Path)
 
 	// Check query string
 	qs := uri.Query()
@@ -89,7 +89,7 @@ func TestGenericOAuthExchangeCode(t *testing.T) {
 
 	// Setup provider
 	p := GenericOAuth{
-		LoginURL:     "https://provider.com/oauth2/login",
+		AuthURL:      "https://provider.com/oauth2/auth",
 		TokenURL:     serverURL.String() + "/token",
 		UserURL:      "https://provider.com/oauth2/user",
 		ClientID:     "idtest",
@@ -118,7 +118,7 @@ func TestGenericOAuthGetUser(t *testing.T) {
 
 	// Setup provider
 	p := GenericOAuth{
-		LoginURL:     "https://provider.com/oauth2/login",
+		AuthURL:      "https://provider.com/oauth2/auth",
 		TokenURL:     "https://provider.com/oauth2/token",
 		UserURL:      serverURL.String() + "/userinfo",
 		ClientID:     "idtest",
