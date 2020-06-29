@@ -91,18 +91,9 @@ func (o *OIDC) GetUser(token string) (User, error) {
 	}
 
 	// Extract custom claims
-	var claims struct {
-		ID       string `json:"sub"`
-		Email    string `json:"email"`
-		Verified bool   `json:"email_verified"`
-	}
-	if err := idToken.Claims(&claims); err != nil {
+	if err := idToken.Claims(&user); err != nil {
 		return user, err
 	}
-
-	user.ID = claims.ID
-	user.Email = claims.Email
-	user.Verified = claims.Verified
 
 	return user, nil
 }

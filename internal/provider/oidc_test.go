@@ -124,9 +124,7 @@ func TestOIDCGetUser(t *testing.T) {
 	// Get user
 	user, err := provider.GetUser(token)
 	assert.Nil(err)
-	assert.Equal("1", user.ID)
 	assert.Equal("example@example.com", user.Email)
-	assert.True(user.Verified)
 }
 
 // Utils
