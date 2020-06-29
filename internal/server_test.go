@@ -158,6 +158,12 @@ func TestServerAuthCallback(t *testing.T) {
 	res, _ = doHttpRequest(req, c)
 	assert.Equal(401, res.StatusCode, "auth callback with invalid cookie shouldn't be authorised")
 
+	// Should catch invalid provider cookie
+	req = newDefaultHttpRequest("/_oauth?state=12345678901234567890123456789012:invalid:http://redirect")
+	c = MakeCSRFCookie(req, "12345678901234567890123456789012")
+	res, _ = doHttpRequest(req, c)
+	assert.Equal(401, res.StatusCode, "auth callback with invalid provider shouldn't be authorised")
+
 	// Should redirect valid request
 	req = newDefaultHttpRequest("/_oauth?state=12345678901234567890123456789012:google:http://redirect")
 	c = MakeCSRFCookie(req, "12345678901234567890123456789012")
@@ -168,6 +174,58 @@ func TestServerAuthCallback(t *testing.T) {
 	assert.Equal("http", fwd.Scheme, "valid request should be redirected to return url")
 	assert.Equal("redirect", fwd.Host, "valid request should be redirected to return url")
 	assert.Equal("", fwd.Path, "valid request should be redirected to return url")
+}
+
+func TestServerAuthCallbackExchangeFailure(t *testing.T) {
+	assert := assert.New(t)
+	config = newDefaultConfig()
+
+	// Setup OAuth server
+	server, serverURL := NewFailingOAuthServer(t)
+	defer server.Close()
+	config.Providers.Google.TokenURL = &url.URL{
+		Scheme: serverURL.Scheme,
+		Host:   serverURL.Host,
+		Path:   "/token",
+	}
+	config.Providers.Google.UserURL = &url.URL{
+		Scheme: serverURL.Scheme,
+		Host:   serverURL.Host,
+		Path:   "/userinfo",
+	}
+
+	// Should handle failed code exchange
+	req := newDefaultHttpRequest("/_oauth?state=12345678901234567890123456789012:google:http://redirect")
+	c := MakeCSRFCookie(req, "12345678901234567890123456789012")
+	res, _ := doHttpRequest(req, c)
+	assert.Equal(503, res.StatusCode, "auth callback should handle failed code exchange")
+}
+
+func TestServerAuthCallbackUserFailure(t *testing.T) {
+	assert := assert.New(t)
+	config = newDefaultConfig()
+
+	// Setup OAuth server
+	server, serverURL := NewOAuthServer(t)
+	defer server.Close()
+	config.Providers.Google.TokenURL = &url.URL{
+		Scheme: serverURL.Scheme,
+		Host:   serverURL.Host,
+		Path:   "/token",
+	}
+	serverFail, serverFailURL := NewFailingOAuthServer(t)
+	defer serverFail.Close()
+	config.Providers.Google.UserURL = &url.URL{
+		Scheme: serverFailURL.Scheme,
+		Host:   serverFailURL.Host,
+		Path:   "/userinfo",
+	}
+
+	// Should handle failed user request
+	req := newDefaultHttpRequest("/_oauth?state=12345678901234567890123456789012:google:http://redirect")
+	c := MakeCSRFCookie(req, "12345678901234567890123456789012")
+	res, _ := doHttpRequest(req, c)
+	assert.Equal(503, res.StatusCode, "auth callback should handle failed user request")
 }
 
 func TestServerLogout(t *testing.T) {
@@ -398,10 +456,16 @@ func TestServerRouteQuery(t *testing.T) {
  */
 
 type OAuthServer struct {
-	t *testing.T
+	t    *testing.T
+	fail bool
 }
 
 func (s *OAuthServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if s.fail {
+		http.Error(w, "Service unavailable", 500)
+		return
+	}
+
 	if r.URL.Path == "/token" {
 		fmt.Fprintf(w, `{"access_token":"123456789"}`)
 	} else if r.URL.Path == "/userinfo" {
@@ -418,6 +482,13 @@ func (s *OAuthServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func NewOAuthServer(t *testing.T) (*httptest.Server, *url.URL) {
 	handler := &OAuthServer{}
+	server := httptest.NewServer(handler)
+	serverURL, _ := url.Parse(server.URL)
+	return server, serverURL
+}
+
+func NewFailingOAuthServer(t *testing.T) (*httptest.Server, *url.URL) {
+	handler := &OAuthServer{fail: true}
 	server := httptest.NewServer(handler)
 	serverURL, _ := url.Parse(server.URL)
 	return server, serverURL
