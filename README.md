@@ -155,7 +155,7 @@ Application Options:
   --cookie-name=                                        Cookie Name (default: _forward_auth) [$COOKIE_NAME]
   --csrf-cookie-name=                                   CSRF Cookie Name (default: _forward_auth_csrf) [$CSRF_COOKIE_NAME]
   --default-action=[auth|allow]                         Default action (default: auth) [$DEFAULT_ACTION]
-  --default-provider=[google|oidc]                      Default provider (default: google) [$DEFAULT_PROVIDER]
+  --default-provider=[google|oidc|generic-oauth]        Default provider (default: google) [$DEFAULT_PROVIDER]
   --domain=                                             Only allow given email domains, can be set multiple times [$DOMAIN]
   --lifetime=                                           Lifetime in seconds (default: 43200) [$LIFETIME]
   --logout-redirect=                                    URL to redirect to following logout [$LOGOUT_REDIRECT]
