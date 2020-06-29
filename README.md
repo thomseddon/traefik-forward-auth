@@ -98,6 +98,8 @@ Also in the examples directory is [docker-compose-auth-host.yml](https://github.
 
 #### Provider Setup
 
+Below are some general notes on provider setup, specific instructions and examples for a number of providers can be found on the [Provider Setup](https://github.com/thomseddon/traefik-forward-auth/wiki/Provider-Setup) wiki page.
+
 ##### Google
 
 Head to https://console.developers.google.com and make sure you've switched to the correct email account.
@@ -113,6 +115,25 @@ You must set the `providers.google.client-id` and `providers.google.client-secre
 Any provider that supports OpenID Connect 1.0 can be configured via the OIDC config options below.
 
 You must set the `providers.oidc.issuer-url`, `providers.oidc.client-id` and `providers.oidc.client-secret` config options.
+
+Please see the [Provider Setup](https://github.com/thomseddon/traefik-forward-auth/wiki/Provider-Setup) wiki page for examples.
+
+##### Generic OAuth2
+
+For providers that don't support OpenID Connect, we also have the Generic OAuth2 provider where you can statically configure the OAuth2 and "user" endpoints.
+
+You must set:
+- `providers.generic-oauth.auth-url` - URL the client should be sent to authenticate the authenticate
+- `providers.generic-oauth.token-url` - URL the service should call to exchange an auth code for an access token
+- `providers.generic-oauth.user-url` - URL used to retrieve user info (service makes a GET request)
+- `providers.generic-oauth.client-id` - Client ID
+- `providers.generic-oauth.client-secret` - Client Secret
+
+You can also set:
+- `providers.generic-oauth.scope`- Any scopes that should be included in the request (default: profile, email)
+- `providers.generic-oauth.token-style` - How token is presented when querying the User URL. Can be `header` or `query`, defaults to `header`. With `header` the token is provided in an Authorization header, with query the token is provided in the `access_token` query string value.
+
+Please see the [Provider Setup](https://github.com/thomseddon/traefik-forward-auth/wiki/Provider-Setup) wiki page for examples.
 
 ## Configuration
 
@@ -134,7 +155,7 @@ Application Options:
   --cookie-name=                                        Cookie Name (default: _forward_auth) [$COOKIE_NAME]
   --csrf-cookie-name=                                   CSRF Cookie Name (default: _forward_auth_csrf) [$CSRF_COOKIE_NAME]
   --default-action=[auth|allow]                         Default action (default: auth) [$DEFAULT_ACTION]
-  --default-provider=[google|oidc]                      Default provider (default: google) [$DEFAULT_PROVIDER]
+  --default-provider=[google|oidc|generic-oauth]        Default provider (default: google) [$DEFAULT_PROVIDER]
   --domain=                                             Only allow given email domains, can be set multiple times [$DOMAIN]
   --lifetime=                                           Lifetime in seconds (default: 43200) [$LIFETIME]
   --logout-redirect=                                    URL to redirect to following logout [$LOGOUT_REDIRECT]
@@ -153,6 +174,17 @@ OIDC Provider:
   --providers.oidc.client-id=                           Client ID [$PROVIDERS_OIDC_CLIENT_ID]
   --providers.oidc.client-secret=                       Client Secret [$PROVIDERS_OIDC_CLIENT_SECRET]
   --providers.oidc.resource=                            Optional resource indicator [$PROVIDERS_OIDC_RESOURCE]
+
+Generic OAuth2 Provider:
+  --providers.generic-oauth.auth-url=                   Auth/Login URL [$PROVIDERS_GENERIC_OAUTH_AUTH_URL]
+  --providers.generic-oauth.token-url=                  Token URL [$PROVIDERS_GENERIC_OAUTH_TOKEN_URL]
+  --providers.generic-oauth.user-url=                   URL used to retrieve user info [$PROVIDERS_GENERIC_OAUTH_USER_URL]
+  --providers.generic-oauth.client-id=                  Client ID [$PROVIDERS_GENERIC_OAUTH_CLIENT_ID]
+  --providers.generic-oauth.client-secret=              Client Secret [$PROVIDERS_GENERIC_OAUTH_CLIENT_SECRET]
+  --providers.generic-oauth.scope=                      Scopes (default: profile, email) [$PROVIDERS_GENERIC_OAUTH_SCOPE]
+  --providers.generic-oauth.token-style=[header|query]  How token is presented when querying the User URL (default: header)
+                                                        [$PROVIDERS_GENERIC_OAUTH_TOKEN_STYLE]
+  --providers.generic-oauth.resource=                   Optional resource indicator [$PROVIDERS_GENERIC_OAUTH_RESOURCE]
 
 Help Options:
   -h, --help                                            Show this help message
