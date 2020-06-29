@@ -144,8 +144,5 @@ func TestGoogleGetUser(t *testing.T) {
 	user, err := p.GetUser("123456789")
 	assert.Nil(err)
 
-	assert.Equal("1", user.ID)
 	assert.Equal("example@example.com", user.Email)
-	assert.True(user.Verified)
-	assert.Equal("example.com", user.Hd)
 }
