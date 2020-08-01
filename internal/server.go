@@ -104,7 +104,7 @@ func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 		valid := ValidateUser(user)
 		if !valid {
 			logger.WithField("user", user).Warn("Invalid user")
-			http.Error(w, user+" not authorized", 401)
+			http.Error(w, "User '"+user+"' is not authorized", 401)
 			return
 		}
 
