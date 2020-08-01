@@ -48,7 +48,7 @@ func GetUserID(r io.Reader, key string) (UserID, error) {
 
 func GetKeyDataFromJson(json *gabs.Container, key string) (UserID, error) {
 	if !json.ExistsP(key) {
-		return "", errors.New("Invalid key: " + key)
+		return "", errors.New("Invalid key: " + key + " in json:" + string(json.Bytes()))
 	}
 	return fmt.Sprintf("%v", json.Path(key).Data()), nil
 }
