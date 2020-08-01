@@ -38,7 +38,7 @@ type Config struct {
 	MatchWhitelistOrDomain bool                 `long:"match-whitelist-or-domain" env:"MATCH_WHITELIST_OR_DOMAIN" description:"Allow users that match *either* whitelist or domain (enabled by default in v3)"`
 	Path                   string               `long:"url-path" env:"URL_PATH" default:"/_oauth" description:"Callback URL Path"`
 	SecretString           string               `long:"secret" env:"SECRET" description:"Secret used for signing (required)" json:"-"`
-	UserIDKey              string               `long:"user-id-key" env:"USER_ID_KEY" default:"email" description:"Key used to grab the UserID for use in whitelist and X-Forwarded-User"`
+	UserIDPath             string               `long:"user-id-path" env:"USER_ID_PATH" default:"email" description:"Dot notation path of a UserID for use with whitelist and X-Forwarded-User"`
 	Whitelist              CommaSeparatedList   `long:"whitelist" env:"WHITELIST" env-delim:"," description:"Only allow given email addresses, comma delimited, can be set multiple times"`
 
 	Providers provider.Providers `group:"providers" namespace:"providers" env-namespace:"PROVIDERS"`
@@ -318,9 +318,7 @@ func (c *Config) setupProvider(name string) error {
 	}
 
 	// Setup
-	err = p.Setup()
-
-	if err != nil {
+	if err := p.Setup(); err != nil {
 		return err
 	}
 

@@ -23,7 +23,7 @@ type Provider interface {
 	Name() string
 	GetLoginURL(redirectURI, state string) string
 	ExchangeCode(redirectURI, code string) (string, error)
-	GetUser(token, userIDKey string) (string, error)
+	GetUser(token, userIDPath string) (string, error)
 	Setup() error
 }
 
@@ -36,21 +36,20 @@ type User struct {
 	Email string `json:"email"`
 }
 
+// UserID is a type used to represent a uniquely identified user
 type UserID = string
 
-func GetUserID(r io.Reader, key string) (UserID, error) {
-	jsonParsed, err := gabs.ParseJSONBuffer(r)
+// GetUserID extracts a UserID located at the (dot notation) path (userIDPath) in the json io.Reader
+func GetUserID(r io.Reader, userIDPath string) (UserID, error) {
+	json, err := gabs.ParseJSONBuffer(r)
 	if err != nil {
 		return "", err
 	}
-	return GetKeyDataFromJson(jsonParsed, key)
-}
 
-func GetKeyDataFromJson(json *gabs.Container, key string) (UserID, error) {
-	if !json.ExistsP(key) {
-		return "", errors.New("Invalid User ID Key: " + key + " in json:" + string(json.Bytes()))
+	if !json.ExistsP(userIDPath) {
+		return "", errors.New("Invalid User ID Path: " + userIDPath + " in json:" + string(json.Bytes()))
 	}
-	return fmt.Sprintf("%v", json.Path(key).Data()), nil
+	return fmt.Sprintf("%v", json.Path(userIDPath).Data()), nil
 }
 
 // OAuthProvider is a provider using the oauth2 library

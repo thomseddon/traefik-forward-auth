@@ -81,7 +81,6 @@ func (o *OIDC) ExchangeCode(redirectURI, code string) (string, error) {
 
 // GetUser uses the given token and returns a complete provider.User object
 func (o *OIDC) GetUser(token, _ string) (UserID, error) {
-
 	// Parse & Verify ID Token
 	idToken, err := o.verifier.Verify(o.ctx, token)
 	if err != nil {
