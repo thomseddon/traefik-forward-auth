@@ -67,31 +67,31 @@ func TestAuthValidateEmail(t *testing.T) {
 	config, _ = NewConfig([]string{})
 
 	// Should allow any
-	v := ValidateEmail("test@test.com")
+	v := ValidateUser("test@test.com")
 	assert.True(v, "should allow any domain if email domain is not defined")
-	v = ValidateEmail("one@two.com")
+	v = ValidateUser("one@two.com")
 	assert.True(v, "should allow any domain if email domain is not defined")
 
 	// Should block non matching domain
 	config.Domains = []string{"test.com"}
-	v = ValidateEmail("one@two.com")
+	v = ValidateUser("one@two.com")
 	assert.False(v, "should not allow user from another domain")
 
 	// Should allow matching domain
 	config.Domains = []string{"test.com"}
-	v = ValidateEmail("test@test.com")
+	v = ValidateUser("test@test.com")
 	assert.True(v, "should allow user from allowed domain")
 
 	// Should block non whitelisted email address
 	config.Domains = []string{}
 	config.Whitelist = []string{"test@test.com"}
-	v = ValidateEmail("one@two.com")
+	v = ValidateUser("one@two.com")
 	assert.False(v, "should not allow user not in whitelist")
 
 	// Should allow matching whitelisted email address
 	config.Domains = []string{}
 	config.Whitelist = []string{"test@test.com"}
-	v = ValidateEmail("test@test.com")
+	v = ValidateUser("test@test.com")
 	assert.True(v, "should allow user in whitelist")
 
 	// Should allow only matching email address when
@@ -99,11 +99,11 @@ func TestAuthValidateEmail(t *testing.T) {
 	config.Domains = []string{"example.com"}
 	config.Whitelist = []string{"test@test.com"}
 	config.MatchWhitelistOrDomain = false
-	v = ValidateEmail("test@test.com")
+	v = ValidateUser("test@test.com")
 	assert.True(v, "should allow user in whitelist")
-	v = ValidateEmail("test@example.com")
+	v = ValidateUser("test@example.com")
 	assert.False(v, "should not allow user from valid domain")
-	v = ValidateEmail("one@two.com")
+	v = ValidateUser("one@two.com")
 	assert.False(v, "should not allow user not in either")
 
 	// Should allow either matching domain or email address when
@@ -111,12 +111,17 @@ func TestAuthValidateEmail(t *testing.T) {
 	config.Domains = []string{"example.com"}
 	config.Whitelist = []string{"test@test.com"}
 	config.MatchWhitelistOrDomain = true
-	v = ValidateEmail("test@test.com")
+	v = ValidateUser("test@test.com")
 	assert.True(v, "should allow user in whitelist")
-	v = ValidateEmail("test@example.com")
+	v = ValidateUser("test@example.com")
 	assert.True(v, "should allow user from valid domain")
-	v = ValidateEmail("one@two.com")
+	v = ValidateUser("one@two.com")
 	assert.False(v, "should not allow user not in either")
+
+	// Should allow comma separated email
+	config.Whitelist = []string{"test@test.com", "test2@test2.com"}
+	v = ValidateUser("test2@test2.com")
+	assert.True(v, "should allow user in whitelist")
 }
 
 func TestRedirectUri(t *testing.T) {

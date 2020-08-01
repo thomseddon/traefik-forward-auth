@@ -3,6 +3,7 @@ module github.com/thomseddon/traefik-forward-auth
 go 1.13
 
 require (
+	github.com/Jeffail/gabs/v2 v2.5.1
 	github.com/containous/traefik/v2 v2.1.2
 	github.com/coreos/go-oidc v2.1.0+incompatible
 	github.com/pquerna/cachecontrol v0.0.0-20180517163645-1555304b9b35 // indirect

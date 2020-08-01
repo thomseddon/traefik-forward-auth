@@ -2,8 +2,12 @@ package provider
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"io"
 	// "net/url"
 
+	"github.com/Jeffail/gabs/v2"
 	"golang.org/x/oauth2"
 )
 
@@ -19,7 +23,7 @@ type Provider interface {
 	Name() string
 	GetLoginURL(redirectURI, state string) string
 	ExchangeCode(redirectURI, code string) (string, error)
-	GetUser(token string) (User, error)
+	GetUser(token, userIDKey string) (string, error)
 	Setup() error
 }
 
@@ -30,6 +34,23 @@ type token struct {
 // User is the authenticated user
 type User struct {
 	Email string `json:"email"`
+}
+
+type UserID = string
+
+func GetUserID(r io.Reader, key string) (UserID, error) {
+	jsonParsed, err := gabs.ParseJSONBuffer(r)
+	if err != nil {
+		return "", err
+	}
+	return GetKeyDataFromContainer(jsonParsed, key)
+}
+
+func GetKeyDataFromContainer(container *gabs.Container, key string) (UserID, error) {
+	if !container.ExistsP(key) {
+		return "", errors.New("Invalid key: " + key)
+	}
+	return fmt.Sprintf("%v", container.Path(key).Data()), nil
 }
 
 // OAuthProvider is a provider using the oauth2 library
