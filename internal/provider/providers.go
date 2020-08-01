@@ -43,14 +43,14 @@ func GetUserID(r io.Reader, key string) (UserID, error) {
 	if err != nil {
 		return "", err
 	}
-	return GetKeyDataFromContainer(jsonParsed, key)
+	return GetKeyDataFromJson(jsonParsed, key)
 }
 
-func GetKeyDataFromContainer(container *gabs.Container, key string) (UserID, error) {
-	if !container.ExistsP(key) {
+func GetKeyDataFromJson(json *gabs.Container, key string) (UserID, error) {
+	if !json.ExistsP(key) {
 		return "", errors.New("Invalid key: " + key)
 	}
-	return fmt.Sprintf("%v", container.Path(key).Data()), nil
+	return fmt.Sprintf("%v", json.Path(key).Data()), nil
 }
 
 // OAuthProvider is a provider using the oauth2 library
