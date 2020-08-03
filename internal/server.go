@@ -1,6 +1,7 @@
 package tfa
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 
@@ -104,7 +105,7 @@ func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 		valid := ValidateUser(user)
 		if !valid {
 			logger.WithField("user", user).Warn("Invalid user")
-			http.Error(w, "User '"+user+"' is not authorized", 401)
+			http.Error(w, fmt.Sprintf("User '%s' is not authorized", user), 401)
 			return
 		}
 
