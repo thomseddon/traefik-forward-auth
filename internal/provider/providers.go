@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	// "net/url"
@@ -39,7 +38,7 @@ type User struct {
 // UserID is a type used to represent a uniquely identified user
 type UserID = string
 
-// GetUserID extracts a UserID located at the (dot notation) path (userIDPath) in the json io.Reader
+// GetUserID extracts a UserID located at the (dot notation) path (userIDPath) in the json io.Reader of the UserURL
 func GetUserID(r io.Reader, userIDPath string) (UserID, error) {
 	json, err := gabs.ParseJSONBuffer(r)
 	if err != nil {
@@ -47,7 +46,7 @@ func GetUserID(r io.Reader, userIDPath string) (UserID, error) {
 	}
 
 	if !json.ExistsP(userIDPath) {
-		return "", errors.New("Invalid User ID Path: " + userIDPath + " in json:" + string(json.Bytes()))
+		return "", fmt.Errorf("no such user ID path: '%s' in the UserURL response: %s", userIDPath, string(json.Bytes()))
 	}
 	return fmt.Sprintf("%v", json.Path(userIDPath).Data()), nil
 }
