@@ -35,8 +35,8 @@ type User struct {
 	Email string `json:"email"`
 }
 
-// GetUserID extracts a UserID located at the (dot notation) path (UserPath) in the json io.Reader of the UserURL
-func GetUserID(r io.Reader, UserPath string) (string, error) {
+// GetUser extracts a UserID located at the (dot notation) path (UserPath) in the json io.Reader of the UserURL
+func GetUser(r io.Reader, UserPath string) (string, error) {
 	json, err := gabs.ParseJSONBuffer(r)
 	if err != nil {
 		return "", err

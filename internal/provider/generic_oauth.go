@@ -87,5 +87,5 @@ func (o *GenericOAuth) GetUser(token, UserPath string) (string, error) {
 	}
 	defer res.Body.Close()
 
-	return GetUserID(res.Body, UserPath)
+	return GetUser(res.Body, UserPath)
 }
