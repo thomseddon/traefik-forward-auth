@@ -66,7 +66,7 @@ func (o *GenericOAuth) ExchangeCode(redirectURI, code string) (string, error) {
 }
 
 // GetUser uses the given token and returns a UserID
-func (o *GenericOAuth) GetUser(token, userIDPath string) (UserID, error) {
+func (o *GenericOAuth) GetUser(token, UserPath string) (string, error) {
 	req, err := http.NewRequest("GET", o.UserURL, nil)
 	if err != nil {
 		return "", err
@@ -87,5 +87,5 @@ func (o *GenericOAuth) GetUser(token, userIDPath string) (UserID, error) {
 	}
 	defer res.Body.Close()
 
-	return GetUserID(res.Body, userIDPath)
+	return GetUserID(res.Body, UserPath)
 }

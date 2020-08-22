@@ -93,7 +93,7 @@ func (g *Google) ExchangeCode(redirectURI, code string) (string, error) {
 }
 
 // GetUser uses the given token and returns a userID located at the json path
-func (g *Google) GetUser(token, userIDPath string) (UserID, error) {
+func (g *Google) GetUser(token, UserPath string) (string, error) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", g.UserURL.String(), nil)
 	if err != nil {
@@ -107,5 +107,5 @@ func (g *Google) GetUser(token, userIDPath string) (UserID, error) {
 	}
 
 	defer res.Body.Close()
-	return GetUserID(res.Body, userIDPath)
+	return GetUserID(res.Body, UserPath)
 }

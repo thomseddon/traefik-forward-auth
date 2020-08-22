@@ -350,7 +350,7 @@ func (c *CookieDomains) UnmarshalFlag(value string) error {
 	return nil
 }
 
-// MarshalFlag converts an array of CookieDomain to a comma seperated list
+// MarshalFlag converts an array of CookieDomain to a comma separated list
 func (c *CookieDomains) MarshalFlag() (string, error) {
 	var domains []string
 	for _, d := range *c {
