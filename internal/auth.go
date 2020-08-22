@@ -95,6 +95,8 @@ func ValidateEmail(email string, ruleName *string) bool {
 	if len(domains) > 0 && ValidateDomains(email, domains) {
 		return true
 	}
+
+	return false
 }
 
 // ValidateWhitelist checks if the email is in whitelist
@@ -122,30 +124,6 @@ func ValidateDomains(email string, domains CommaSeparatedList) bool {
 }
 
 // OAuth Methods
-
-// Get login url
-func GetLoginURL(r *http.Request, nonce string) string {
-	state := fmt.Sprintf("%s:%s", nonce, returnUrl(r))
-
-	// TODO: Support multiple providers
-	return config.Providers.Google.GetLoginURL(redirectUri(r), state)
-}
-
-// Exchange code for token
-
-func ExchangeCode(r *http.Request) (string, error) {
-	code := r.URL.Query().Get("code")
-
-	// TODO: Support multiple providers
-	return config.Providers.Google.ExchangeCode(redirectUri(r), code)
-}
-
-// Get user with token
-
-func GetUser(token string) (provider.User, error) {
-	// TODO: Support multiple providers
-	return config.Providers.Google.GetUser(token)
-}
 
 // Utility methods
 
