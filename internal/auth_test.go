@@ -143,18 +143,6 @@ func TestAuthValidateEmail(t *testing.T) {
 	config.Domains = []string{"globaltestdomain.com"}
 	config.Whitelist = []string{}
 	config.Rules = map[string]*Rule{"test": NewRule()}
-<<<<<<< HEAD
-	config.Rules["test"].Domains = []string{"test.com"}
-	// Validation for user in the rule domains
-	v = ValidateEmail("test@test.com", "test")
-	assert.True(v, "should allow user in rule domains")
-	// Validation for user not in the rule whitelist
-	v = ValidateEmail("test@test2.com", "test")
-	assert.False(v, "should not allow user not in rule domains")
-	// Validation for user in the whitelist, but that not this rule
-	v = ValidateEmail("test@test.com", "default")
-	assert.False(v, "should not allow user not in the rule")
-=======
 	ruleName = "test"
 	config.Rules[ruleName].Whitelist = []string{"test@testrule.com"}
 	config.Rules[ruleName].Domains = []string{"testruledomain.com"}
@@ -180,7 +168,8 @@ func TestAuthValidateEmail(t *testing.T) {
 	assert.True(v, "should allow user in global whitelist")
 	v = ValidateEmail("test@example.com", &ruleName)
 	assert.True(v, "should allow user from valid global domain")
->>>>>>> Use pointers for ruleName
+	v = ValidateEmail("one@two.com", &ruleName)
+	assert.False(v, "should not allow user not in either")
 }
 
 func TestRedirectUri(t *testing.T) {

@@ -60,29 +60,28 @@ func ValidateCookie(r *http.Request, c *http.Cookie) (string, error) {
 // email address, as defined by the "whitelist" config parameter. Or is part of
 // a permitted domain, as defined by the "domains" config parameter
 func ValidateEmail(email string, ruleName *string) bool {
+	// Use global config by default
+	whitelist := config.Whitelist
+	domains := config.Domains
+
 	if ruleName != nil {
 		rule, ruleExists := config.Rules[*ruleName]
 
-		// Do we need to apply rule-level validation?
+		// Override with rule config if found
 		if ruleExists && (len(rule.Whitelist) > 0 || len(rule.Domains) > 0) {
-			if len(rule.Whitelist) > 0 && ValidateWhitelist(email, rule.Whitelist) {
-				return true
-			} else if config.MatchWhitelistOrDomain && len(rule.Domains) > 0 && ValidateDomains(email, rule.Domains) {
-				return true
-			} else {
-				return false
-			}
+			whitelist = rule.Whitelist
+			domains = rule.Domains
 		}
 	}
 
 	// Do we have any validation to perform?
-	if len(config.Whitelist) == 0 && len(config.Domains) == 0 {
+	if len(whitelist) == 0 && len(config.Domains) == 0 {
 		return true
 	}
 
 	// Email whitelist validation
-	if len(config.Whitelist) > 0 {
-		if ValidateWhitelist(email, config.Whitelist) {
+	if len(whitelist) > 0 {
+		if ValidateWhitelist(email, whitelist) {
 			return true
 		}
 
@@ -93,7 +92,7 @@ func ValidateEmail(email string, ruleName *string) bool {
 	}
 
 	// Domain validation
-	if len(config.Domains) > 0 && ValidateDomains(email, config.Domains) {
+	if len(domains) > 0 && ValidateDomains(email, domains) {
 		return true
 	}
 }
