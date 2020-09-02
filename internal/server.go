@@ -73,7 +73,7 @@ func (s *Server) AllowHandler(rule string) http.HandlerFunc {
 }
 
 // AuthHandler Authenticates requests
-func (s *Server) AuthHandler(providerName string, rule string) http.HandlerFunc {
+func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 	p, _ := config.GetConfiguredProvider(providerName)
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -230,7 +230,7 @@ func (s *Server) authRedirect(logger *logrus.Entry, w http.ResponseWriter, r *ht
 	}).Debug("Set CSRF cookie and redirected to provider login url")
 }
 
-func (s *Server) logger(r *http.Request, handler string, rule string, msg string) *logrus.Entry {
+func (s *Server) logger(r *http.Request, handler, rule, msg string) *logrus.Entry {
 	// Create logger
 	logger := log.WithFields(logrus.Fields{
 		"handler":   handler,
