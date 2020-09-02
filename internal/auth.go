@@ -59,7 +59,7 @@ func ValidateCookie(r *http.Request, c *http.Cookie) (string, error) {
 // ValidateEmail checks if the given email address matches either a whitelisted
 // email address, as defined by the "whitelist" config parameter. Or is part of
 // a permitted domain, as defined by the "domains" config parameter
-func ValidateEmail(email string, ruleName string) bool {
+func ValidateEmail(email, ruleName string) bool {
 	// Use global config by default
 	whitelist := config.Whitelist
 	domains := config.Domains
