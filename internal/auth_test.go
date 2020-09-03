@@ -236,10 +236,12 @@ func TestAuthMakeCSRFCookie(t *testing.T) {
 }
 
 func TestAuthClearCSRFCookie(t *testing.T) {
+	assert := assert.New(t)
 	config, _ = NewConfig([]string{})
 	r, _ := http.NewRequest("GET", "http://example.com", nil)
 
-	c := ClearCSRFCookie(r)
+	c := ClearCSRFCookie(r, &http.Cookie{Name: "someCsrfCookie"})
+	assert.Equal("someCsrfCookie", c.Name)
 	if c.Value != "" {
 		t.Error("ClearCSRFCookie should create cookie with empty value")
 	}

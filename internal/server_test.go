@@ -98,7 +98,7 @@ func TestServerAuthHandlerExpired(t *testing.T) {
 	// Check for CSRF cookie
 	var cookie *http.Cookie
 	for _, c := range res.Cookies() {
-		if c.Name == config.CSRFCookieName {
+		if strings.HasPrefix(c.Name, config.CSRFCookieName) {
 			cookie = c
 		}
 	}

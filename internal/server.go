@@ -122,7 +122,7 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 		logger := s.logger(r, "AuthCallback", "default", "Handling callback")
 
 		// Check for CSRF cookie
-		c, err := r.Cookie(config.CSRFCookieName)
+		c, err := FindCSRFCookie(r)
 		if err != nil {
 			logger.Info("Missing csrf cookie")
 			http.Error(w, "Not authorized", 401)
@@ -153,7 +153,7 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 		}
 
 		// Clear CSRF cookie
-		http.SetCookie(w, ClearCSRFCookie(r))
+		http.SetCookie(w, ClearCSRFCookie(r, c))
 
 		// Exchange code for token
 		token, err := p.ExchangeCode(redirectUri(r), r.URL.Query().Get("code"))
