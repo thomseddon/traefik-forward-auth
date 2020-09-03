@@ -175,6 +175,10 @@ func buildCSRFCookieName(nonce string) string {
 }
 
 // MakeCSRFCookie makes a csrf cookie (used during login only)
+//
+// Note, CSRF cookies live shorter than auth cookies, a fixed 1h.
+// That's because some CSRF cookies may belong to auth flows that don't complete
+// and thus may not get cleared by ClearCookie.
 func MakeCSRFCookie(r *http.Request, nonce string) *http.Cookie {
 	return &http.Cookie{
 		Name:     buildCSRFCookieName(nonce),
@@ -183,7 +187,7 @@ func MakeCSRFCookie(r *http.Request, nonce string) *http.Cookie {
 		Domain:   csrfCookieDomain(r),
 		HttpOnly: true,
 		Secure:   !config.InsecureCookie,
-		Expires:  cookieExpiry(),
+		Expires:  time.Now().Local().Add(time.Hour * 1),
 	}
 }
 
@@ -201,12 +205,7 @@ func ClearCSRFCookie(r *http.Request, c *http.Cookie) *http.Cookie {
 }
 
 // FindCSRFCookie extracts the CSRF cookie from the request based on state.
-func FindCSRFCookie(r *http.Request) (c *http.Cookie, err error) {
-	state := r.URL.Query().Get("state")
-	if len(state) < 34 {
-		return nil, errors.New("Invalid CSRF state value")
-	}
-
+func FindCSRFCookie(r *http.Request, state string) (c *http.Cookie, err error) {
 	// Check for CSRF cookie
 	c, err = r.Cookie(buildCSRFCookieName(state))
 	if err != nil {
@@ -216,15 +215,9 @@ func FindCSRFCookie(r *http.Request) (c *http.Cookie, err error) {
 }
 
 // ValidateCSRFCookie validates the csrf cookie against state
-func ValidateCSRFCookie(r *http.Request, c *http.Cookie) (valid bool, provider string, redirect string, err error) {
-	state := r.URL.Query().Get("state")
-
+func ValidateCSRFCookie(c *http.Cookie, state string) (valid bool, provider string, redirect string, err error) {
 	if len(c.Value) != 32 {
 		return false, "", "", errors.New("Invalid CSRF cookie value")
-	}
-
-	if len(state) < 34 {
-		return false, "", "", errors.New("Invalid CSRF state value")
 	}
 
 	// Check nonce match
@@ -246,6 +239,14 @@ func ValidateCSRFCookie(r *http.Request, c *http.Cookie) (valid bool, provider s
 // MakeState generates a state value
 func MakeState(r *http.Request, p provider.Provider, nonce string) string {
 	return fmt.Sprintf("%s:%s:%s", nonce, p.Name(), returnUrl(r))
+}
+
+// ValidateState checks whether the state is of right length.
+func ValidateState(state string) error {
+	if len(state) < 34 {
+		return errors.New("Invalid CSRF state value")
+	}
+	return nil
 }
 
 // Nonce generates a random nonce

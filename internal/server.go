@@ -120,9 +120,17 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Logging setup
 		logger := s.logger(r, "AuthCallback", "default", "Handling callback")
+		state := r.URL.Query().Get("state")
+		if err := ValidateState(state); err != nil {
+			logger.WithFields(logrus.Fields{
+				"error": err,
+			}).Warn("Bad CSRF state")
+			http.Error(w, "Not authorized", 401)
+			return
+		}
 
 		// Check for CSRF cookie
-		c, err := FindCSRFCookie(r)
+		c, err := FindCSRFCookie(r, state)
 		if err != nil {
 			logger.Info("Missing csrf cookie")
 			http.Error(w, "Not authorized", 401)
@@ -130,7 +138,7 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 		}
 
 		// Validate state
-		valid, providerName, redirect, err := ValidateCSRFCookie(r, c)
+		valid, providerName, redirect, err := ValidateCSRFCookie(c, state)
 		if !valid {
 			logger.WithFields(logrus.Fields{
 				"error":       err,
