@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"errors"
+	pkce "github.com/nirasan/go-oauth-pkce-code-verifier"
 
 	"github.com/coreos/go-oidc"
 	"golang.org/x/oauth2"
@@ -13,11 +14,13 @@ type OIDC struct {
 	IssuerURL    string `long:"issuer-url" env:"ISSUER_URL" description:"Issuer URL"`
 	ClientID     string `long:"client-id" env:"CLIENT_ID" description:"Client ID"`
 	ClientSecret string `long:"client-secret" env:"CLIENT_SECRET" description:"Client Secret" json:"-"`
+	PkceRequired bool   `long:"pkce-required" env:"PKCE_REQUIRED" description:"Optional pkce required indicator"`
 
 	OAuthProvider
 
-	provider *oidc.Provider
-	verifier *oidc.IDTokenVerifier
+	provider     *oidc.Provider
+	verifier     *oidc.IDTokenVerifier
+	pkceVerifier *pkce.CodeVerifier
 }
 
 // Name returns the name of the provider
@@ -61,12 +64,24 @@ func (o *OIDC) Setup() error {
 
 // GetLoginURL provides the login url for the given redirect uri and state
 func (o *OIDC) GetLoginURL(redirectURI, state string) string {
-	return o.OAuthGetLoginURL(redirectURI, state)
+	var opts []oauth2.AuthCodeOption
+	if o.PkceRequired {
+		o.pkceVerifier, _ = pkce.CreateCodeVerifier()
+		opts = append(opts, oauth2.SetAuthURLParam("code_challenge_method", "S256"))
+		opts = append(opts, oauth2.SetAuthURLParam("code_challenge", o.pkceVerifier.CodeChallengeS256()))
+	}
+	return o.OAuthGetLoginURL(redirectURI, state, opts...)
 }
 
 // ExchangeCode exchanges the given redirect uri and code for a token
 func (o *OIDC) ExchangeCode(redirectURI, code string) (string, error) {
-	token, err := o.OAuthExchangeCode(redirectURI, code)
+	var opts []oauth2.AuthCodeOption
+
+	if o.PkceRequired {
+		opts = append(opts, oauth2.SetAuthURLParam("code_verifier", o.pkceVerifier.String()))
+	}
+
+	token, err := o.OAuthExchangeCode(redirectURI, code, opts...)
 	if err != nil {
 		return "", err
 	}

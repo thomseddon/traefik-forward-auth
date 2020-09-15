@@ -61,6 +61,34 @@ func TestOIDCGetLoginURL(t *testing.T) {
 	assert.Equal("", provider.Config.RedirectURL)
 
 	//
+	// Test with PkceRequired config option
+	//
+	provider.PkceRequired = true
+
+	// Check url
+	uri, err = url.Parse(provider.GetLoginURL("http://example.com/_oauth", "state"))
+	assert.Nil(err)
+	assert.Equal(serverURL.Scheme, uri.Scheme)
+	assert.Equal(serverURL.Host, uri.Host)
+	assert.Equal("/auth", uri.Path)
+
+	// Check query string
+	qs = uri.Query()
+	expectedQs = url.Values{
+		"client_id":             []string{"idtest"},
+		"code_challenge":        []string{provider.pkceVerifier.CodeChallengeS256()},
+		"code_challenge_method": []string{"S256"},
+		"redirect_uri":          []string{"http://example.com/_oauth"},
+		"response_type":         []string{"code"},
+		"scope":                 []string{"openid profile email"},
+		"state":                 []string{"state"},
+	}
+	assert.Equal(expectedQs, qs)
+
+	// Calling the method should not modify the underlying config
+	assert.Equal("", provider.Config.RedirectURL)
+
+	//
 	// Test with resource config option
 	//
 	provider.Resource = "resourcetest"
