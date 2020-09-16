@@ -30,9 +30,13 @@ func (o *OIDC) Name() string {
 
 // Setup performs validation and setup
 func (o *OIDC) Setup() error {
-	// Check parms
-	if o.IssuerURL == "" || o.ClientID == "" || o.ClientSecret == "" {
-		return errors.New("providers.oidc.issuer-url, providers.oidc.client-id, providers.oidc.client-secret must be set")
+	// Check params
+	if o.IssuerURL == "" || o.ClientID == "" {
+		return errors.New("providers.oidc.issuer-url, providers.oidc.client-id must be set")
+	}
+
+	if o.ClientSecret == "" && !o.PkceRequired {
+		return errors.New("providers.oidc.client-secret must be set if pkce not required")
 	}
 
 	var err error

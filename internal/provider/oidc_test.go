@@ -29,7 +29,15 @@ func TestOIDCSetup(t *testing.T) {
 
 	err := p.Setup()
 	if assert.Error(err) {
-		assert.Equal("providers.oidc.issuer-url, providers.oidc.client-id, providers.oidc.client-secret must be set", err.Error())
+		assert.Equal("providers.oidc.issuer-url, providers.oidc.client-id must be set", err.Error())
+	}
+
+	p.IssuerURL = "test"
+	p.ClientID = "test"
+
+	err = p.Setup()
+	if assert.Error(err) {
+		assert.Equal("providers.oidc.client-secret must be set if pkce not required", err.Error())
 	}
 }
 
