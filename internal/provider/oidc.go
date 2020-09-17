@@ -3,7 +3,7 @@ package provider
 import (
 	"context"
 	"errors"
-	pkce "github.com/nirasan/go-oauth-pkce-code-verifier"
+	"github.com/thomseddon/traefik-forward-auth/internal/pkce"
 	"strings"
 
 	"github.com/coreos/go-oidc"
@@ -67,7 +67,7 @@ func (o *OIDC) Setup() error {
 func (o *OIDC) GetLoginURL(redirectURI, state string) string {
 	var opts []oauth2.AuthCodeOption
 	if o.PkceRequired {
-		o.pkceVerifier, _ = pkce.CreateCodeVerifier()
+		o.pkceVerifier = pkce.CreateCodeVerifier()
 		opts = append(opts, oauth2.SetAuthURLParam("code_challenge_method", "S256"))
 		opts = append(opts, oauth2.SetAuthURLParam("code_challenge", o.pkceVerifier.CodeChallengeS256()))
 	}
