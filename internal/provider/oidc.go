@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	pkce "github.com/nirasan/go-oauth-pkce-code-verifier"
+	"strings"
 
 	"github.com/coreos/go-oidc"
 	"golang.org/x/oauth2"
@@ -31,12 +32,8 @@ func (o *OIDC) Name() string {
 // Setup performs validation and setup
 func (o *OIDC) Setup() error {
 	// Check params
-	if o.IssuerURL == "" || o.ClientID == "" {
-		return errors.New("providers.oidc.issuer-url, providers.oidc.client-id must be set")
-	}
-
-	if o.ClientSecret == "" && !o.PkceRequired {
-		return errors.New("providers.oidc.client-secret must be set if pkce not required")
+	if err := o.checkParams(); err != nil {
+		return err
 	}
 
 	var err error
@@ -115,4 +112,26 @@ func (o *OIDC) GetUser(token string) (User, error) {
 	}
 
 	return user, nil
+}
+
+func (o *OIDC) checkParams() error {
+	if o.IssuerURL == "" || o.ClientID == "" || (o.ClientSecret == "" && !o.PkceRequired) {
+		var emptyFields []string
+
+		if o.IssuerURL == "" {
+			emptyFields = append(emptyFields, "providers.oidc.issuer-url")
+		}
+
+		if o.ClientID == "" {
+			emptyFields = append(emptyFields, "providers.oidc.client-id")
+		}
+
+		if o.ClientSecret == "" && !o.PkceRequired {
+			emptyFields = append(emptyFields, "providers.oidc.client-secret")
+		}
+
+		return errors.New(strings.Join(emptyFields, ", ") + " must be set")
+	}
+
+	return nil
 }
