@@ -121,16 +121,26 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 		// Logging setup
 		logger := s.logger(r, "AuthCallback", "default", "Handling callback")
 
+		// Check state
+		state := r.URL.Query().Get("state")
+		if err := ValidateState(state); err != nil {
+			logger.WithFields(logrus.Fields{
+				"error": err,
+			}).Warn("Error validating state")
+			http.Error(w, "Not authorized", 401)
+			return
+		}
+
 		// Check for CSRF cookie
-		c, err := r.Cookie(config.CSRFCookieName)
+		c, err := FindCSRFCookie(r, state)
 		if err != nil {
 			logger.Info("Missing csrf cookie")
 			http.Error(w, "Not authorized", 401)
 			return
 		}
 
-		// Validate state
-		valid, providerName, redirect, err := ValidateCSRFCookie(r, c)
+		// Validate CSRF cookie against state
+		valid, providerName, redirect, err := ValidateCSRFCookie(c, state)
 		if !valid {
 			logger.WithFields(logrus.Fields{
 				"error":       err,
@@ -153,7 +163,7 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 		}
 
 		// Clear CSRF cookie
-		http.SetCookie(w, ClearCSRFCookie(r))
+		http.SetCookie(w, ClearCSRFCookie(r, c))
 
 		// Exchange code for token
 		token, err := p.ExchangeCode(redirectUri(r), r.URL.Query().Get("code"))

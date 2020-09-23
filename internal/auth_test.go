@@ -1,7 +1,6 @@
 package tfa
 
 import (
-	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -217,29 +216,30 @@ func TestAuthMakeCSRFCookie(t *testing.T) {
 
 	// No cookie domain or auth url
 	c := MakeCSRFCookie(r, "12345678901234567890123456789012")
+	assert.Equal("_forward_auth_csrf_123456", c.Name)
 	assert.Equal("app.example.com", c.Domain)
 
 	// With cookie domain but no auth url
-	config = &Config{
-		CookieDomains: []CookieDomain{*NewCookieDomain("example.com")},
-	}
-	c = MakeCSRFCookie(r, "12345678901234567890123456789012")
+	config.CookieDomains = []CookieDomain{*NewCookieDomain("example.com")}
+	c = MakeCSRFCookie(r, "12222278901234567890123456789012")
+	assert.Equal("_forward_auth_csrf_122222", c.Name)
 	assert.Equal("app.example.com", c.Domain)
 
 	// With cookie domain and auth url
-	config = &Config{
-		AuthHost:      "auth.example.com",
-		CookieDomains: []CookieDomain{*NewCookieDomain("example.com")},
-	}
-	c = MakeCSRFCookie(r, "12345678901234567890123456789012")
+	config.AuthHost = "auth.example.com"
+	config.CookieDomains = []CookieDomain{*NewCookieDomain("example.com")}
+	c = MakeCSRFCookie(r, "12333378901234567890123456789012")
+	assert.Equal("_forward_auth_csrf_123333", c.Name)
 	assert.Equal("example.com", c.Domain)
 }
 
 func TestAuthClearCSRFCookie(t *testing.T) {
+	assert := assert.New(t)
 	config, _ = NewConfig([]string{})
 	r, _ := http.NewRequest("GET", "http://example.com", nil)
 
-	c := ClearCSRFCookie(r)
+	c := ClearCSRFCookie(r, &http.Cookie{Name: "someCsrfCookie"})
+	assert.Equal("someCsrfCookie", c.Name)
 	if c.Value != "" {
 		t.Error("ClearCSRFCookie should create cookie with empty value")
 	}
@@ -249,54 +249,55 @@ func TestAuthValidateCSRFCookie(t *testing.T) {
 	assert := assert.New(t)
 	config, _ = NewConfig([]string{})
 	c := &http.Cookie{}
-
-	newCsrfRequest := func(state string) *http.Request {
-		u := fmt.Sprintf("http://example.com?state=%s", state)
-		r, _ := http.NewRequest("GET", u, nil)
-		return r
-	}
+	state := ""
 
 	// Should require 32 char string
-	r := newCsrfRequest("")
+	state = ""
 	c.Value = ""
-	valid, _, _, err := ValidateCSRFCookie(r, c)
+	valid, _, _, err := ValidateCSRFCookie(c, state)
 	assert.False(valid)
 	if assert.Error(err) {
 		assert.Equal("Invalid CSRF cookie value", err.Error())
 	}
 	c.Value = "123456789012345678901234567890123"
-	valid, _, _, err = ValidateCSRFCookie(r, c)
+	valid, _, _, err = ValidateCSRFCookie(c, state)
 	assert.False(valid)
 	if assert.Error(err) {
 		assert.Equal("Invalid CSRF cookie value", err.Error())
 	}
 
-	// Should require valid state
-	r = newCsrfRequest("12345678901234567890123456789012:")
-	c.Value = "12345678901234567890123456789012"
-	valid, _, _, err = ValidateCSRFCookie(r, c)
-	assert.False(valid)
-	if assert.Error(err) {
-		assert.Equal("Invalid CSRF state value", err.Error())
-	}
-
 	// Should require provider
-	r = newCsrfRequest("12345678901234567890123456789012:99")
+	state = "12345678901234567890123456789012:99"
 	c.Value = "12345678901234567890123456789012"
-	valid, _, _, err = ValidateCSRFCookie(r, c)
+	valid, _, _, err = ValidateCSRFCookie(c, state)
 	assert.False(valid)
 	if assert.Error(err) {
 		assert.Equal("Invalid CSRF state format", err.Error())
 	}
 
 	// Should allow valid state
-	r = newCsrfRequest("12345678901234567890123456789012:p99:url123")
+	state = "12345678901234567890123456789012:p99:url123"
 	c.Value = "12345678901234567890123456789012"
-	valid, provider, redirect, err := ValidateCSRFCookie(r, c)
+	valid, provider, redirect, err := ValidateCSRFCookie(c, state)
 	assert.True(valid, "valid request should return valid")
 	assert.Nil(err, "valid request should not return an error")
 	assert.Equal("p99", provider, "valid request should return correct provider")
 	assert.Equal("url123", redirect, "valid request should return correct redirect")
+}
+
+func TestValidateState(t *testing.T) {
+	assert := assert.New(t)
+
+	// Should require valid state
+	state := "12345678901234567890123456789012:"
+	err := ValidateState(state)
+	if assert.Error(err) {
+		assert.Equal("Invalid CSRF state value", err.Error())
+	}
+	// Should pass this state
+	state = "12345678901234567890123456789012:p99:url123"
+	err = ValidateState(state)
+	assert.Nil(err, "valid request should not return an error")
 }
 
 func TestMakeState(t *testing.T) {
