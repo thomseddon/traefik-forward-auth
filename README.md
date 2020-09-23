@@ -321,6 +321,7 @@ All options can be supplied in any of the following ways, in the following prece
        - `action` - same usage as [`default-action`](#default-action), supported values:
            - `auth` (default)
            - `allow`
+       - `domains` - optional, same usage as [`domain`](#domain)
        - `provider` - same usage as [`default-provider`](#default-provider), supported values:
            - `google`
            - `oidc`
@@ -333,6 +334,7 @@ All options can be supplied in any of the following ways, in the following prece
            - ``Path(`path`, `/articles/{category}/{id:[0-9]+}`, ...)``
            - ``PathPrefix(`/products/`, `/articles/{category}/{id:[0-9]+}`)``
            - ``Query(`foo=bar`, `bar=baz`)``
+       - `whitelist` - optional, same usage as whitelist`](#whitelist)
 
    For example:
    ```
@@ -348,6 +350,11 @@ All options can be supplied in any of the following ways, in the following prece
    rule.oidc.action = auth
    rule.oidc.provider = oidc
    rule.oidc.rule = PathPrefix(`/github`)
+
+   # Allow jane@example.com to `/janes-eyes-only`
+   rule.two.action = allow
+   rule.two.rule = Path(`/janes-eyes-only`)
+   rule.two.whitelist = jane@example.com
    ```
 
    Note: It is possible to break your redirect flow with rules, please be careful not to create an `allow` rule that matches your redirect_uri unless you know what you're doing. This limitation is being tracked in in #101 and the behaviour will change in future releases.
@@ -361,7 +368,7 @@ You can restrict who can login with the following parameters:
 * `domain` - Use this to limit logins to a specific domain, e.g. test.com only
 * `whitelist` - Use this to only allow specific users to login e.g. thom@test.com only
 
-Note, if you pass both `whitelist` and `domain`, then the default behaviour is for only `whitelist` to be used and `domain` will be effectively ignored. You can allow users matching *either* `whitelist` or `domain` by passing the `match-whitelist-or-domain` parameter (this will be the default behaviour in v3).
+Note, if you pass both `whitelist` and `domain`, then the default behaviour is for only `whitelist` to be used and `domain` will be effectively ignored. You can allow users matching *either* `whitelist` or `domain` by passing the `match-whitelist-or-domain` parameter (this will be the default behaviour in v3). If you set `domains` or `whitelist` on a rule, the global configuration is ignored.
 
 ### Forwarded Headers
 
