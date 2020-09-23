@@ -120,11 +120,13 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Logging setup
 		logger := s.logger(r, "AuthCallback", "default", "Handling callback")
+
+		// Check state
 		state := r.URL.Query().Get("state")
 		if err := ValidateState(state); err != nil {
 			logger.WithFields(logrus.Fields{
 				"error": err,
-			}).Warn("Bad CSRF state")
+			}).Warn("Error validating state")
 			http.Error(w, "Not authorized", 401)
 			return
 		}
@@ -137,7 +139,7 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 			return
 		}
 
-		// Validate state
+		// Validate CSRF cookie against state
 		valid, providerName, redirect, err := ValidateCSRFCookie(c, state)
 		if !valid {
 			logger.WithFields(logrus.Fields{
