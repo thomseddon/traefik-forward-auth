@@ -49,18 +49,18 @@ func (p *OAuthProvider) ConfigCopy(redirectURI string) oauth2.Config {
 }
 
 // OAuthGetLoginURL provides a base "GetLoginURL" for proiders using OAauth2
-func (p *OAuthProvider) OAuthGetLoginURL(redirectURI, state string) string {
+func (p *OAuthProvider) OAuthGetLoginURL(redirectURI, state string, opts ...oauth2.AuthCodeOption) string {
 	config := p.ConfigCopy(redirectURI)
 
 	if p.Resource != "" {
 		return config.AuthCodeURL(state, oauth2.SetAuthURLParam("resource", p.Resource))
 	}
 
-	return config.AuthCodeURL(state)
+	return config.AuthCodeURL(state, opts...)
 }
 
 // OAuthExchangeCode provides a base "ExchangeCode" for proiders using OAauth2
-func (p *OAuthProvider) OAuthExchangeCode(redirectURI, code string) (*oauth2.Token, error) {
+func (p *OAuthProvider) OAuthExchangeCode(redirectURI, code string, opts ...oauth2.AuthCodeOption) (*oauth2.Token, error) {
 	config := p.ConfigCopy(redirectURI)
-	return config.Exchange(p.ctx, code)
+	return config.Exchange(p.ctx, code, opts...)
 }
