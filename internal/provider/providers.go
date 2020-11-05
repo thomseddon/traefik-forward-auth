@@ -18,7 +18,6 @@ type Provider interface {
 	GetLoginURL(redirectURI, state string) string
 	ExchangeCode(redirectURI, code string) (string, error)
 	GetUser(token string) (User, error)
-	GetUserFromCode(code, redirectURI string) (User, error)
 	Setup() error
 }
 
@@ -28,12 +27,10 @@ type token struct {
 
 // User is the authenticated user
 type User struct {
-	ID        string `json:"sub"`
-	Email     string `json:"email"`
-	Verified  bool   `json:"verified_email"`
-	Hd        string `json:"hd"`
-	FirstName string `json:"given_name"`
-	LastName  string `json:"family_name"`
+	ID       string `json:"id"`
+	Email    string `json:"email"`
+	Verified bool   `json:"verified_email"`
+	Hd       string `json:"hd"`
 }
 
 // OAuthProvider is a provider using the oauth2 library
