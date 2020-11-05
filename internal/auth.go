@@ -143,6 +143,23 @@ func MakeCookie(r *http.Request, email string) *http.Cookie {
 	}
 }
 
+// MakeUserCookie create's an UserInfo cookie
+func MakeUserCookie(r *http.Request, userInfo string) *http.Cookie {
+	expires := cookieExpiry()
+	mac := cookieSignature(r, userInfo, fmt.Sprintf("%d", expires.Unix()))
+	value := fmt.Sprintf("%s|%d|%s", mac, expires.Unix(), userInfo)
+
+	return &http.Cookie{
+		Name:     config.UserInfoCookie,
+		Value:    base64.StdEncoding.EncodeToString([]byte(value)),
+		Path:     "/",
+		Domain:   cookieDomain(r),
+		HttpOnly: true,
+		Secure:   !config.InsecureCookie,
+		Expires:  expires,
+	}
+}
+
 // Make a CSRF cookie (used during login only)
 func MakeCSRFCookie(r *http.Request, nonce string) *http.Cookie {
 	return &http.Cookie{

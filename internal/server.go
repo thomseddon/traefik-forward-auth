@@ -1,7 +1,9 @@
 package tfa
 
 import (
+	"fmt"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 
 	"github.com/containous/traefik/v2/pkg/rules"
@@ -110,7 +112,7 @@ func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 	}
 }
 
-// Handle auth callback
+// AuthCallbackHandler handle's auth callback
 func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Logging setup
@@ -143,24 +145,34 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 		// Clear CSRF cookie
 		http.SetCookie(w, ClearCSRFCookie(r))
 
-		// Exchange code for token
-		token, err := p.ExchangeCode(redirectUri(r), r.URL.Query().Get("code"))
+		b, err := httputil.DumpRequest(r, true)
 		if err != nil {
-			logger.Errorf("Code exchange failed with: %v", err)
-			http.Error(w, "Service unavailable", 503)
+			logger.Warnf("httputil.DumpRequest: %v", err)
+			http.Error(w, "Not authorized", 401)
 			return
 		}
-		// Get user
-		user, err := p.GetUser(token)
+		logger.Warnf("request dump: %s", string(b))
+
+		redirectURI := r.URL.Query().Get("redirect_uri")
+		if redirectURI == "" {
+			redirectURI = "https%3A%2F%2Fauth.bizapps-mock.cisco.com%2Fcallback"
+		}
+
+		user, err := p.GetUserFromCode(r.URL.Query().Get("code"), redirectURI)
 		if err != nil {
-			logger.Errorf("Error getting user: %s", err)
+			logger.Warnf("GetUserFromCode: %v", err)
+			http.Error(w, "Not authorized", 401)
 			return
 		}
+
 		logger.Debug("User ID--------------------------------------------------->" + user.ID)
 		logger.Debug("User Email--------------------------------------------------->" + user.Email)
+		logger.Debug("User FirstName--------------------------------------------------->" + user.FirstName)
+		logger.Debug("User LastName--------------------------------------------------->" + user.LastName)
 		// Generate cookie
 		http.SetCookie(w, MakeCookie(r, user.Email))
 		http.SetCookie(w, MakeCookie(r, user.ID))
+		http.SetCookie(w, MakeUserCookie(r, fmt.Sprintf("%s|%s|%s", user.Email, user.FirstName, user.LastName)))
 
 		logger.WithFields(logrus.Fields{
 			"user_Email": user.Email,
