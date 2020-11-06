@@ -8,6 +8,7 @@ import (
 
 var log *logrus.Logger
 
+// NewDefaultLogger creates a new logger based on the current configuration
 func NewDefaultLogger() *logrus.Logger {
 	// Setup logger
 	log = logrus.StandardLogger()

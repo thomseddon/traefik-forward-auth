@@ -18,9 +18,10 @@ Application Options:
   --cookie-name=                                        Cookie Name (default: _forward_auth) [$COOKIE_NAME]
   --csrf-cookie-name=                                   CSRF Cookie Name (default: _forward_auth_csrf) [$CSRF_COOKIE_NAME]
   --default-action=[auth|allow]                         Default action (default: auth) [$DEFAULT_ACTION]
-  --default-provider=[google|oidc]                      Default provider (default: google) [$DEFAULT_PROVIDER]
+  --default-provider=[google|oidc|generic-oauth]        Default provider (default: google) [$DEFAULT_PROVIDER]
   --domain=                                             Only allow given email domains, can be set multiple times [$DOMAIN]
   --lifetime=                                           Lifetime in seconds (default: 43200) [$LIFETIME]
+  --logout-redirect=                                    URL to redirect to following logout [$LOGOUT_REDIRECT]
   --url-path=                                           Callback URL Path (default: /_oauth) [$URL_PATH]
   --secret=                                             Secret used for signing (required) [$SECRET]
   --whitelist=                                          Only allow given email addresses, can be set multiple times [$WHITELIST]
@@ -30,6 +31,18 @@ OIDC Provider:
   --providers.oidc.issuer-url=                          Issuer URL [$PROVIDERS_OIDC_ISSUER_URL]
   --providers.oidc.client-id=                           Client ID [$PROVIDERS_OIDC_CLIENT_ID]
   --providers.oidc.client-secret=                       Client Secret [$PROVIDERS_OIDC_CLIENT_SECRET]
+  --providers.oidc.resource=                            Optional resource indicator [$PROVIDERS_OIDC_RESOURCE]
+
+Generic OAuth2 Provider:
+  --providers.generic-oauth.auth-url=                   Auth/Login URL [$PROVIDERS_GENERIC_OAUTH_AUTH_URL]
+  --providers.generic-oauth.token-url=                  Token URL [$PROVIDERS_GENERIC_OAUTH_TOKEN_URL]
+  --providers.generic-oauth.user-url=                   URL used to retrieve user info [$PROVIDERS_GENERIC_OAUTH_USER_URL]
+  --providers.generic-oauth.client-id=                  Client ID [$PROVIDERS_GENERIC_OAUTH_CLIENT_ID]
+  --providers.generic-oauth.client-secret=              Client Secret [$PROVIDERS_GENERIC_OAUTH_CLIENT_SECRET]
+  --providers.generic-oauth.scope=                      Scopes (default: profile, email) [$PROVIDERS_GENERIC_OAUTH_SCOPE]
+  --providers.generic-oauth.token-style=[header|query]  How token is presented when querying the User URL (default: header)
+                                                        [$PROVIDERS_GENERIC_OAUTH_TOKEN_STYLE]
+  --providers.generic-oauth.resource=                   Optional resource indicator [$PROVIDERS_GENERIC_OAUTH_RESOURCE]
 
 Help Options:
   -h, --help                                            Show this help message

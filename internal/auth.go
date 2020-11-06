@@ -17,6 +17,7 @@ import (
 
 // Request Validation
 
+// ValidateCookie verifies that a cookie matches the expected format of:
 // Cookie = hash(secret, cookie domain, email, expires)|expires|email
 func ValidateCookie(r *http.Request, c *http.Cookie) (string, error) {
 	parts := strings.Split(c.Value, "|")
@@ -55,30 +56,69 @@ func ValidateCookie(r *http.Request, c *http.Cookie) (string, error) {
 	return parts[2], nil
 }
 
-// Validate email
-func ValidateEmail(email string) bool {
-	found := false
-	if len(config.Whitelist) > 0 {
-		for _, whitelist := range config.Whitelist {
-			if email == whitelist {
-				found = true
-			}
+// ValidateEmail checks if the given email address matches either a whitelisted
+// email address, as defined by the "whitelist" config parameter. Or is part of
+// a permitted domain, as defined by the "domains" config parameter
+func ValidateEmail(email, ruleName string) bool {
+	// Use global config by default
+	whitelist := config.Whitelist
+	domains := config.Domains
+
+	if rule, ok := config.Rules[ruleName]; ok {
+		// Override with rule config if found
+		if len(rule.Whitelist) > 0 || len(rule.Domains) > 0 {
+			whitelist = rule.Whitelist
+			domains = rule.Domains
 		}
-	} else if len(config.Domains) > 0 {
-		parts := strings.Split(email, "@")
-		if len(parts) < 2 {
-			return false
-		}
-		for _, domain := range config.Domains {
-			if domain == parts[1] {
-				found = true
-			}
-		}
-	} else {
+	}
+
+	// Do we have any validation to perform?
+	if len(whitelist) == 0 && len(domains) == 0 {
 		return true
 	}
 
-	return found
+	// Email whitelist validation
+	if len(whitelist) > 0 {
+		if ValidateWhitelist(email, whitelist) {
+			return true
+		}
+
+		// If we're not matching *either*, stop here
+		if !config.MatchWhitelistOrDomain {
+			return false
+		}
+	}
+
+	// Domain validation
+	if len(domains) > 0 && ValidateDomains(email, domains) {
+		return true
+	}
+
+	return false
+}
+
+// ValidateWhitelist checks if the email is in whitelist
+func ValidateWhitelist(email string, whitelist CommaSeparatedList) bool {
+	for _, whitelist := range whitelist {
+		if email == whitelist {
+			return true
+		}
+	}
+	return false
+}
+
+// ValidateDomains checks if the email matches a whitelisted domain
+func ValidateDomains(email string, domains CommaSeparatedList) bool {
+	parts := strings.Split(email, "@")
+	if len(parts) < 2 {
+		return false
+	}
+	for _, domain := range domains {
+		if domain == parts[1] {
+			return true
+		}
+	}
+	return false
 }
 
 // Utility methods
@@ -126,7 +166,7 @@ func useAuthDomain(r *http.Request) (bool, string) {
 
 // Cookie methods
 
-// Create an auth cookie
+// MakeCookie creates an auth cookie
 func MakeCookie(r *http.Request, email string) *http.Cookie {
 	expires := cookieExpiry()
 	mac := cookieSignature(r, email, fmt.Sprintf("%d", expires.Unix()))
@@ -143,23 +183,44 @@ func MakeCookie(r *http.Request, email string) *http.Cookie {
 	}
 }
 
-// Make a CSRF cookie (used during login only)
+// ClearCookie clears the auth cookie
+func ClearCookie(r *http.Request) *http.Cookie {
+	return &http.Cookie{
+		Name:     config.CookieName,
+		Value:    "",
+		Path:     "/",
+		Domain:   cookieDomain(r),
+		HttpOnly: true,
+		Secure:   !config.InsecureCookie,
+		Expires:  time.Now().Local().Add(time.Hour * -1),
+	}
+}
+
+func buildCSRFCookieName(nonce string) string {
+	return config.CSRFCookieName + "_" + nonce[:6]
+}
+
+// MakeCSRFCookie makes a csrf cookie (used during login only)
+//
+// Note, CSRF cookies live shorter than auth cookies, a fixed 1h.
+// That's because some CSRF cookies may belong to auth flows that don't complete
+// and thus may not get cleared by ClearCookie.
 func MakeCSRFCookie(r *http.Request, nonce string) *http.Cookie {
 	return &http.Cookie{
-		Name:     config.CSRFCookieName,
+		Name:     buildCSRFCookieName(nonce),
 		Value:    nonce,
 		Path:     "/",
 		Domain:   csrfCookieDomain(r),
 		HttpOnly: true,
 		Secure:   !config.InsecureCookie,
-		Expires:  cookieExpiry(),
+		Expires:  time.Now().Local().Add(time.Hour * 1),
 	}
 }
 
-// Create a cookie to clear csrf cookie
-func ClearCSRFCookie(r *http.Request) *http.Cookie {
+// ClearCSRFCookie makes an expired csrf cookie to clear csrf cookie
+func ClearCSRFCookie(r *http.Request, c *http.Cookie) *http.Cookie {
 	return &http.Cookie{
-		Name:     config.CSRFCookieName,
+		Name:     c.Name,
 		Value:    "",
 		Path:     "/",
 		Domain:   csrfCookieDomain(r),
@@ -169,16 +230,16 @@ func ClearCSRFCookie(r *http.Request) *http.Cookie {
 	}
 }
 
-// Validate the csrf cookie against state
-func ValidateCSRFCookie(r *http.Request, c *http.Cookie) (valid bool, provider string, redirect string, err error) {
-	state := r.URL.Query().Get("state")
+// FindCSRFCookie extracts the CSRF cookie from the request based on state.
+func FindCSRFCookie(r *http.Request, state string) (c *http.Cookie, err error) {
+	// Check for CSRF cookie
+	return r.Cookie(buildCSRFCookieName(state))
+}
 
+// ValidateCSRFCookie validates the csrf cookie against state
+func ValidateCSRFCookie(c *http.Cookie, state string) (valid bool, provider string, redirect string, err error) {
 	if len(c.Value) != 32 {
 		return false, "", "", errors.New("Invalid CSRF cookie value")
-	}
-
-	if len(state) < 34 {
-		return false, "", "", errors.New("Invalid CSRF state value")
 	}
 
 	// Check nonce match
@@ -197,12 +258,21 @@ func ValidateCSRFCookie(r *http.Request, c *http.Cookie) (valid bool, provider s
 	return true, params[:split], params[split+1:], nil
 }
 
+// MakeState generates a state value
 func MakeState(r *http.Request, p provider.Provider, nonce string) string {
 	return fmt.Sprintf("%s:%s:%s", nonce, p.Name(), returnUrl(r))
 }
 
+// ValidateState checks whether the state is of right length.
+func ValidateState(state string) error {
+	if len(state) < 34 {
+		return errors.New("Invalid CSRF state value")
+	}
+	return nil
+}
+
+// Nonce generates a random nonce
 func Nonce() (error, string) {
-	// Make nonce
 	nonce := make([]byte, 16)
 	_, err := rand.Read(nonce)
 	if err != nil {
@@ -263,9 +333,7 @@ func cookieExpiry() time.Time {
 	return time.Now().Local().Add(config.Lifetime)
 }
 
-// Cookie Domain
-
-// Cookie Domain
+// CookieDomain holds cookie domain info
 type CookieDomain struct {
 	Domain       string
 	DomainLen    int
@@ -273,6 +341,7 @@ type CookieDomain struct {
 	SubDomainLen int
 }
 
+// NewCookieDomain creates a new CookieDomain from the given domain string
 func NewCookieDomain(domain string) *CookieDomain {
 	return &CookieDomain{
 		Domain:       domain,
@@ -282,6 +351,7 @@ func NewCookieDomain(domain string) *CookieDomain {
 	}
 }
 
+// Match checks if the given host matches this CookieDomain
 func (c *CookieDomain) Match(host string) bool {
 	// Exact domain match?
 	if host == c.Domain {
@@ -296,19 +366,22 @@ func (c *CookieDomain) Match(host string) bool {
 	return false
 }
 
+// UnmarshalFlag converts a string to a CookieDomain
 func (c *CookieDomain) UnmarshalFlag(value string) error {
 	*c = *NewCookieDomain(value)
 	return nil
 }
 
+// MarshalFlag converts a CookieDomain to a string
 func (c *CookieDomain) MarshalFlag() (string, error) {
 	return c.Domain, nil
 }
 
-// Legacy support for comma separated list of cookie domains
-
+// CookieDomains provides legacy sypport for comma separated list of cookie domains
 type CookieDomains []CookieDomain
 
+// UnmarshalFlag converts a comma separated list of cookie domains to an array
+// of CookieDomains
 func (c *CookieDomains) UnmarshalFlag(value string) error {
 	if len(value) > 0 {
 		for _, d := range strings.Split(value, ",") {
@@ -319,6 +392,7 @@ func (c *CookieDomains) UnmarshalFlag(value string) error {
 	return nil
 }
 
+// MarshalFlag converts an array of CookieDomain to a comma seperated list
 func (c *CookieDomains) MarshalFlag() (string, error) {
 	var domains []string
 	for _, d := range *c {
