@@ -27,7 +27,7 @@ type token struct {
 
 // User is the authenticated user
 type User struct {
-	ID       string `json:"id"`
+	ID       string `json:"sub"`
 	Email    string `json:"email"`
 	Verified bool   `json:"verified_email"`
 	Hd       string `json:"hd"`
