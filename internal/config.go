@@ -41,6 +41,12 @@ type Config struct {
 	Whitelist              CommaSeparatedList   `long:"whitelist" env:"WHITELIST" env-delim:"," description:"Only allow given email addresses, can be set multiple times"`
 	Port                   int                  `long:"port" env:"PORT" default:"4181" description:"Port to listen on"`
 
+	GoogleGroups                 CommaSeparatedList `long:"google-group" env:"GOOGLE_GROUP" env-delim:"," description:"Only allow given Google groups, can be set multiple times"`
+	GoogleDomain                 string             `long:"google-domain" env:"GOOGLE_DOMAIN" description:"Google domain used for gcloud API"`
+	GoogleApplicationCredentials string             `long:"google-application-credentials" env:"GOOGLE_APPLICATION_CREDENTIALS" description:"Google service account JSON file used for gcloud API"`
+	GoogleActingAdminEmail       string             `long:"google-acting-admin-email" env:"GOOGLE_ACTING_ADMIN_EMAIL" description:"The gcloud admin account the service account delegates to for gcloud API"`
+	GoogleExpirySeconds          int64              `long:"google-expiry-seconds" env:"GOOGLE_EXPIRY_SECONDS" default:"300" description:"How long a users Google groups list is cached before refreshing from the API"`
+
 	Providers provider.Providers `group:"providers" namespace:"providers" env-namespace:"PROVIDERS"`
 	Rules     map[string]*Rule   `long:"rule.<name>.<param>" description:"Rule definitions, param can be: \"action\", \"rule\" or \"provider\""`
 
@@ -219,6 +225,10 @@ func (c *Config) parseUnknownFlag(option string, arg flags.SplitArgument, args [
 			list := CommaSeparatedList{}
 			list.UnmarshalFlag(val)
 			rule.Domains = list
+		case "google_groups":
+			list := CommaSeparatedList{}
+			list.UnmarshalFlag(val)
+			rule.GoogleGroups = list
 		default:
 			return args, fmt.Errorf("invalid route param: %v", option)
 		}
@@ -255,6 +265,18 @@ func (c *Config) Validate() {
 	// Check for show stopper errors
 	if len(c.Secret) == 0 {
 		log.Fatal("\"secret\" option must be set")
+	}
+
+	if len(c.GoogleGroups) > 0 {
+		if len(c.GoogleDomain) == 0 {
+			log.Fatal("\"google-domain\" option must be set if google-groups is set")
+		}
+		if len(c.GoogleApplicationCredentials) == 0 {
+			log.Fatal("\"google-application-credentials\" option must be set if google-groups is set")
+		}
+		if len(c.GoogleActingAdminEmail) == 0 {
+			log.Fatal("\"google-acting-admin-email\" option must be set if google-groups is set")
+		}
 	}
 
 	// Setup default provider
@@ -336,11 +358,12 @@ func (c *Config) setupProvider(name string) error {
 
 // Rule holds defined rules
 type Rule struct {
-	Action    string
-	Rule      string
-	Provider  string
-	Whitelist CommaSeparatedList
-	Domains   CommaSeparatedList
+	Action       string
+	Rule         string
+	Provider     string
+	Whitelist    CommaSeparatedList
+	Domains      CommaSeparatedList
+	GoogleGroups CommaSeparatedList
 }
 
 // NewRule creates a new rule object
@@ -360,6 +383,18 @@ func (r *Rule) formattedRule() string {
 func (r *Rule) Validate(c *Config) error {
 	if r.Action != "auth" && r.Action != "allow" {
 		return errors.New("invalid rule action, must be \"auth\" or \"allow\"")
+	}
+
+	if len(r.GoogleGroups) > 0 {
+		if len(c.GoogleDomain) == 0 {
+			return errors.New("\"google-domain\" option must be set if google_groups is set in a rule")
+		}
+		if len(c.GoogleApplicationCredentials) == 0 {
+			return errors.New("\"google-application-credentials\" option must be set if google_groups is set in a rule")
+		}
+		if len(c.GoogleActingAdminEmail) == 0 {
+			return errors.New("\"google-acting-admin-email\" option must be set if google_groups is set in a rule")
+		}
 	}
 
 	return c.setupProvider(r.Provider)
