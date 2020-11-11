@@ -7,4 +7,7 @@ NAME=$(shell basename $(CURDIR))
 format:
 	gofmt -w -s internal/*.go internal/provider/*.go cmd/*.go
 
-.PHONY: format
+test:
+	go test -v ./...
+
+.PHONY: format test

@@ -19,23 +19,26 @@ import (
 
 var config *Config
 
+// Config holds the runtime application config
 type Config struct {
 	LogLevel  string `long:"log-level" env:"LOG_LEVEL" default:"warn" choice:"trace" choice:"debug" choice:"info" choice:"warn" choice:"error" choice:"fatal" choice:"panic" description:"Log level"`
 	LogFormat string `long:"log-format"  env:"LOG_FORMAT" default:"text" choice:"text" choice:"json" choice:"pretty" description:"Log format"`
 
-	AuthHost        string               `long:"auth-host" env:"AUTH_HOST" description:"Single host to use when returning from 3rd party auth"`
-	Config          func(s string) error `long:"config" env:"CONFIG" description:"Path to config file" json:"-"`
-	CookieDomains   []CookieDomain       `long:"cookie-domain" env:"COOKIE_DOMAIN" description:"Domain to set auth cookie on, can be set multiple times"`
-	InsecureCookie  bool                 `long:"insecure-cookie" env:"INSECURE_COOKIE" description:"Use insecure cookies"`
-	CookieName      string               `long:"cookie-name" env:"COOKIE_NAME" default:"_forward_auth" description:"Cookie Name"`
-	CSRFCookieName  string               `long:"csrf-cookie-name" env:"CSRF_COOKIE_NAME" default:"_forward_auth_csrf" description:"CSRF Cookie Name"`
-	DefaultAction   string               `long:"default-action" env:"DEFAULT_ACTION" default:"auth" choice:"auth" choice:"allow" description:"Default action"`
-	DefaultProvider string               `long:"default-provider" env:"DEFAULT_PROVIDER" default:"google" choice:"google" choice:"oidc" description:"Default provider"`
-	Domains         CommaSeparatedList   `long:"domain" env:"DOMAIN" description:"Only allow given email domains, can be set multiple times"`
-	LifetimeString  int                  `long:"lifetime" env:"LIFETIME" default:"43200" description:"Lifetime in seconds"`
-	Path            string               `long:"url-path" env:"URL_PATH" default:"/_oauth" description:"Callback URL Path"`
-	SecretString    string               `long:"secret" env:"SECRET" description:"Secret used for signing (required)" json:"-"`
-	Whitelist       CommaSeparatedList   `long:"whitelist" env:"WHITELIST" description:"Only allow given email addresses, can be set multiple times"`
+	AuthHost               string               `long:"auth-host" env:"AUTH_HOST" description:"Single host to use when returning from 3rd party auth"`
+	Config                 func(s string) error `long:"config" env:"CONFIG" description:"Path to config file" json:"-"`
+	CookieDomains          []CookieDomain       `long:"cookie-domain" env:"COOKIE_DOMAIN" env-delim:"," description:"Domain to set auth cookie on, can be set multiple times"`
+	InsecureCookie         bool                 `long:"insecure-cookie" env:"INSECURE_COOKIE" description:"Use insecure cookies"`
+	CookieName             string               `long:"cookie-name" env:"COOKIE_NAME" default:"_forward_auth" description:"Cookie Name"`
+	CSRFCookieName         string               `long:"csrf-cookie-name" env:"CSRF_COOKIE_NAME" default:"_forward_auth_csrf" description:"CSRF Cookie Name"`
+	DefaultAction          string               `long:"default-action" env:"DEFAULT_ACTION" default:"auth" choice:"auth" choice:"allow" description:"Default action"`
+	DefaultProvider        string               `long:"default-provider" env:"DEFAULT_PROVIDER" default:"google" choice:"google" choice:"oidc" choice:"generic-oauth" description:"Default provider"`
+	Domains                CommaSeparatedList   `long:"domain" env:"DOMAIN" env-delim:"," description:"Only allow given email domains, can be set multiple times"`
+	LifetimeString         int                  `long:"lifetime" env:"LIFETIME" default:"43200" description:"Lifetime in seconds"`
+	LogoutRedirect         string               `long:"logout-redirect" env:"LOGOUT_REDIRECT" description:"URL to redirect to following logout"`
+	MatchWhitelistOrDomain bool                 `long:"match-whitelist-or-domain" env:"MATCH_WHITELIST_OR_DOMAIN" description:"Allow users that match *either* whitelist or domain (enabled by default in v3)"`
+	Path                   string               `long:"url-path" env:"URL_PATH" default:"/_oauth" description:"Callback URL Path"`
+	SecretString           string               `long:"secret" env:"SECRET" description:"Secret used for signing (required)" json:"-"`
+	Whitelist              CommaSeparatedList   `long:"whitelist" env:"WHITELIST" env-delim:"," description:"Only allow given email addresses, can be set multiple times"`
 
 	Providers provider.Providers `group:"providers" namespace:"providers" env-namespace:"PROVIDERS"`
 	Rules     map[string]*Rule   `long:"rule.<name>.<param>" description:"Rule definitions, param can be: \"action\", \"rule\" or \"provider\""`
@@ -45,6 +48,7 @@ type Config struct {
 	Lifetime time.Duration
 }
 
+// NewGlobalConfig creates a new global config, parsed from command arguments
 func NewGlobalConfig() *Config {
 	var err error
 	config, err = NewConfig(os.Args[1:])
@@ -58,6 +62,7 @@ func NewGlobalConfig() *Config {
 
 // TODO: move config parsing into new func "NewParsedConfig"
 
+// NewConfig parses and validates provided configuration into a config object
 func NewConfig(args []string) (*Config, error) {
 	c := &Config{
 		Rules: map[string]*Rule{},
@@ -168,6 +173,14 @@ func (c *Config) parseUnknownFlag(option string, arg flags.SplitArgument, args [
 			rule.Rule = val
 		case "provider":
 			rule.Provider = val
+		case "whitelist":
+			list := CommaSeparatedList{}
+			list.UnmarshalFlag(val)
+			rule.Whitelist = list
+		case "domains":
+			list := CommaSeparatedList{}
+			list.UnmarshalFlag(val)
+			rule.Domains = list
 		default:
 			return args, fmt.Errorf("invalid route param: %v", option)
 		}
@@ -199,6 +212,7 @@ func convertLegacyToIni(name string) (io.Reader, error) {
 	return bytes.NewReader(legacyFileFormat.ReplaceAll(b, []byte("$1=$2"))), nil
 }
 
+// Validate validates a config object
 func (c *Config) Validate() {
 	// Check for show stopper errors
 	if len(c.Secret) == 0 {
@@ -278,12 +292,16 @@ func (c *Config) setupProvider(name string) error {
 	return nil
 }
 
+// Rule holds defined rules
 type Rule struct {
-	Action   string
-	Rule     string
-	Provider string
+	Action    string
+	Rule      string
+	Provider  string
+	Whitelist CommaSeparatedList
+	Domains   CommaSeparatedList
 }
 
+// NewRule creates a new rule object
 func NewRule() *Rule {
 	return &Rule{
 		Action: "auth",
@@ -296,6 +314,7 @@ func (r *Rule) formattedRule() string {
 	return strings.ReplaceAll(r.Rule, "Host(", "HostRegexp(")
 }
 
+// Validate validates a rule
 func (r *Rule) Validate(c *Config) error {
 	if r.Action != "auth" && r.Action != "allow" {
 		return errors.New("invalid rule action, must be \"auth\" or \"allow\"")
@@ -306,13 +325,16 @@ func (r *Rule) Validate(c *Config) error {
 
 // Legacy support for comma separated lists
 
+// CommaSeparatedList provides legacy support for config values provided as csv
 type CommaSeparatedList []string
 
+// UnmarshalFlag converts a comma separated list to an array
 func (c *CommaSeparatedList) UnmarshalFlag(value string) error {
 	*c = append(*c, strings.Split(value, ",")...)
 	return nil
 }
 
+// MarshalFlag converts an array back to a comma separated list
 func (c *CommaSeparatedList) MarshalFlag() (string, error) {
 	return strings.Join(*c, ","), nil
 }

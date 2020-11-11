@@ -24,7 +24,7 @@ func main() {
 	http.HandleFunc("/", server.RootHandler)
 
 	// Start
-	log.Debugf("Starting with options: %s", config)
+	log.WithField("config", config).Debug("Starting with config")
 	log.Info("Listening on :4181")
 	log.Info(http.ListenAndServe(":4181", nil))
 }

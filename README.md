@@ -21,6 +21,7 @@ Application Options:
   --default-provider=[google|oidc]                      Default provider (default: google) [$DEFAULT_PROVIDER]
   --domain=                                             Only allow given email domains, can be set multiple times [$DOMAIN]
   --lifetime=                                           Lifetime in seconds (default: 43200) [$LIFETIME]
+  --logout-redirect=                                    URL to redirect to following logout [$LOGOUT_REDIRECT]
   --url-path=                                           Callback URL Path (default: /_oauth) [$URL_PATH]
   --secret=                                             Secret used for signing (required) [$SECRET]
   --whitelist=                                          Only allow given email addresses, can be set multiple times [$WHITELIST]
@@ -30,6 +31,7 @@ OIDC Provider:
   --providers.oidc.issuer-url=                          Issuer URL [$PROVIDERS_OIDC_ISSUER_URL]
   --providers.oidc.client-id=                           Client ID [$PROVIDERS_OIDC_CLIENT_ID]
   --providers.oidc.client-secret=                       Client Secret [$PROVIDERS_OIDC_CLIENT_SECRET]
+  --providers.oidc.resource=                            Optional resource indicator [$PROVIDERS_OIDC_RESOURCE]
 
 Help Options:
   -h, --help                                            Show this help message
