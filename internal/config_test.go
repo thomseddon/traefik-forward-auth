@@ -38,6 +38,7 @@ func TestConfigDefaults(t *testing.T) {
 	assert.Equal("/_oauth", c.Path)
 	assert.Len(c.Whitelist, 0)
 	assert.Equal(c.Port, 4181)
+	assert.Len(c.GoogleGroups, 0)
 
 	assert.Equal("select_account", c.Providers.Google.Prompt)
 }
@@ -207,6 +208,7 @@ func TestConfigParseEnvironment(t *testing.T) {
 	os.Setenv("COOKIE_DOMAIN", "test1.com,example.org")
 	os.Setenv("DOMAIN", "test2.com,example.org")
 	os.Setenv("WHITELIST", "test3.com,example.org")
+	os.Setenv("GOOGLE_GROUP", "group1,group2")
 
 	c, err := NewConfig([]string{})
 	assert.Nil(err)
@@ -219,12 +221,14 @@ func TestConfigParseEnvironment(t *testing.T) {
 	}, c.CookieDomains, "array variable should be read from environment COOKIE_DOMAIN")
 	assert.Equal(CommaSeparatedList{"test2.com", "example.org"}, c.Domains, "array variable should be read from environment DOMAIN")
 	assert.Equal(CommaSeparatedList{"test3.com", "example.org"}, c.Whitelist, "array variable should be read from environment WHITELIST")
+	assert.Equal(CommaSeparatedList{"group1", "group2"}, c.GoogleGroups, "array variable should be read from environment GOOGLE_GROUP")
 
 	os.Unsetenv("COOKIE_NAME")
 	os.Unsetenv("PROVIDERS_GOOGLE_CLIENT_ID")
 	os.Unsetenv("COOKIE_DOMAIN")
 	os.Unsetenv("DOMAIN")
 	os.Unsetenv("WHITELIST")
+	os.Unsetenv("GOOGLE_GROUP")
 }
 
 func TestConfigParseEnvironmentBackwardsCompatability(t *testing.T) {
