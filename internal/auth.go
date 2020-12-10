@@ -125,24 +125,19 @@ func ValidateDomains(email string, domains CommaSeparatedList) bool {
 
 // Get the redirect base
 func redirectBase(r *http.Request) string {
-	proto := r.Header.Get("X-Forwarded-Proto")
-	host := r.Header.Get("X-Forwarded-Host")
-
-	return fmt.Sprintf("%s://%s", proto, host)
+	return fmt.Sprintf("%s://%s", r.Header.Get("X-Forwarded-Proto"), r.Host)
 }
 
 // Return url
 func returnUrl(r *http.Request) string {
-	path := r.Header.Get("X-Forwarded-Uri")
-
-	return fmt.Sprintf("%s%s", redirectBase(r), path)
+	return fmt.Sprintf("%s%s", redirectBase(r), r.URL.Path)
 }
 
 // Get oauth redirect uri
 func redirectUri(r *http.Request) string {
 	if use, _ := useAuthDomain(r); use {
-		proto := r.Header.Get("X-Forwarded-Proto")
-		return fmt.Sprintf("%s://%s%s", proto, config.AuthHost, config.Path)
+		p := r.Header.Get("X-Forwarded-Proto")
+		return fmt.Sprintf("%s://%s%s", p, config.AuthHost, config.Path)
 	}
 
 	return fmt.Sprintf("%s%s", redirectBase(r), config.Path)
@@ -155,7 +150,7 @@ func useAuthDomain(r *http.Request) (bool, string) {
 	}
 
 	// Does the request match a given cookie domain?
-	reqMatch, reqHost := matchCookieDomains(r.Header.Get("X-Forwarded-Host"))
+	reqMatch, reqHost := matchCookieDomains(r.Host)
 
 	// Do any of the auth hosts match a cookie domain?
 	authMatch, authHost := matchCookieDomains(config.AuthHost)
@@ -284,10 +279,8 @@ func Nonce() (error, string) {
 
 // Cookie domain
 func cookieDomain(r *http.Request) string {
-	host := r.Header.Get("X-Forwarded-Host")
-
 	// Check if any of the given cookie domains matches
-	_, domain := matchCookieDomains(host)
+	_, domain := matchCookieDomains(r.Host)
 	return domain
 }
 
@@ -297,7 +290,7 @@ func csrfCookieDomain(r *http.Request) string {
 	if use, domain := useAuthDomain(r); use {
 		host = domain
 	} else {
-		host = r.Header.Get("X-Forwarded-Host")
+		host = r.Host
 	}
 
 	// Remove port
