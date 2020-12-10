@@ -9,8 +9,8 @@ A minimal forward authentication service that provides OAuth/SSO login and authe
 - Seamlessly overlays any http service with a single endpoint (see: `url-path` in [Configuration](#configuration))
 - Supports multiple providers including Google and OpenID Connect (supported by Azure, Github, Salesforce etc.)
 - Supports multiple domains/subdomains by dynamically generating redirect_uri's
-- Allows authentication to be selectively applied/bypassed based on request parameters (see `rules` in [Configuration](#configuration)))
-- Supports use of centralised authentication host/redirect_uri (see `auth-host` in [Configuration](#configuration)))
+- Allows authentication to be selectively applied/bypassed based on request parameters (see `rules` in [Configuration](#configuration))
+- Supports use of centralised authentication host/redirect_uri (see `auth-host` in [Configuration](#configuration))
 - Allows authentication to persist across multiple domains (see [Cookie Domains](#cookie-domains))
 - Supports extended authentication beyond Google token lifetime (see: `lifetime` in [Configuration](#configuration))
 
