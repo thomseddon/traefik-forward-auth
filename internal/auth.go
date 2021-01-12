@@ -59,18 +59,28 @@ func ValidateCookie(r *http.Request, c *http.Cookie) (string, error) {
 // ValidateUser checks if the given user matches either a whitelisted
 // user, as defined by the "whitelist" config parameter. Or is part of
 // a permitted domain, as defined by the "domains" config parameter
-func ValidateUser(user string) bool {
+func ValidateUser(user, ruleName string) bool {
+	// Use global config by default
+	whitelist := config.Whitelist
+	domains := config.Domains
+
+	if rule, ok := config.Rules[ruleName]; ok {
+		// Override with rule config if found
+		if len(rule.Whitelist) > 0 || len(rule.Domains) > 0 {
+			whitelist = rule.Whitelist
+			domains = rule.Domains
+		}
+	}
+
 	// Do we have any validation to perform?
-	if len(config.Whitelist) == 0 && len(config.Domains) == 0 {
+	if len(whitelist) == 0 && len(domains) == 0 {
 		return true
 	}
 
 	// Email whitelist validation
-	if len(config.Whitelist) > 0 {
-		for _, whitelist := range config.Whitelist {
-			if user == whitelist {
-				return true
-			}
+	if len(whitelist) > 0 {
+		if ValidateWhitelist(user, whitelist) {
+			return true
 		}
 
 		// If we're not matching *either*, stop here
@@ -80,15 +90,32 @@ func ValidateUser(user string) bool {
 	}
 
 	// Domain validation
-	if len(config.Domains) > 0 {
-		parts := strings.Split(user, "@")
-		if len(parts) < 2 {
-			return false
+	if len(domains) > 0 && ValidateDomains(user, domains) {
+		return true
+	}
+
+	return false
+}
+
+// ValidateWhitelist checks if the email is in whitelist
+func ValidateWhitelist(user string, whitelist CommaSeparatedList) bool {
+	for _, whitelist := range whitelist {
+		if user == whitelist {
+			return true
 		}
-		for _, domain := range config.Domains {
-			if domain == parts[1] {
-				return true
-			}
+	}
+	return false
+}
+
+// ValidateDomains checks if the email matches a whitelisted domain
+func ValidateDomains(user string, domains CommaSeparatedList) bool {
+	parts := strings.Split(user, "@")
+	if len(parts) < 2 {
+		return false
+	}
+	for _, domain := range domains {
+		if domain == parts[1] {
+			return true
 		}
 	}
 
@@ -141,10 +168,10 @@ func useAuthDomain(r *http.Request) (bool, string) {
 // Cookie methods
 
 // MakeCookie creates an auth cookie
-func MakeCookie(r *http.Request, user string) *http.Cookie {
+func MakeCookie(r *http.Request, email string) *http.Cookie {
 	expires := cookieExpiry()
-	mac := cookieSignature(r, user, fmt.Sprintf("%d", expires.Unix()))
-	value := fmt.Sprintf("%s|%d|%s", mac, expires.Unix(), user)
+	mac := cookieSignature(r, email, fmt.Sprintf("%d", expires.Unix()))
+	value := fmt.Sprintf("%s|%d|%s", mac, expires.Unix(), email)
 
 	return &http.Cookie{
 		Name:     config.CookieName,
@@ -350,7 +377,7 @@ func (c *CookieDomains) UnmarshalFlag(value string) error {
 	return nil
 }
 
-// MarshalFlag converts an array of CookieDomain to a comma separated list
+// MarshalFlag converts an array of CookieDomain to a comma seperated list
 func (c *CookieDomains) MarshalFlag() (string, error) {
 	var domains []string
 	for _, d := range *c {

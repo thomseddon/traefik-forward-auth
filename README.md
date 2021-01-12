@@ -1,5 +1,5 @@
 
-# Traefik Forward Auth [![Build Status](https://travis-ci.org/thomseddon/traefik-forward-auth.svg?branch=master)](https://travis-ci.org/thomseddon/traefik-forward-auth) [![Go Report Card](https://goreportcard.com/badge/github.com/thomseddon/traefik-forward-auth)](https://goreportcard.com/report/github.com/thomseddon/traefik-forward-auth) ![Docker Pulls](https://img.shields.io/docker/pulls/thomseddon/traefik-forward-auth.svg) [![GitHub release](https://img.shields.io/github/release/thomseddon/traefik-forward-auth.svg)](https://GitHub.com/thomseddon/traefik-forward-auth/releases/)
+# Traefik Forward Auth ![Build Status](https://img.shields.io/github/workflow/status/thomseddon/traefik-forward-auth/CI) [![Go Report Card](https://goreportcard.com/badge/github.com/thomseddon/traefik-forward-auth)](https://goreportcard.com/report/github.com/thomseddon/traefik-forward-auth) ![Docker Pulls](https://img.shields.io/docker/pulls/thomseddon/traefik-forward-auth.svg) [![GitHub release](https://img.shields.io/github/release/thomseddon/traefik-forward-auth.svg)](https://GitHub.com/thomseddon/traefik-forward-auth/releases/)
 
 
 A minimal forward authentication service that provides OAuth/SSO login and authentication for the [traefik](https://github.com/containous/traefik) reverse proxy/load balancer.
@@ -9,8 +9,8 @@ A minimal forward authentication service that provides OAuth/SSO login and authe
 - Seamlessly overlays any http service with a single endpoint (see: `url-path` in [Configuration](#configuration))
 - Supports multiple providers including Google and OpenID Connect (supported by Azure, Github, Salesforce etc.)
 - Supports multiple domains/subdomains by dynamically generating redirect_uri's
-- Allows authentication to be selectively applied/bypassed based on request parameters (see `rules` in [Configuration](#configuration)))
-- Supports use of centralised authentication host/redirect_uri (see `auth-host` in [Configuration](#configuration)))
+- Allows authentication to be selectively applied/bypassed based on request parameters (see `rules` in [Configuration](#configuration))
+- Supports use of centralised authentication host/redirect_uri (see `auth-host` in [Configuration](#configuration))
 - Allows authentication to persist across multiple domains (see [Cookie Domains](#cookie-domains))
 - Supports extended authentication beyond Google token lifetime (see: `lifetime` in [Configuration](#configuration))
 
@@ -321,6 +321,7 @@ All options can be supplied in any of the following ways, in the following prece
        - `action` - same usage as [`default-action`](#default-action), supported values:
            - `auth` (default)
            - `allow`
+       - `domains` - optional, same usage as [`domain`](#domain)
        - `provider` - same usage as [`default-provider`](#default-provider), supported values:
            - `google`
            - `oidc`
@@ -333,6 +334,7 @@ All options can be supplied in any of the following ways, in the following prece
            - ``Path(`path`, `/articles/{category}/{id:[0-9]+}`, ...)``
            - ``PathPrefix(`/products/`, `/articles/{category}/{id:[0-9]+}`)``
            - ``Query(`foo=bar`, `bar=baz`)``
+       - `whitelist` - optional, same usage as whitelist`](#whitelist)
 
    For example:
    ```
@@ -348,6 +350,11 @@ All options can be supplied in any of the following ways, in the following prece
    rule.oidc.action = auth
    rule.oidc.provider = oidc
    rule.oidc.rule = PathPrefix(`/github`)
+
+   # Allow jane@example.com to `/janes-eyes-only`
+   rule.two.action = allow
+   rule.two.rule = Path(`/janes-eyes-only`)
+   rule.two.whitelist = jane@example.com
    ```
 
    Note: It is possible to break your redirect flow with rules, please be careful not to create an `allow` rule that matches your redirect_uri unless you know what you're doing. This limitation is being tracked in in #101 and the behaviour will change in future releases.
@@ -361,7 +368,7 @@ You can restrict who can login with the following parameters:
 * `domain` - Use this to limit logins to a specific domain, e.g. test.com only
 * `whitelist` - Use this to only allow specific users to login e.g. thom@test.com only
 
-Note, if you pass both `whitelist` and `domain`, then the default behaviour is for only `whitelist` to be used and `domain` will be effectively ignored. You can allow users matching *either* `whitelist` or `domain` by passing the `match-whitelist-or-domain` parameter (this will be the default behaviour in v3).
+Note, if you pass both `whitelist` and `domain`, then the default behaviour is for only `whitelist` to be used and `domain` will be effectively ignored. You can allow users matching *either* `whitelist` or `domain` by passing the `match-whitelist-or-domain` parameter (this will be the default behaviour in v3). If you set `domains` or `whitelist` on a rule, the global configuration is ignored.
 
 ### Forwarded Headers
 
