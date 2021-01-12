@@ -78,6 +78,12 @@ func TestAuthValidateUser(t *testing.T) {
 	v = ValidateUser("test@test.com", "default")
 	assert.True(v, "should allow user from allowed domain")
 
+	// Should block non whitelisted email address
+	config.Domains = []string{}
+	config.Whitelist = []string{"test@test.com"}
+	v = ValidateUser("one@two.com", "default")
+	assert.False(v, "should not allow user not in whitelist")
+
 	// Should allow matching whitelisted email address
 	config.Domains = []string{}
 	config.Whitelist = []string{"test@test.com"}
@@ -91,6 +97,10 @@ func TestAuthValidateUser(t *testing.T) {
 	config.Domains = []string{"example.com"}
 	config.Whitelist = []string{"test@test.com"}
 	config.MatchWhitelistOrDomain = false
+	v = ValidateUser("test@test.com", "default")
+	assert.True(v, "should allow user in whitelist")
+	v = ValidateUser("test@example.com", "default")
+	assert.False(v, "should not allow user from valid domain")
 	v = ValidateUser("one@two.com", "default")
 	assert.False(v, "should not allow user not in either")
 	v = ValidateUser("test@example.com", "default")
@@ -109,6 +119,8 @@ func TestAuthValidateUser(t *testing.T) {
 	assert.True(v, "should allow user from allowed domain")
 	v = ValidateUser("test@test.com", "default")
 	assert.True(v, "should allow user in whitelist")
+	v = ValidateUser("test@example.com", "default")
+	assert.True(v, "should allow user from valid domain")
 
 	// Rule testing
 
@@ -137,6 +149,10 @@ func TestAuthValidateUser(t *testing.T) {
 	assert.False(v, "should not allow user from global domain")
 	v = ValidateUser("test@testrule.com", "test")
 	assert.True(v, "should allow user from allowed domain")
+
+	// Should allow comma separated email
+	config.Whitelist = []string{"test@test.com", "test2@test2.com"}
+	v = ValidateUser("test2@test2.com", "default")
 
 	// Should allow matching whitelist in rule
 	config.Domains = []string{}
