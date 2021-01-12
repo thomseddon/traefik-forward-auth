@@ -39,7 +39,7 @@ type Config struct {
 	Path                   string               `long:"url-path" env:"URL_PATH" default:"/_oauth" description:"Callback URL Path"`
 	SecretString           string               `long:"secret" env:"SECRET" description:"Secret used for signing (required)" json:"-"`
 	UserPath               string               `long:"user-id-path" env:"USER_ID_PATH" default:"email" description:"Dot notation path of a UserID for use with whitelist and X-Forwarded-User"`
-	Whitelist              CommaSeparatedList   `long:"whitelist" env:"WHITELIST" env-delim:"," description:"Only allow given email addresses, comma separated, can be set multiple times"`
+	Whitelist              CommaSeparatedList   `long:"whitelist" env:"WHITELIST" env-delim:"," description:"Only allow given UserID, comma separated, can be set multiple times"`
 
 	Providers provider.Providers `group:"providers" namespace:"providers" env-namespace:"PROVIDERS"`
 	Rules     map[string]*Rule   `long:"rule.<name>.<param>" description:"Rule definitions, param can be: \"action\", \"rule\" or \"provider\""`

@@ -161,7 +161,7 @@ Application Options:
   --logout-redirect=                                    URL to redirect to following logout [$LOGOUT_REDIRECT]
   --url-path=                                           Callback URL Path (default: /_oauth) [$URL_PATH]
   --secret=                                             Secret used for signing (required) [$SECRET]
-  --whitelist=                                          Only allow given email addresses, comma separated, can be set multiple times [$WHITELIST]
+  --whitelist=                                          Only allow given user ID, comma separated, can be set multiple times [$WHITELIST]
   --rule.<name>.<param>=                                Rule definitions, param can be: "action", "rule" or "provider"
 
 Google Provider:
