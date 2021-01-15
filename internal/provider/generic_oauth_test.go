@@ -133,8 +133,8 @@ func TestGenericOAuthGetUser(t *testing.T) {
 	// AuthStyleInHeader is attempted
 	p.Config.Endpoint.AuthStyle = oauth2.AuthStyleInParams
 
-	user, err := p.GetUser("123456789")
+	user, err := p.GetUser("123456789", "email")
 	assert.Nil(err)
 
-	assert.Equal("example@example.com", user.Email)
+	assert.Equal("example@example.com", user)
 }

@@ -105,6 +105,17 @@ func TestConfigParseRuleError(t *testing.T) {
 	assert.Equal(map[string]*Rule{}, c.Rules)
 }
 
+func TestConfigCommaSeperated(t *testing.T) {
+	assert := assert.New(t)
+	c, err := NewConfig([]string{
+		"--whitelist=test@test.com,test2@test2.com",
+	})
+	require.Nil(t, err)
+
+	expected1 := CommaSeparatedList{"test@test.com", "test2@test2.com"}
+	assert.Equal(expected1, c.Whitelist, "should read legacy comma separated list whitelist")
+}
+
 func TestConfigFlagBackwardsCompatability(t *testing.T) {
 	assert := assert.New(t)
 	c, err := NewConfig([]string{

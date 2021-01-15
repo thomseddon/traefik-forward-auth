@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"errors"
-
 	"github.com/coreos/go-oidc"
 	"golang.org/x/oauth2"
 )
@@ -81,19 +80,18 @@ func (o *OIDC) ExchangeCode(redirectURI, code string) (string, error) {
 }
 
 // GetUser uses the given token and returns a complete provider.User object
-func (o *OIDC) GetUser(token string) (User, error) {
-	var user User
-
+func (o *OIDC) GetUser(token, _ string) (string, error) {
 	// Parse & Verify ID Token
 	idToken, err := o.verifier.Verify(o.ctx, token)
 	if err != nil {
-		return user, err
+		return "", err
 	}
 
 	// Extract custom claims
+	var user User
 	if err := idToken.Claims(&user); err != nil {
-		return user, err
+		return "", err
 	}
 
-	return user, nil
+	return user.Email, nil
 }

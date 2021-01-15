@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	jose "gopkg.in/square/go-jose.v2"
+	"gopkg.in/square/go-jose.v2"
 )
 
 // Tests
@@ -122,9 +122,9 @@ func TestOIDCGetUser(t *testing.T) {
 	}`))
 
 	// Get user
-	user, err := provider.GetUser(token)
+	user, err := provider.GetUser(token, "")
 	assert.Nil(err)
-	assert.Equal("example@example.com", user.Email)
+	assert.Equal("example@example.com", user)
 }
 
 // Utils

@@ -18,7 +18,7 @@ import (
 // Request Validation
 
 // ValidateCookie verifies that a cookie matches the expected format of:
-// Cookie = hash(secret, cookie domain, email, expires)|expires|email
+// Cookie = hash(secret, cookie domain, user, expires)|expires|user
 func ValidateCookie(r *http.Request, c *http.Cookie) (string, error) {
 	parts := strings.Split(c.Value, "|")
 
@@ -56,10 +56,10 @@ func ValidateCookie(r *http.Request, c *http.Cookie) (string, error) {
 	return parts[2], nil
 }
 
-// ValidateEmail checks if the given email address matches either a whitelisted
-// email address, as defined by the "whitelist" config parameter. Or is part of
+// ValidateUser checks if the given user matches either a whitelisted
+// user, as defined by the "whitelist" config parameter. Or is part of
 // a permitted domain, as defined by the "domains" config parameter
-func ValidateEmail(email, ruleName string) bool {
+func ValidateUser(user, ruleName string) bool {
 	// Use global config by default
 	whitelist := config.Whitelist
 	domains := config.Domains
@@ -79,7 +79,7 @@ func ValidateEmail(email, ruleName string) bool {
 
 	// Email whitelist validation
 	if len(whitelist) > 0 {
-		if ValidateWhitelist(email, whitelist) {
+		if ValidateWhitelist(user, whitelist) {
 			return true
 		}
 
@@ -90,7 +90,7 @@ func ValidateEmail(email, ruleName string) bool {
 	}
 
 	// Domain validation
-	if len(domains) > 0 && ValidateDomains(email, domains) {
+	if len(domains) > 0 && ValidateDomains(user, domains) {
 		return true
 	}
 
@@ -98,9 +98,9 @@ func ValidateEmail(email, ruleName string) bool {
 }
 
 // ValidateWhitelist checks if the email is in whitelist
-func ValidateWhitelist(email string, whitelist CommaSeparatedList) bool {
+func ValidateWhitelist(user string, whitelist CommaSeparatedList) bool {
 	for _, whitelist := range whitelist {
-		if email == whitelist {
+		if user == whitelist {
 			return true
 		}
 	}
@@ -108,8 +108,8 @@ func ValidateWhitelist(email string, whitelist CommaSeparatedList) bool {
 }
 
 // ValidateDomains checks if the email matches a whitelisted domain
-func ValidateDomains(email string, domains CommaSeparatedList) bool {
-	parts := strings.Split(email, "@")
+func ValidateDomains(user string, domains CommaSeparatedList) bool {
+	parts := strings.Split(user, "@")
 	if len(parts) < 2 {
 		return false
 	}
@@ -167,10 +167,10 @@ func useAuthDomain(r *http.Request) (bool, string) {
 // Cookie methods
 
 // MakeCookie creates an auth cookie
-func MakeCookie(r *http.Request, email string) *http.Cookie {
+func MakeCookie(r *http.Request, user string) *http.Cookie {
 	expires := cookieExpiry()
-	mac := cookieSignature(r, email, fmt.Sprintf("%d", expires.Unix()))
-	value := fmt.Sprintf("%s|%d|%s", mac, expires.Unix(), email)
+	mac := cookieSignature(r, user, fmt.Sprintf("%d", expires.Unix()))
+	value := fmt.Sprintf("%s|%d|%s", mac, expires.Unix(), user)
 
 	return &http.Cookie{
 		Name:     config.CookieName,

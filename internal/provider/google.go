@@ -92,24 +92,20 @@ func (g *Google) ExchangeCode(redirectURI, code string) (string, error) {
 	return token.Token, err
 }
 
-// GetUser uses the given token and returns a complete provider.User object
-func (g *Google) GetUser(token string) (User, error) {
-	var user User
-
+// GetUser uses the given token and returns a userID located at the json path
+func (g *Google) GetUser(token, UserPath string) (string, error) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", g.UserURL.String(), nil)
 	if err != nil {
-		return user, err
+		return "", err
 	}
 
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token))
 	res, err := client.Do(req)
 	if err != nil {
-		return user, err
+		return "", err
 	}
 
 	defer res.Body.Close()
-	err = json.NewDecoder(res.Body).Decode(&user)
-
-	return user, err
+	return GetUser(res.Body, UserPath)
 }

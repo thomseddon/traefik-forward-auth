@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -66,13 +65,11 @@ func (o *GenericOAuth) ExchangeCode(redirectURI, code string) (string, error) {
 	return token.AccessToken, nil
 }
 
-// GetUser uses the given token and returns a complete provider.User object
-func (o *GenericOAuth) GetUser(token string) (User, error) {
-	var user User
-
+// GetUser uses the given token and returns a UserID
+func (o *GenericOAuth) GetUser(token, UserPath string) (string, error) {
 	req, err := http.NewRequest("GET", o.UserURL, nil)
 	if err != nil {
-		return user, err
+		return "", err
 	}
 
 	if o.TokenStyle == "header" {
@@ -86,11 +83,9 @@ func (o *GenericOAuth) GetUser(token string) (User, error) {
 	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
-		return user, err
+		return "", err
 	}
-
 	defer res.Body.Close()
-	err = json.NewDecoder(res.Body).Decode(&user)
 
-	return user, err
+	return GetUser(res.Body, UserPath)
 }
