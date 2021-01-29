@@ -25,7 +25,7 @@ func main() {
 	http.HandleFunc("/", server.RootHandler)
 
 	// Start
-	log.Debugf("Starting with options: %s", config)
+	log.WithField("config", config).Debug("Starting with config")
 	log.Infof("Listening on :%d", config.Port)
 	log.Info(http.ListenAndServe(fmt.Sprintf(":%d", config.Port), nil))
 }

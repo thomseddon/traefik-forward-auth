@@ -1,7 +1,6 @@
 package tfa
 
 import (
-	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -66,32 +65,131 @@ func TestAuthValidateEmail(t *testing.T) {
 	assert := assert.New(t)
 	config, _ = NewConfig([]string{})
 
-	// Should allow any
-	v := ValidateEmail("test@test.com")
+	// Should allow any with no whitelist/domain is specified
+	v := ValidateEmail("test@test.com", "default")
 	assert.True(v, "should allow any domain if email domain is not defined")
-	v = ValidateEmail("one@two.com")
+	v = ValidateEmail("one@two.com", "default")
 	assert.True(v, "should allow any domain if email domain is not defined")
-
-	// Should block non matching domain
-	config.Domains = []string{"test.com"}
-	v = ValidateEmail("one@two.com")
-	assert.False(v, "should not allow user from another domain")
 
 	// Should allow matching domain
 	config.Domains = []string{"test.com"}
-	v = ValidateEmail("test@test.com")
+	v = ValidateEmail("one@two.com", "default")
+	assert.False(v, "should not allow user from another domain")
+	v = ValidateEmail("test@test.com", "default")
 	assert.True(v, "should allow user from allowed domain")
-
-	// Should block non whitelisted email address
-	config.Domains = []string{}
-	config.Whitelist = []string{"test@test.com"}
-	v = ValidateEmail("one@two.com")
-	assert.False(v, "should not allow user not in whitelist")
 
 	// Should allow matching whitelisted email address
 	config.Domains = []string{}
 	config.Whitelist = []string{"test@test.com"}
-	v = ValidateEmail("test@test.com")
+	v = ValidateEmail("one@two.com", "default")
+	assert.False(v, "should not allow user not in whitelist")
+	v = ValidateEmail("test@test.com", "default")
+	assert.True(v, "should allow user in whitelist")
+
+	// Should allow only matching email address when
+	// MatchWhitelistOrDomain is disabled
+	config.Domains = []string{"example.com"}
+	config.Whitelist = []string{"test@test.com"}
+	config.MatchWhitelistOrDomain = false
+	v = ValidateEmail("one@two.com", "default")
+	assert.False(v, "should not allow user not in either")
+	v = ValidateEmail("test@example.com", "default")
+	assert.False(v, "should not allow user from allowed domain")
+	v = ValidateEmail("test@test.com", "default")
+	assert.True(v, "should allow user in whitelist")
+
+	// Should allow either matching domain or email address when
+	// MatchWhitelistOrDomain is enabled
+	config.Domains = []string{"example.com"}
+	config.Whitelist = []string{"test@test.com"}
+	config.MatchWhitelistOrDomain = true
+	v = ValidateEmail("one@two.com", "default")
+	assert.False(v, "should not allow user not in either")
+	v = ValidateEmail("test@example.com", "default")
+	assert.True(v, "should allow user from allowed domain")
+	v = ValidateEmail("test@test.com", "default")
+	assert.True(v, "should allow user in whitelist")
+
+	// Rule testing
+
+	// Should use global whitelist/domain when not specified on rule
+	config.Domains = []string{"example.com"}
+	config.Whitelist = []string{"test@test.com"}
+	config.Rules = map[string]*Rule{"test": NewRule()}
+	config.MatchWhitelistOrDomain = true
+	v = ValidateEmail("one@two.com", "test")
+	assert.False(v, "should not allow user not in either")
+	v = ValidateEmail("test@example.com", "test")
+	assert.True(v, "should allow user from allowed global domain")
+	v = ValidateEmail("test@test.com", "test")
+	assert.True(v, "should allow user in global whitelist")
+
+	// Should allow matching domain in rule
+	config.Domains = []string{"testglobal.com"}
+	config.Whitelist = []string{}
+	rule := NewRule()
+	config.Rules = map[string]*Rule{"test": rule}
+	rule.Domains = []string{"testrule.com"}
+	config.MatchWhitelistOrDomain = false
+	v = ValidateEmail("one@two.com", "test")
+	assert.False(v, "should not allow user from another domain")
+	v = ValidateEmail("one@testglobal.com", "test")
+	assert.False(v, "should not allow user from global domain")
+	v = ValidateEmail("test@testrule.com", "test")
+	assert.True(v, "should allow user from allowed domain")
+
+	// Should allow matching whitelist in rule
+	config.Domains = []string{}
+	config.Whitelist = []string{"test@testglobal.com"}
+	rule = NewRule()
+	config.Rules = map[string]*Rule{"test": rule}
+	rule.Whitelist = []string{"test@testrule.com"}
+	config.MatchWhitelistOrDomain = false
+	v = ValidateEmail("one@two.com", "test")
+	assert.False(v, "should not allow user from another domain")
+	v = ValidateEmail("test@testglobal.com", "test")
+	assert.False(v, "should not allow user from global domain")
+	v = ValidateEmail("test@testrule.com", "test")
+	assert.True(v, "should allow user from allowed domain")
+
+	// Should allow only matching email address when
+	// MatchWhitelistOrDomain is disabled
+	config.Domains = []string{"exampleglobal.com"}
+	config.Whitelist = []string{"test@testglobal.com"}
+	rule = NewRule()
+	config.Rules = map[string]*Rule{"test": rule}
+	rule.Domains = []string{"examplerule.com"}
+	rule.Whitelist = []string{"test@testrule.com"}
+	config.MatchWhitelistOrDomain = false
+	v = ValidateEmail("one@two.com", "test")
+	assert.False(v, "should not allow user not in either")
+	v = ValidateEmail("test@testglobal.com", "test")
+	assert.False(v, "should not allow user in global whitelist")
+	v = ValidateEmail("test@exampleglobal.com", "test")
+	assert.False(v, "should not allow user from global domain")
+	v = ValidateEmail("test@examplerule.com", "test")
+	assert.False(v, "should not allow user from allowed domain")
+	v = ValidateEmail("test@testrule.com", "test")
+	assert.True(v, "should allow user in whitelist")
+
+	// Should allow either matching domain or email address when
+	// MatchWhitelistOrDomain is enabled
+	config.Domains = []string{"exampleglobal.com"}
+	config.Whitelist = []string{"test@testglobal.com"}
+	rule = NewRule()
+	config.Rules = map[string]*Rule{"test": rule}
+	rule.Domains = []string{"examplerule.com"}
+	rule.Whitelist = []string{"test@testrule.com"}
+	config.MatchWhitelistOrDomain = true
+	v = ValidateEmail("one@two.com", "test")
+	assert.False(v, "should not allow user not in either")
+	v = ValidateEmail("test@testglobal.com", "test")
+	assert.False(v, "should not allow user in global whitelist")
+	v = ValidateEmail("test@exampleglobal.com", "test")
+	assert.False(v, "should not allow user from global domain")
+	v = ValidateEmail("test@examplerule.com", "test")
+	assert.True(v, "should allow user from allowed domain")
+	v = ValidateEmail("test@testrule.com", "test")
 	assert.True(v, "should allow user in whitelist")
 }
 
@@ -193,29 +291,30 @@ func TestAuthMakeCSRFCookie(t *testing.T) {
 
 	// No cookie domain or auth url
 	c := MakeCSRFCookie(r, "12345678901234567890123456789012")
+	assert.Equal("_forward_auth_csrf_123456", c.Name)
 	assert.Equal("app.example.com", c.Domain)
 
 	// With cookie domain but no auth url
-	config = &Config{
-		CookieDomains: []CookieDomain{*NewCookieDomain("example.com")},
-	}
-	c = MakeCSRFCookie(r, "12345678901234567890123456789012")
+	config.CookieDomains = []CookieDomain{*NewCookieDomain("example.com")}
+	c = MakeCSRFCookie(r, "12222278901234567890123456789012")
+	assert.Equal("_forward_auth_csrf_122222", c.Name)
 	assert.Equal("app.example.com", c.Domain)
 
 	// With cookie domain and auth url
-	config = &Config{
-		AuthHost:      "auth.example.com",
-		CookieDomains: []CookieDomain{*NewCookieDomain("example.com")},
-	}
-	c = MakeCSRFCookie(r, "12345678901234567890123456789012")
+	config.AuthHost = "auth.example.com"
+	config.CookieDomains = []CookieDomain{*NewCookieDomain("example.com")}
+	c = MakeCSRFCookie(r, "12333378901234567890123456789012")
+	assert.Equal("_forward_auth_csrf_123333", c.Name)
 	assert.Equal("example.com", c.Domain)
 }
 
 func TestAuthClearCSRFCookie(t *testing.T) {
+	assert := assert.New(t)
 	config, _ = NewConfig([]string{})
 	r, _ := http.NewRequest("GET", "http://example.com", nil)
 
-	c := ClearCSRFCookie(r)
+	c := ClearCSRFCookie(r, &http.Cookie{Name: "someCsrfCookie"})
+	assert.Equal("someCsrfCookie", c.Name)
 	if c.Value != "" {
 		t.Error("ClearCSRFCookie should create cookie with empty value")
 	}
@@ -225,54 +324,55 @@ func TestAuthValidateCSRFCookie(t *testing.T) {
 	assert := assert.New(t)
 	config, _ = NewConfig([]string{})
 	c := &http.Cookie{}
-
-	newCsrfRequest := func(state string) *http.Request {
-		u := fmt.Sprintf("http://example.com?state=%s", state)
-		r, _ := http.NewRequest("GET", u, nil)
-		return r
-	}
+	state := ""
 
 	// Should require 32 char string
-	r := newCsrfRequest("")
+	state = ""
 	c.Value = ""
-	valid, _, _, err := ValidateCSRFCookie(r, c)
+	valid, _, _, err := ValidateCSRFCookie(c, state)
 	assert.False(valid)
 	if assert.Error(err) {
 		assert.Equal("Invalid CSRF cookie value", err.Error())
 	}
 	c.Value = "123456789012345678901234567890123"
-	valid, _, _, err = ValidateCSRFCookie(r, c)
+	valid, _, _, err = ValidateCSRFCookie(c, state)
 	assert.False(valid)
 	if assert.Error(err) {
 		assert.Equal("Invalid CSRF cookie value", err.Error())
 	}
 
-	// Should require valid state
-	r = newCsrfRequest("12345678901234567890123456789012:")
-	c.Value = "12345678901234567890123456789012"
-	valid, _, _, err = ValidateCSRFCookie(r, c)
-	assert.False(valid)
-	if assert.Error(err) {
-		assert.Equal("Invalid CSRF state value", err.Error())
-	}
-
 	// Should require provider
-	r = newCsrfRequest("12345678901234567890123456789012:99")
+	state = "12345678901234567890123456789012:99"
 	c.Value = "12345678901234567890123456789012"
-	valid, _, _, err = ValidateCSRFCookie(r, c)
+	valid, _, _, err = ValidateCSRFCookie(c, state)
 	assert.False(valid)
 	if assert.Error(err) {
 		assert.Equal("Invalid CSRF state format", err.Error())
 	}
 
 	// Should allow valid state
-	r = newCsrfRequest("12345678901234567890123456789012:p99:url123")
+	state = "12345678901234567890123456789012:p99:url123"
 	c.Value = "12345678901234567890123456789012"
-	valid, provider, redirect, err := ValidateCSRFCookie(r, c)
+	valid, provider, redirect, err := ValidateCSRFCookie(c, state)
 	assert.True(valid, "valid request should return valid")
 	assert.Nil(err, "valid request should not return an error")
 	assert.Equal("p99", provider, "valid request should return correct provider")
 	assert.Equal("url123", redirect, "valid request should return correct redirect")
+}
+
+func TestValidateState(t *testing.T) {
+	assert := assert.New(t)
+
+	// Should require valid state
+	state := "12345678901234567890123456789012:"
+	err := ValidateState(state)
+	if assert.Error(err) {
+		assert.Equal("Invalid CSRF state value", err.Error())
+	}
+	// Should pass this state
+	state = "12345678901234567890123456789012:p99:url123"
+	err = ValidateState(state)
+	assert.Nil(err, "valid request should not return an error")
 }
 
 func TestMakeState(t *testing.T) {
@@ -292,6 +392,11 @@ func TestMakeState(t *testing.T) {
 	p2 := provider.OIDC{}
 	state = MakeState(r, &p2, "nonce")
 	assert.Equal("nonce:oidc:http://example.com/hello", state)
+
+	// Test with Generic OAuth
+	p3 := provider.GenericOAuth{}
+	state = MakeState(r, &p3, "nonce")
+	assert.Equal("nonce:generic-oauth:http://example.com/hello", state)
 }
 
 func TestAuthNonce(t *testing.T) {

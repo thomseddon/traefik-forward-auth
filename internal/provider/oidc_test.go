@@ -59,6 +59,33 @@ func TestOIDCGetLoginURL(t *testing.T) {
 
 	// Calling the method should not modify the underlying config
 	assert.Equal("", provider.Config.RedirectURL)
+
+	//
+	// Test with resource config option
+	//
+	provider.Resource = "resourcetest"
+
+	// Check url
+	uri, err = url.Parse(provider.GetLoginURL("http://example.com/_oauth", "state"))
+	assert.Nil(err)
+	assert.Equal(serverURL.Scheme, uri.Scheme)
+	assert.Equal(serverURL.Host, uri.Host)
+	assert.Equal("/auth", uri.Path)
+
+	// Check query string
+	qs = uri.Query()
+	expectedQs = url.Values{
+		"client_id":     []string{"idtest"},
+		"redirect_uri":  []string{"http://example.com/_oauth"},
+		"response_type": []string{"code"},
+		"scope":         []string{"openid profile email"},
+		"state":         []string{"state"},
+		"resource":      []string{"resourcetest"},
+	}
+	assert.Equal(expectedQs, qs)
+
+	// Calling the method should not modify the underlying config
+	assert.Equal("", provider.Config.RedirectURL)
 }
 
 func TestOIDCExchangeCode(t *testing.T) {
@@ -97,9 +124,7 @@ func TestOIDCGetUser(t *testing.T) {
 	// Get user
 	user, err := provider.GetUser(token)
 	assert.Nil(err)
-	assert.Equal("1", user.ID)
 	assert.Equal("example@example.com", user.Email)
-	assert.True(user.Verified)
 }
 
 // Utils

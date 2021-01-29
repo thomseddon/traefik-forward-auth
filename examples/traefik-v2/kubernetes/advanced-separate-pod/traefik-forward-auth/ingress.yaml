@@ -1,0 +1,22 @@
+#
+# Auth Ingress
+#
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: traefik-forward-auth
+  labels:
+    app: traefik
+spec:
+  entryPoints:
+    - https
+  routes:
+  - match: Host(`auth.example.com`)
+    kind: Rule
+    services:
+    - name: traefik-forward-auth
+      port: 4181
+    middlewares:
+      - name: traefik-forward-auth
+  tls:
+    certresolver: default

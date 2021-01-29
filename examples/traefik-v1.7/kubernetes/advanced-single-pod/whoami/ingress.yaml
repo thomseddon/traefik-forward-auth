@@ -1,0 +1,16 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: whoami
+  labels:
+    app: whoami
+  annotations:
+    kubernetes.io/ingress.class: traefik
+spec:
+  rules:
+  - host: whoami.example.com
+    http:
+      paths:
+      - backend:
+          serviceName: whoami
+          servicePort: http

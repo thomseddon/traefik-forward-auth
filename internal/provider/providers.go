@@ -9,8 +9,9 @@ import (
 
 // Providers contains all the implemented providers
 type Providers struct {
-	Google Google `group:"Google Provider" namespace:"google" env-namespace:"GOOGLE"`
-	OIDC   OIDC   `group:"OIDC Provider" namespace:"oidc" env-namespace:"OIDC"`
+	Google       Google       `group:"Google Provider" namespace:"google" env-namespace:"GOOGLE"`
+	OIDC         OIDC         `group:"OIDC Provider" namespace:"oidc" env-namespace:"OIDC"`
+	GenericOAuth GenericOAuth `group:"Generic OAuth2 Provider" namespace:"generic-oauth" env-namespace:"GENERIC_OAUTH"`
 }
 
 // Provider is used to authenticate users
@@ -28,14 +29,13 @@ type token struct {
 
 // User is the authenticated user
 type User struct {
-	ID       string `json:"id"`
-	Email    string `json:"email"`
-	Verified bool   `json:"verified_email"`
-	Hd       string `json:"hd"`
+	Email string `json:"email"`
 }
 
 // OAuthProvider is a provider using the oauth2 library
 type OAuthProvider struct {
+	Resource string `long:"resource" env:"RESOURCE" description:"Optional resource indicator"`
+
 	Config *oauth2.Config
 	ctx    context.Context
 }
@@ -51,6 +51,11 @@ func (p *OAuthProvider) ConfigCopy(redirectURI string) oauth2.Config {
 // OAuthGetLoginURL provides a base "GetLoginURL" for proiders using OAauth2
 func (p *OAuthProvider) OAuthGetLoginURL(redirectURI, state string) string {
 	config := p.ConfigCopy(redirectURI)
+
+	if p.Resource != "" {
+		return config.AuthCodeURL(state, oauth2.SetAuthURLParam("resource", p.Resource))
+	}
+
 	return config.AuthCodeURL(state)
 }
 

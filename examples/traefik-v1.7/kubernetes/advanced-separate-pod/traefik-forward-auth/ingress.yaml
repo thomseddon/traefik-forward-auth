@@ -1,0 +1,22 @@
+#
+# NOTE: This is only needed if you are using auth-host mode
+#
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: traefik-forward-auth
+  labels:
+    app: traefik-forward-auth
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    ingress.kubernetes.io/auth-type: forward
+    ingress.kubernetes.io/auth-url: http://traefik-forward-auth:4181
+    ingress.kubernetes.io/auth-response-headers: X-Forwarded-User
+spec:
+  rules:
+  - host: auth.example.com
+    http:
+      paths:
+      - backend:
+          serviceName: traefik-forward-auth
+          servicePort: auth-http

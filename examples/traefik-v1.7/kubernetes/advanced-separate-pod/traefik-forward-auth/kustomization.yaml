@@ -1,0 +1,22 @@
+commonLabels:
+  app: traefik-forward-auth
+
+resources:
+- deployment.yaml
+- service.yaml
+- ingress.yaml # Only needed for auth-host mode
+
+#
+# Configs
+#
+configMapGenerator:
+- name: configs
+  files:
+    - traefik-forward-auth.ini
+
+#
+# Secrets
+#
+secretGenerator:
+- name: traefik-forward-auth-secrets
+  env: traefik-forward-auth.env
