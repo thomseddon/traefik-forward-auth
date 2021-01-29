@@ -146,6 +146,7 @@ Application Options:
   --secret=                                             Secret used for signing (required) [$SECRET]
   --whitelist=                                          Only allow given email addresses, can be set multiple times [$WHITELIST]
   --rule.<name>.<param>=                                Rule definitions, param can be: "action", "rule" or "provider"
+  --port=                                               The port the server is running on (default: 4181) [$PORT]
 
 Google Provider:
   --providers.google.client-id=                         Client ID [$PROVIDERS_GOOGLE_CLIENT_ID]
