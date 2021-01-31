@@ -10,9 +10,8 @@ jobs:
     name: Build release binaries
     runs-on: ubuntu-latest
     steps:
-    
-    - name: Install jq and curl
-      run: sudo apt-get install jq curl
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
 
     - name: Set up Go 1.x
       uses: actions/setup-go@v2
@@ -20,33 +19,29 @@ jobs:
         go-version: ^1.13
       id: go
 
-    - name: Check out code into the Go module directory
-      uses: actions/checkout@v2
-
-    - name: Get dependencies
-      run: |
-        go get -v -t -d ./...
-        if [ -f Gopkg.toml ]; then
-            curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-            dep ensure
-        fi
-
     - name: Build AMD64
       run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -installsuffix nocgo -v -o traefik-forward-auth_amd64 ./cmd
 
     - name: Build ARM
       run: CGO_ENABLED=0 GOOS=linux GOARCH=arm GO111MODULE=on go build -a -installsuffix nocgo -v -o traefik-forward-auth_arm ./cmd
 
-    - name: Get release details
+    - name: Get tag name
+      run: echo "TAG=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+
+    - name: Get artifact details
+      uses: octokit/request-action@v2.x
       id: get_release_details
-      run: echo "::set-output name=upload_url::$(curl https://api.github.com/repos/${{ github.repository }}/releases/tags/$(echo '${{ github.ref }}' | cut -d '/' -f 3 ) | jq '.upload_url' -r)"
-    
+      with:
+        route: get /repos/${{ github.repository }}/releases/tags/${{ env.TAG }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
     - name: Upload AMD64 release asset
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ steps.get_release_details.outputs.upload_url }}
+        upload_url: ${{ fromJson(steps.get_release_details.outputs.data).upload_url }}
         asset_path: traefik-forward-auth_amd64
         asset_name: traefik-forward-auth_amd64
         asset_content_type: application/octet-stream
@@ -56,7 +51,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ steps.get_release_details.outputs.upload_url }}
+        upload_url: ${{ fromJson(steps.get_release_details.outputs.data).upload_url }}
         asset_path: traefik-forward-auth_arm
         asset_name: traefik-forward-auth_arm
         asset_content_type: application/octet-stream
