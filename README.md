@@ -47,6 +47,8 @@ You can also use the latest incremental releases found on [docker hub](https://h
 
 ARM releases are also available on docker hub, just append `-arm` or `-arm64` to your desired released (e.g. `2-arm` or `2.1-arm64`).
 
+We also build binary files for usage without docker starting with releases after 2.2.0 You can find these as assets of the specific GitHub release.
+
 #### Upgrade Guide
 
 v2 was released in June 2019, whilst this is fully backwards compatible, a number of configuration options were modified, please see the [upgrade guide](https://github.com/thomseddon/traefik-forward-auth/wiki/v2-Upgrade-Guide) to prevent warnings on startup and ensure you are using the current configuration.
