@@ -169,7 +169,7 @@ Application Options:
   --url-path=                                           Callback URL Path (default: /_oauth) [$URL_PATH]
   --secret=                                             Secret used for signing (required) [$SECRET]
   --whitelist=                                          Only allow given email addresses, can be set multiple times [$WHITELIST]
-  --port=                                               Port the server is listen on (default: 4181) [$PORT]
+  --port=                                               Port to listen on (default: 4181) [$PORT]
   --rule.<name>.<param>=                                Rule definitions, param can be: "action", "rule" or "provider"
 
 Google Provider:
