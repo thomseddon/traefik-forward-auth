@@ -39,7 +39,7 @@ type Config struct {
 	Path                   string               `long:"url-path" env:"URL_PATH" default:"/_oauth" description:"Callback URL Path"`
 	SecretString           string               `long:"secret" env:"SECRET" description:"Secret used for signing (required)" json:"-"`
 	Whitelist              CommaSeparatedList   `long:"whitelist" env:"WHITELIST" env-delim:"," description:"Only allow given email addresses, can be set multiple times"`
-	Port                   int                  `long:"port" env:"PORT" default:"4181" description:"The prot the server is running on"`
+	Port                   int                  `long:"port" env:"PORT" default:"4181" description:"Port the server is listen on"`
 
 	Providers provider.Providers `group:"providers" namespace:"providers" env-namespace:"PROVIDERS"`
 	Rules     map[string]*Rule   `long:"rule.<name>.<param>" description:"Rule definitions, param can be: \"action\", \"rule\" or \"provider\""`
