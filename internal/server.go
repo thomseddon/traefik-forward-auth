@@ -58,7 +58,11 @@ func (s *Server) RootHandler(w http.ResponseWriter, r *http.Request) {
 	// Modify request
 	r.Method = r.Header.Get("X-Forwarded-Method")
 	r.Host = r.Header.Get("X-Forwarded-Host")
-	r.URL, _ = url.Parse(r.Header.Get("X-Forwarded-Uri"))
+
+	// Read URI from header if we're acting as forward auth middleware
+	if _, ok := r.Header["X-Forwarded-Uri"]; ok {
+		r.URL, _ = url.Parse(r.Header.Get("X-Forwarded-Uri"))
+	}
 
 	// Pass to mux
 	s.router.ServeHTTP(w, r)
