@@ -1,0 +1,19 @@
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: traefik-forward-auth
+  namespace: {{ .Values.namespace | default "kube-system" }}
+  labels:
+{{- if .Values.service.labels }}
+{{ toYaml .Values.service.labels | indent 4}}
+{{- end }}
+  annotations:
+{{ toYaml .Values.service.annotations | indent 4 }}
+spec:
+  selector:
+    app: traefik-forward-auth
+  ports:
+    - port: {{ .Values.port | default "80" }}
+      targetPort: 4181
+      protocol: TCP
