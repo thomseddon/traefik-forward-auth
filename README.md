@@ -177,6 +177,7 @@ OIDC Provider:
   --providers.oidc.client-id=                           Client ID [$PROVIDERS_OIDC_CLIENT_ID]
   --providers.oidc.client-secret=                       Client Secret [$PROVIDERS_OIDC_CLIENT_SECRET]
   --providers.oidc.resource=                            Optional resource indicator [$PROVIDERS_OIDC_RESOURCE]
+  --providers.oidc.pkce_required=                       Optional pkce required indicator [$PROVIDERS_OIDC_PKCE_REQUIRED]
 
 Generic OAuth2 Provider:
   --providers.generic-oauth.auth-url=                   Auth/Login URL [$PROVIDERS_GENERIC_OAUTH_AUTH_URL]
