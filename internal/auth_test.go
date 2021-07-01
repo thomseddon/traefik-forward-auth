@@ -278,6 +278,13 @@ func TestAuthMakeCookie(t *testing.T) {
 	c = MakeCookie(r, "test@example.com")
 	assert.Equal("testname", c.Name)
 	assert.False(c.Secure)
+
+	config.CookieName = "testname"
+	config.InsecureCookie = true
+	config.SameSiteCookie = 3
+	c = MakeCookie(r, "test@example.com")
+	assert.Equal("testname", c.Name)
+	assert.Equal(http.SameSiteStrictMode, c.SameSite)
 }
 
 func TestAuthMakeCSRFCookie(t *testing.T) {
