@@ -3,8 +3,10 @@ package tfa
 import (
 	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/http"
@@ -319,6 +321,13 @@ func cookieSignature(r *http.Request, email, expires string) string {
 	hash.Write([]byte(email))
 	hash.Write([]byte(expires))
 	return base64.URLEncoding.EncodeToString(hash.Sum(nil))
+}
+
+// Create CouchDB cookie hmac
+func couchCookieSignature(email string) string {
+	hash := hmac.New(sha1.New, []byte(config.CouchSecret))
+	hash.Write([]byte(email))
+	return hex.EncodeToString(hash.Sum(nil))
 }
 
 // Get cookie expiry

@@ -1,12 +1,11 @@
 package tfa
 
 import (
-	"net/http"
-	"net/url"
-
 	"github.com/containous/traefik/v2/pkg/rules"
 	"github.com/sirupsen/logrus"
 	"github.com/thomseddon/traefik-forward-auth/internal/provider"
+	"net/http"
+	"net/url"
 )
 
 // Server contains router and handler methods
@@ -115,6 +114,9 @@ func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 		// Valid request
 		logger.Debug("Allowing valid request")
 		w.Header().Set("X-Forwarded-User", email)
+		w.Header().Set("X-Auth-CouchDB-UserName", email)
+		w.Header().Set("X-Auth-CouchDB-Roles", "")
+		w.Header().Set("X-Auth-CouchDB-Token", couchCookieSignature(email))
 		w.WriteHeader(200)
 	}
 }
