@@ -18,6 +18,7 @@ type GenericOAuth struct {
 	ClientID     string   `long:"client-id" env:"CLIENT_ID" description:"Client ID"`
 	ClientSecret string   `long:"client-secret" env:"CLIENT_SECRET" description:"Client Secret" json:"-"`
 	Scopes       []string `long:"scope" env:"SCOPE" env-delim:"," default:"profile" default:"email" description:"Scopes"`
+	AuthStyle	 string	  `long:"auth-style" env:"AUTH_STYLE" default:"auto-detect" choice:"auto-detect" choice:"header" choice:"params" description:"Authentication style to be used by the OAuth library"`
 	TokenStyle   string   `long:"token-style" env:"TOKEN_STYLE" default:"header" choice:"header" choice:"query" description:"How token is presented when querying the User URL"`
 
 	OAuthProvider
@@ -40,6 +41,7 @@ func (o *GenericOAuth) Setup() error {
 		ClientID:     o.ClientID,
 		ClientSecret: o.ClientSecret,
 		Endpoint: oauth2.Endpoint{
+			AuthStyle: o.GetAuthStyle(),
 			AuthURL:  o.AuthURL,
 			TokenURL: o.TokenURL,
 		},
@@ -49,6 +51,17 @@ func (o *GenericOAuth) Setup() error {
 	o.ctx = context.Background()
 
 	return nil
+}
+
+func (o *GenericOAuth) GetAuthStyle() oauth2.AuthStyle {
+	switch o.AuthStyle {
+	case "header":
+		return oauth2.AuthStyleInHeader
+	case "params":
+		return oauth2.AuthStyleInParams
+	default:
+		return oauth2.AuthStyleAutoDetect
+	}
 }
 
 // GetLoginURL provides the login url for the given redirect uri and state
