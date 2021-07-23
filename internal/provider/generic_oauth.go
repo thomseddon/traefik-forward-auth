@@ -18,7 +18,7 @@ type GenericOAuth struct {
 	ClientID     string   `long:"client-id" env:"CLIENT_ID" description:"Client ID"`
 	ClientSecret string   `long:"client-secret" env:"CLIENT_SECRET" description:"Client Secret" json:"-"`
 	Scopes       []string `long:"scope" env:"SCOPE" env-delim:"," default:"profile" default:"email" description:"Scopes"`
-	AuthStyle	 string	  `long:"auth-style" env:"AUTH_STYLE" default:"auto-detect" choice:"auto-detect" choice:"header" choice:"params" description:"Authentication style to be used by the OAuth library"`
+	AuthStyle    string   `long:"auth-style" env:"AUTH_STYLE" default:"auto-detect" choice:"auto-detect" choice:"header" choice:"params" description:"Authentication style to be used by the OAuth library"`
 	TokenStyle   string   `long:"token-style" env:"TOKEN_STYLE" default:"header" choice:"header" choice:"query" description:"How token is presented when querying the User URL"`
 
 	OAuthProvider

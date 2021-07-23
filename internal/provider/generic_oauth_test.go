@@ -60,7 +60,7 @@ func TestGenericOAuthGetAuthStyleDefault(t *testing.T) {
 func TestGenericOAuthGetAuthStyleHeader(t *testing.T) {
 	assert := assert.New(t)
 	p := GenericOAuth{
-		AuthStyle: 	  "header",
+		AuthStyle:    "header",
 		AuthURL:      "https://provider.com/oauth2/auth",
 		TokenURL:     "https://provider.com/oauth2/token",
 		UserURL:      "https://provider.com/oauth2/user",
@@ -81,7 +81,7 @@ func TestGenericOAuthGetAuthStyleHeader(t *testing.T) {
 func TestGenericOAuthGetAuthStyleParams(t *testing.T) {
 	assert := assert.New(t)
 	p := GenericOAuth{
-		AuthStyle: 	  "params",
+		AuthStyle:    "params",
 		AuthURL:      "https://provider.com/oauth2/auth",
 		TokenURL:     "https://provider.com/oauth2/token",
 		UserURL:      "https://provider.com/oauth2/user",

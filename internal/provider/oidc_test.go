@@ -181,7 +181,7 @@ func setupOIDCTest(t *testing.T, bodyValues map[string]map[string]string, authSt
 
 	// Setup provider
 	p := OIDC{
-		AuthStyle:	  authStyle,
+		AuthStyle:    authStyle,
 		ClientID:     "idtest",
 		ClientSecret: "sectest",
 		IssuerURL:    serverURL.String(),
