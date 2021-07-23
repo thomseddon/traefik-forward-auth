@@ -41,7 +41,7 @@ func (o *GenericOAuth) Setup() error {
 		ClientID:     o.ClientID,
 		ClientSecret: o.ClientSecret,
 		Endpoint: oauth2.Endpoint{
-			AuthStyle: o.GetAuthStyle(),
+			AuthStyle: parseAuthStyle(o.AuthStyle),
 			AuthURL:  o.AuthURL,
 			TokenURL: o.TokenURL,
 		},
@@ -51,17 +51,6 @@ func (o *GenericOAuth) Setup() error {
 	o.ctx = context.Background()
 
 	return nil
-}
-
-func (o *GenericOAuth) GetAuthStyle() oauth2.AuthStyle {
-	switch o.AuthStyle {
-	case "header":
-		return oauth2.AuthStyleInHeader
-	case "params":
-		return oauth2.AuthStyleInParams
-	default:
-		return oauth2.AuthStyleAutoDetect
-	}
 }
 
 // GetLoginURL provides the login url for the given redirect uri and state

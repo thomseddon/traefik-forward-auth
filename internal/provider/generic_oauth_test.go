@@ -53,7 +53,7 @@ func TestGenericOAuthGetAuthStyleDefault(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	authStyle := p.GetAuthStyle()
+	authStyle := parseAuthStyle(p.AuthStyle)
 	assert.Equal(oauth2.AuthStyleAutoDetect, authStyle)
 }
 
@@ -74,7 +74,7 @@ func TestGenericOAuthGetAuthStyleHeader(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	authStyle := p.GetAuthStyle()
+	authStyle := parseAuthStyle(p.AuthStyle)
 	assert.Equal(oauth2.AuthStyleInHeader, authStyle)
 }
 
@@ -95,7 +95,7 @@ func TestGenericOAuthGetAuthStyleParams(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	authStyle := p.GetAuthStyle()
+	authStyle := parseAuthStyle(p.AuthStyle)
 	assert.Equal(oauth2.AuthStyleInParams, authStyle)
 }
 

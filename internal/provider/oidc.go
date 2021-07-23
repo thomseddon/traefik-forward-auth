@@ -47,7 +47,7 @@ func (o *OIDC) Setup() error {
 		ClientID:     o.ClientID,
 		ClientSecret: o.ClientSecret,
 		Endpoint: oauth2.Endpoint{
-			AuthStyle: o.GetAuthStyle(),
+			AuthStyle: parseAuthStyle(o.AuthStyle),
 			AuthURL:  o.provider.Endpoint().AuthURL,
 			TokenURL: o.provider.Endpoint().TokenURL,
 		},
@@ -62,17 +62,6 @@ func (o *OIDC) Setup() error {
 	})
 
 	return nil
-}
-
-func (o *OIDC) GetAuthStyle() oauth2.AuthStyle {
-	switch o.AuthStyle {
-	case "header":
-		return oauth2.AuthStyleInHeader
-	case "params":
-		return oauth2.AuthStyleInParams
-	default:
-		return oauth2.AuthStyleAutoDetect
-	}
 }
 
 // GetLoginURL provides the login url for the given redirect uri and state

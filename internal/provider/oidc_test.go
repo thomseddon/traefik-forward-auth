@@ -40,7 +40,7 @@ func TestOIDCGetAuthStyleAutoDetect(t *testing.T) {
 	assert := assert.New(t)
 	provider, _, _, _ := setupOIDCTest(t, nil, defaultAuthStyle)
 
-	authStyle := provider.GetAuthStyle()
+	authStyle := parseAuthStyle(provider.AuthStyle)
 	assert.Equal(oauth2.AuthStyleAutoDetect, authStyle)
 }
 
@@ -48,7 +48,7 @@ func TestOIDCGetAuthStyleHeader(t *testing.T) {
 	assert := assert.New(t)
 	provider, _, _, _ := setupOIDCTest(t, nil, "header")
 
-	authStyle := provider.GetAuthStyle()
+	authStyle := parseAuthStyle(provider.AuthStyle)
 	assert.Equal(oauth2.AuthStyleInHeader, authStyle)
 }
 
@@ -56,7 +56,7 @@ func TestOIDCGetAuthStyleParams(t *testing.T) {
 	assert := assert.New(t)
 	provider, _, _, _ := setupOIDCTest(t, nil, "params")
 
-	authStyle := provider.GetAuthStyle()
+	authStyle := parseAuthStyle(provider.AuthStyle)
 	assert.Equal(oauth2.AuthStyleInParams, authStyle)
 }
 
