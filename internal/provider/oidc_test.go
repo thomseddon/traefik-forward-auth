@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"fmt"
+	"golang.org/x/oauth2"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -17,6 +18,8 @@ import (
 )
 
 // Tests
+
+var defaultAuthStyle = "auto-detect"
 
 func TestOIDCName(t *testing.T) {
 	p := OIDC{}
@@ -33,10 +36,34 @@ func TestOIDCSetup(t *testing.T) {
 	}
 }
 
+func TestOIDCGetAuthStyleAutoDetect(t *testing.T) {
+	assert := assert.New(t)
+	provider, _, _, _ := setupOIDCTest(t, nil, defaultAuthStyle)
+
+	authStyle := parseAuthStyle(provider.AuthStyle)
+	assert.Equal(oauth2.AuthStyleAutoDetect, authStyle)
+}
+
+func TestOIDCGetAuthStyleHeader(t *testing.T) {
+	assert := assert.New(t)
+	provider, _, _, _ := setupOIDCTest(t, nil, "header")
+
+	authStyle := parseAuthStyle(provider.AuthStyle)
+	assert.Equal(oauth2.AuthStyleInHeader, authStyle)
+}
+
+func TestOIDCGetAuthStyleParams(t *testing.T) {
+	assert := assert.New(t)
+	provider, _, _, _ := setupOIDCTest(t, nil, "params")
+
+	authStyle := parseAuthStyle(provider.AuthStyle)
+	assert.Equal(oauth2.AuthStyleInParams, authStyle)
+}
+
 func TestOIDCGetLoginURL(t *testing.T) {
 	assert := assert.New(t)
 
-	provider, server, serverURL, _ := setupOIDCTest(t, nil)
+	provider, server, serverURL, _ := setupOIDCTest(t, nil, defaultAuthStyle)
 	defer server.Close()
 
 	// Check url
@@ -97,7 +124,7 @@ func TestOIDCExchangeCode(t *testing.T) {
 			"grant_type":   "authorization_code",
 			"redirect_uri": "http://example.com/_oauth",
 		},
-	})
+	}, defaultAuthStyle)
 	defer server.Close()
 
 	token, err := provider.ExchangeCode("http://example.com/_oauth", "code")
@@ -108,7 +135,7 @@ func TestOIDCExchangeCode(t *testing.T) {
 func TestOIDCGetUser(t *testing.T) {
 	assert := assert.New(t)
 
-	provider, server, serverURL, key := setupOIDCTest(t, nil)
+	provider, server, serverURL, key := setupOIDCTest(t, nil, defaultAuthStyle)
 	defer server.Close()
 
 	// Generate JWT
@@ -130,7 +157,7 @@ func TestOIDCGetUser(t *testing.T) {
 // Utils
 
 // setOIDCTest creates a key, OIDCServer and initilises an OIDC provider
-func setupOIDCTest(t *testing.T, bodyValues map[string]map[string]string) (*OIDC, *httptest.Server, *url.URL, *rsaKey) {
+func setupOIDCTest(t *testing.T, bodyValues map[string]map[string]string, authStyle string) (*OIDC, *httptest.Server, *url.URL, *rsaKey) {
 	// Generate key
 	key, err := newRSAKey()
 	if err != nil {
@@ -154,6 +181,7 @@ func setupOIDCTest(t *testing.T, bodyValues map[string]map[string]string) (*OIDC
 
 	// Setup provider
 	p := OIDC{
+		AuthStyle:    authStyle,
 		ClientID:     "idtest",
 		ClientSecret: "sectest",
 		IssuerURL:    serverURL.String(),

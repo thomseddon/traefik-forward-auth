@@ -40,6 +40,17 @@ type OAuthProvider struct {
 	ctx    context.Context
 }
 
+func parseAuthStyle(authStyle string) oauth2.AuthStyle {
+	switch authStyle {
+	case "header":
+		return oauth2.AuthStyleInHeader
+	case "params":
+		return oauth2.AuthStyleInParams
+	default:
+		return oauth2.AuthStyleAutoDetect
+	}
+}
+
 // ConfigCopy returns a copy of the oauth2 config with the given redirectURI
 // which ensures the underlying config is not modified
 func (p *OAuthProvider) ConfigCopy(redirectURI string) oauth2.Config {
