@@ -397,6 +397,65 @@ func TestConfigGetConfiguredProvider(t *testing.T) {
 	}
 }
 
+func TestConfigUserHeaderMap(t *testing.T) {
+	t.Run("empty", func(t *testing.T) {
+		assert := assert.New(t)
+		uhdrs := UserHeaderMap{}
+
+		err := uhdrs.UnmarshalFlag("")
+		assert.Nil(err)
+		assert.Equal(UserHeaderMap{}, uhdrs, "should parse empty user header")
+
+		marshal, err := uhdrs.MarshalFlag()
+		assert.Nil(err)
+		assert.Equal("", marshal, "should marshal back to empty user header map")
+	})
+
+	t.Run("single", func(t *testing.T) {
+		assert := assert.New(t)
+		uhdrs := UserHeaderMap{}
+
+		err := uhdrs.UnmarshalFlag("test@example.com=X-Header:value")
+		assert.Nil(err)
+		assert.Equal(UserHeaderMap{"test@example.com": []UserHeader{{"X-Header", "value"}}}, uhdrs, "should parse single user header")
+
+		marshal, err := uhdrs.MarshalFlag()
+		assert.Nil(err)
+		assert.Equal("test@example.com=X-Header:value", marshal, "should marshal back to user header map")
+	})
+
+	t.Run("twousers", func(t *testing.T) {
+		assert := assert.New(t)
+		uhdrs := UserHeaderMap{}
+
+		err := uhdrs.UnmarshalFlag("test@example.com=X-Header:value,othertest@example.com=X-Header:other")
+		assert.Nil(err)
+		assert.Equal(UserHeaderMap{
+			"test@example.com":      []UserHeader{{"X-Header", "value"}},
+			"othertest@example.com": []UserHeader{{"X-Header", "other"}},
+		}, uhdrs, "should parse single user header")
+
+		marshal, err := uhdrs.MarshalFlag()
+		assert.Nil(err)
+		assert.Equal("othertest@example.com=X-Header:other,test@example.com=X-Header:value", marshal, "should marshal back to (sorted) user header map")
+	})
+
+	t.Run("twoheaders", func(t *testing.T) {
+		assert := assert.New(t)
+		uhdrs := UserHeaderMap{}
+
+		err := uhdrs.UnmarshalFlag("test@example.com=X-Trailer:other&X-Header:value")
+		assert.Nil(err)
+		assert.Equal(UserHeaderMap{
+			"test@example.com": []UserHeader{{"X-Trailer", "other"}, {"X-Header", "value"}},
+		}, uhdrs, "should parse single user header")
+
+		marshal, err := uhdrs.MarshalFlag()
+		assert.Nil(err)
+		assert.Equal("test@example.com=X-Trailer:other&X-Header:value", marshal, "should marshal back to user header map")
+	})
+}
+
 func TestConfigCommaSeparatedList(t *testing.T) {
 	assert := assert.New(t)
 	list := CommaSeparatedList{}

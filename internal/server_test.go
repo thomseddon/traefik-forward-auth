@@ -149,15 +149,81 @@ func TestServerAuthHandlerValid(t *testing.T) {
 	// Should allow valid request email
 	req := newHTTPRequest("GET", "http://example.com/foo")
 	c := MakeCookie(req, "test@example.com")
-	config.Domains = []string{}
 
 	res, _ := doHttpRequest(req, c)
 	assert.Equal(200, res.StatusCode, "valid request should be allowed")
 
 	// Should pass through user
 	users := res.Header["X-Forwarded-User"]
-	assert.Len(users, 1, "valid request should have X-Forwarded-User header")
 	assert.Equal([]string{"test@example.com"}, users, "X-Forwarded-User header should match user")
+}
+
+func TestServerAuthHandlerValidWithUserHeaders(t *testing.T) {
+	t.Run("nomatch", func(t *testing.T) {
+		assert := assert.New(t)
+		config = newDefaultConfig()
+		config.UserHeaderMap = map[string][]UserHeader{
+			"testother@example.com": []UserHeader{{"X-Forwarded-User", "testsomeone"}},
+		}
+
+		// Should allow valid request email
+		req := newHTTPRequest("GET", "http://example.com/foo")
+		c := MakeCookie(req, "test@example.com")
+
+		res, _ := doHttpRequest(req, c)
+		assert.Equal(200, res.StatusCode, "valid request should be allowed")
+
+		// Should pass through user, and not match the user header map
+		users := res.Header["X-Forwarded-User"]
+		assert.Equal([]string{"test@example.com"}, users, "X-Forwarded-User header should match user override")
+	})
+
+	t.Run("nouser", func(t *testing.T) {
+		assert := assert.New(t)
+		config = newDefaultConfig()
+		config.UserHeaderMap = map[string][]UserHeader{
+			"test@example.com": []UserHeader{{"X-Is-Forwarded", "true"}},
+		}
+
+		// Should allow valid request email
+		req := newHTTPRequest("GET", "http://example.com/foo")
+		c := MakeCookie(req, "test@example.com")
+
+		res, _ := doHttpRequest(req, c)
+		assert.Equal(200, res.StatusCode, "valid request should be allowed")
+
+		// Should pass through user
+		users := res.Header["X-Forwarded-User"]
+		assert.Equal([]string{"test@example.com"}, users, "X-Forwarded-User header should match user")
+
+		assert.Empty(res.Header["X-Forwarded-Email"], "valid request should have no X-Forwarded-Email header")
+
+		// Should add our header
+		assert.Equal([]string{"true"}, res.Header["X-Is-Forwarded"], "X-Is-Forwarded header should match")
+	})
+
+	t.Run("useroverride", func(t *testing.T) {
+		assert := assert.New(t)
+		config = newDefaultConfig()
+		config.UserHeaderMap = map[string][]UserHeader{
+			"test@example.com": []UserHeader{{"X-Forwarded-User", "testsomeone"}},
+		}
+
+		// Should allow valid request email
+		req := newHTTPRequest("GET", "http://example.com/foo")
+		c := MakeCookie(req, "test@example.com")
+
+		res, _ := doHttpRequest(req, c)
+		assert.Equal(200, res.StatusCode, "valid request should be allowed")
+
+		// Should override user
+		users := res.Header["X-Forwarded-User"]
+		assert.Equal([]string{"testsomeone"}, users, "X-Forwarded-User header should match user override")
+
+		// Should add email
+		emails := res.Header["X-Forwarded-Email"]
+		assert.Equal([]string{"test@example.com"}, emails, "X-Forwarded-Email header should match user")
+	})
 }
 
 func TestServerAuthCallback(t *testing.T) {
