@@ -114,8 +114,39 @@ func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 
 		// Valid request
 		logger.Debug("Allowing valid request")
-		w.Header().Set("X-Forwarded-User", email)
+		writeHeadersForValidated(w, email, config.UserHeaderMap)
 		w.WriteHeader(200)
+	}
+}
+
+const (
+	xForwardedEmail = "X-Forwarded-Email"
+	xForwardedUser  = "X-Forwarded-User"
+)
+
+// writeHeadersForValidated writes headers from the provided
+// UserHeaderMap. If no X-Forwarded-User was listed explicitly, the
+// email is written in that header
+func writeHeadersForValidated(w http.ResponseWriter, email string, umap map[string][]UserHeader) {
+	if umap == nil {
+		return
+	}
+	var foundForwardedUser bool
+	var foundForwardedEmail bool
+	for _, hdr := range umap[email] {
+		w.Header().Set(hdr.Name, hdr.Value)
+		switch hdr.Name {
+		case xForwardedUser:
+			foundForwardedUser = true
+		case xForwardedEmail:
+			foundForwardedEmail = true
+		}
+	}
+
+	if !foundForwardedUser {
+		w.Header().Set(xForwardedUser, email)
+	} else if !foundForwardedEmail {
+		w.Header().Set(xForwardedEmail, email)
 	}
 }
 
