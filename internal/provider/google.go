@@ -14,6 +14,7 @@ type Google struct {
 	ClientSecret string `long:"client-secret" env:"CLIENT_SECRET" description:"Client Secret" json:"-"`
 	Scope        string
 	Prompt       string `long:"prompt" env:"PROMPT" default:"select_account" description:"Space separated list of OpenID prompt options"`
+	HostedDomain string `long:"hosted-domain" env:"HOSTED_DOMAIN" default:"" description:"Option to streamline the UI to only select accounts from this domain"`
 
 	LoginURL *url.URL
 	TokenURL *url.URL
@@ -63,6 +64,9 @@ func (g *Google) GetLoginURL(redirectURI, state string) string {
 	}
 	q.Set("redirect_uri", redirectURI)
 	q.Set("state", state)
+	if g.HostedDomain != "" {
+		q.Set("hd", g.HostedDomain)
+	}
 
 	var u url.URL
 	u = *g.LoginURL

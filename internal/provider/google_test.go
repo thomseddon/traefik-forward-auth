@@ -33,6 +33,7 @@ func TestGoogleSetup(t *testing.T) {
 	assert.Nil(err)
 	assert.Equal("https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email", p.Scope)
 	assert.Equal("", p.Prompt)
+	assert.Equal("", p.HostedDomain)
 
 	assert.Equal(&url.URL{
 		Scheme: "https",
@@ -60,6 +61,7 @@ func TestGoogleGetLoginURL(t *testing.T) {
 		ClientSecret: "sectest",
 		Scope:        "scopetest",
 		Prompt:       "consent select_account",
+		HostedDomain: "example.com",
 		LoginURL: &url.URL{
 			Scheme: "https",
 			Host:   "google.com",
@@ -82,6 +84,7 @@ func TestGoogleGetLoginURL(t *testing.T) {
 		"response_type": []string{"code"},
 		"scope":         []string{"scopetest"},
 		"prompt":        []string{"consent select_account"},
+		"hd":            []string{"example.com"},
 		"state":         []string{"state"},
 	}
 	assert.Equal(expectedQs, qs)
@@ -109,6 +112,7 @@ func TestGoogleExchangeCode(t *testing.T) {
 		ClientSecret: "sectest",
 		Scope:        "scopetest",
 		Prompt:       "consent select_account",
+		HostedDomain: "example.com",
 		TokenURL: &url.URL{
 			Scheme: serverURL.Scheme,
 			Host:   serverURL.Host,
@@ -134,6 +138,7 @@ func TestGoogleGetUser(t *testing.T) {
 		ClientSecret: "sectest",
 		Scope:        "scopetest",
 		Prompt:       "consent select_account",
+		HostedDomain: "example.com",
 		UserURL: &url.URL{
 			Scheme: serverURL.Scheme,
 			Host:   serverURL.Host,
