@@ -1,5 +1,5 @@
 
-# Traefik Forward Auth [![Build Status](https://travis-ci.org/thomseddon/traefik-forward-auth.svg?branch=master)](https://travis-ci.org/thomseddon/traefik-forward-auth) [![Go Report Card](https://goreportcard.com/badge/github.com/thomseddon/traefik-forward-auth)](https://goreportcard.com/report/github.com/thomseddon/traefik-forward-auth) ![Docker Pulls](https://img.shields.io/docker/pulls/thomseddon/traefik-forward-auth.svg) [![GitHub release](https://img.shields.io/github/release/thomseddon/traefik-forward-auth.svg)](https://GitHub.com/thomseddon/traefik-forward-auth/releases/)
+# Traefik Forward Auth ![Build Status](https://img.shields.io/github/workflow/status/thomseddon/traefik-forward-auth/CI) [![Go Report Card](https://goreportcard.com/badge/github.com/thomseddon/traefik-forward-auth)](https://goreportcard.com/report/github.com/thomseddon/traefik-forward-auth) ![Docker Pulls](https://img.shields.io/docker/pulls/thomseddon/traefik-forward-auth.svg) [![GitHub release](https://img.shields.io/github/release/thomseddon/traefik-forward-auth.svg)](https://GitHub.com/thomseddon/traefik-forward-auth/releases/)
 
 
 A minimal forward authentication service that provides OAuth/SSO login and authentication for the [traefik](https://github.com/containous/traefik) reverse proxy/load balancer.
@@ -9,8 +9,8 @@ A minimal forward authentication service that provides OAuth/SSO login and authe
 - Seamlessly overlays any http service with a single endpoint (see: `url-path` in [Configuration](#configuration))
 - Supports multiple providers including Google and OpenID Connect (supported by Azure, Github, Salesforce etc.)
 - Supports multiple domains/subdomains by dynamically generating redirect_uri's
-- Allows authentication to be selectively applied/bypassed based on request parameters (see `rules` in [Configuration](#configuration)))
-- Supports use of centralised authentication host/redirect_uri (see `auth-host` in [Configuration](#configuration)))
+- Allows authentication to be selectively applied/bypassed based on request parameters (see `rules` in [Configuration](#configuration))
+- Supports use of centralised authentication host/redirect_uri (see `auth-host` in [Configuration](#configuration))
 - Allows authentication to persist across multiple domains (see [Cookie Domains](#cookie-domains))
 - Supports extended authentication beyond Google token lifetime (see: `lifetime` in [Configuration](#configuration))
 
@@ -46,6 +46,8 @@ We recommend using the `2` tag on docker hub (`thomseddon/traefik-forward-auth:2
 You can also use the latest incremental releases found on [docker hub](https://hub.docker.com/r/thomseddon/traefik-forward-auth/tags) and [github](https://github.com/thomseddon/traefik-forward-auth/releases).
 
 ARM releases are also available on docker hub, just append `-arm` or `-arm64` to your desired released (e.g. `2-arm` or `2.1-arm64`).
+
+We also build binary files for usage without docker starting with releases after 2.2.0 You can find these as assets of the specific GitHub release.
 
 #### Upgrade Guide
 
@@ -162,12 +164,14 @@ Application Options:
   --url-path=                                           Callback URL Path (default: /_oauth) [$URL_PATH]
   --secret=                                             Secret used for signing (required) [$SECRET]
   --whitelist=                                          Only allow given email addresses, can be set multiple times [$WHITELIST]
+  --port=                                               Port to listen on (default: 4181) [$PORT]
   --rule.<name>.<param>=                                Rule definitions, param can be: "action", "rule" or "provider"
 
 Google Provider:
   --providers.google.client-id=                         Client ID [$PROVIDERS_GOOGLE_CLIENT_ID]
   --providers.google.client-secret=                     Client Secret [$PROVIDERS_GOOGLE_CLIENT_SECRET]
   --providers.google.prompt=                            Space separated list of OpenID prompt options [$PROVIDERS_GOOGLE_PROMPT]
+  --providers.google.hosted-domain=                     Restrict google account selection to a domain [$PROVIDERS_GOOGLE_HOSTED_DOMAIN]
 
 OIDC Provider:
   --providers.oidc.issuer-url=                          Issuer URL [$PROVIDERS_OIDC_ISSUER_URL]
@@ -423,8 +427,6 @@ spec:
       - name: traefik-forward-auth
 ```
 
-Note: If using auth host mode, you must apply the middleware to your auth host ingress.
-
 See the examples directory for more examples.
 
 #### Selective Container Authentication in Swarm
@@ -438,8 +440,6 @@ whoami:
     - "traefik.http.routers.whoami.rule=Host(`whoami.example.com`)"
     - "traefik.http.routers.whoami.middlewares=traefik-forward-auth"
 ```
-
-Note: If using auth host mode, you must apply the middleware to the traefik-forward-auth container.
 
 See the examples directory for more examples.
 

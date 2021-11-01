@@ -2,6 +2,7 @@ package tfa
 
 import (
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
@@ -196,10 +197,8 @@ func TestAuthValidateEmail(t *testing.T) {
 func TestRedirectUri(t *testing.T) {
 	assert := assert.New(t)
 
-	r, _ := http.NewRequest("GET", "http://example.com", nil)
+	r := httptest.NewRequest("GET", "http://app.example.com/hello", nil)
 	r.Header.Add("X-Forwarded-Proto", "http")
-	r.Header.Add("X-Forwarded-Host", "app.example.com")
-	r.Header.Add("X-Forwarded-Uri", "/hello")
 
 	//
 	// No Auth Host
@@ -241,10 +240,8 @@ func TestRedirectUri(t *testing.T) {
 	// With Auth URL + cookie domain, but from different domain
 	// - will not use auth host
 	//
-	r, _ = http.NewRequest("GET", "http://another.com", nil)
+	r = httptest.NewRequest("GET", "https://another.com/hello", nil)
 	r.Header.Add("X-Forwarded-Proto", "https")
-	r.Header.Add("X-Forwarded-Host", "another.com")
-	r.Header.Add("X-Forwarded-Uri", "/hello")
 
 	config.AuthHost = "auth.example.com"
 	config.CookieDomains = []CookieDomain{*NewCookieDomain("example.com")}
@@ -378,10 +375,8 @@ func TestValidateState(t *testing.T) {
 func TestMakeState(t *testing.T) {
 	assert := assert.New(t)
 
-	r, _ := http.NewRequest("GET", "http://example.com", nil)
+	r := httptest.NewRequest("GET", "http://example.com/hello", nil)
 	r.Header.Add("X-Forwarded-Proto", "http")
-	r.Header.Add("X-Forwarded-Host", "example.com")
-	r.Header.Add("X-Forwarded-Uri", "/hello")
 
 	// Test with google
 	p := provider.Google{}

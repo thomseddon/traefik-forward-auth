@@ -1,5 +1,0 @@
-language: go
-sudo: false
-go:
-  - "1.12"
-script: env GO111MODULE=on go test -v ./...
