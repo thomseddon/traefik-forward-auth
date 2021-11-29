@@ -13,7 +13,7 @@ type Google struct {
 	ClientID     string `long:"client-id" env:"CLIENT_ID" description:"Client ID"`
 	ClientSecret string `long:"client-secret" env:"CLIENT_SECRET" description:"Client Secret" json:"-"`
 	Scope        string
-	Prompt       string `long:"prompt" env:"PROMPT" default:"select_account" description:"Space separated list of OpenID prompt options"`
+	Prompt       string `long:"prompt" env:"PROMPT" default:"" description:"Space separated list of OpenID prompt options"`
 	HostedDomain string `long:"hosted-domain" env:"HOSTED_DOMAIN" default:"" description:"Option to streamline the UI to only select accounts from this domain"`
 
 	LoginURL *url.URL

@@ -47,12 +47,6 @@ type Config struct {
 	GoogleActingAdminEmail       string             `long:"google-acting-admin-email" env:"GOOGLE_ACTING_ADMIN_EMAIL" description:"The gcloud admin account the service account delegates to for gcloud API"`
 	GoogleExpirySeconds          int64              `long:"google-expiry-seconds" env:"GOOGLE_EXPIRY_SECONDS" default:"300" description:"How long a users Google groups list is cached before refreshing from the API"`
 
-	GoogleGroups                 CommaSeparatedList `long:"google-group" env:"GOOGLE_GROUP" env-delim:"," description:"Only allow given Google groups, can be set multiple times"`
-	GoogleDomain                 string             `long:"google-domain" env:"GOOGLE_DOMAIN" description:"Google domain used for gcloud API"`
-	GoogleApplicationCredentials string             `long:"google-application-credentials" env:"GOOGLE_APPLICATION_CREDENTIALS" description:"Google service account JSON file used for gcloud API"`
-	GoogleActingAdminEmail       string             `long:"google-acting-admin-email" env:"GOOGLE_ACTING_ADMIN_EMAIL" description:"The gcloud admin account the service account delegates to for gcloud API"`
-	GoogleExpirySeconds          int64              `long:"google-expiry-seconds" env:"GOOGLE_EXPIRY_SECONDS" default:"300" description:"How long a users Google groups list is cached before refreshing from the API"`
-
 	Providers provider.Providers `group:"providers" namespace:"providers" env-namespace:"PROVIDERS"`
 	Rules     map[string]*Rule   `long:"rule.<name>.<param>" description:"Rule definitions, param can be: \"action\", \"rule\" or \"provider\""`
 
