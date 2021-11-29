@@ -40,7 +40,7 @@ func TestConfigDefaults(t *testing.T) {
 	assert.Equal(c.Port, 4181)
 	assert.Len(c.GoogleGroups, 0)
 
-	assert.Equal("select_account", c.Providers.Google.Prompt)
+	assert.Equal("", c.Providers.Google.Prompt)
 }
 
 func TestConfigParseArgs(t *testing.T) {
