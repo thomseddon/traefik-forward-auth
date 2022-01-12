@@ -14,6 +14,7 @@ type Google struct {
 	ClientSecret string `long:"client-secret" env:"CLIENT_SECRET" description:"Client Secret" json:"-"`
 	Scope        string
 	Prompt       string `long:"prompt" env:"PROMPT" default:"select_account" description:"Space separated list of OpenID prompt options"`
+	EmailDomain  string `long:"email-domain" env:"EMAIL_DOMAIN" description:"Email domain the user is suggested to login with"`
 
 	LoginURL *url.URL
 	TokenURL *url.URL
@@ -60,6 +61,9 @@ func (g *Google) GetLoginURL(redirectURI, state string) string {
 	q.Set("scope", g.Scope)
 	if g.Prompt != "" {
 		q.Set("prompt", g.Prompt)
+	}
+	if g.EmailDomain != "" {
+		q.Set("hd", g.EmailDomain)
 	}
 	q.Set("redirect_uri", redirectURI)
 	q.Set("state", state)
