@@ -3,6 +3,7 @@ package tfa
 import (
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/containous/traefik/v2/pkg/rules"
 	"github.com/sirupsen/logrus"
@@ -224,9 +225,20 @@ func (s *Server) authRedirect(logger *logrus.Entry, w http.ResponseWriter, r *ht
 		return
 	}
 
-	// Set the CSRF cookie
-	csrf := MakeCSRFCookie(r, nonce)
-	http.SetCookie(w, csrf)
+	var setCsrfCookie = true
+	var csrf *http.Cookie
+	// Check for existing CSRF cookie
+	for _, v := range r.Cookies() {
+		if strings.Contains(v.Name, config.CSRFCookieName) {
+			setCsrfCookie = false
+		}
+	}
+
+	if setCsrfCookie {
+		// Set the CSRF cookie
+		csrf := MakeCSRFCookie(r, nonce)
+		http.SetCookie(w, csrf)
+	}
 
 	if !config.InsecureCookie && r.Header.Get("X-Forwarded-Proto") != "https" {
 		logger.Warn("You are using \"secure\" cookies for a request that was not " +
