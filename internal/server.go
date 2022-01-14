@@ -225,20 +225,15 @@ func (s *Server) authRedirect(logger *logrus.Entry, w http.ResponseWriter, r *ht
 		return
 	}
 
-	var setCsrfCookie = true
-	var csrf *http.Cookie
-	// Check for existing CSRF cookie
+	// clean existing CSRF cookie
 	for _, v := range r.Cookies() {
 		if strings.Contains(v.Name, config.CSRFCookieName) {
-			setCsrfCookie = false
+			http.SetCookie(w, ClearCSRFCookie(r, v))
 		}
 	}
-
-	if setCsrfCookie {
-		// Set the CSRF cookie
-		csrf := MakeCSRFCookie(r, nonce)
-		http.SetCookie(w, csrf)
-	}
+	// Set the CSRF cookie
+	csrf := MakeCSRFCookie(r, nonce)
+	http.SetCookie(w, csrf)
 
 	if !config.InsecureCookie && r.Header.Get("X-Forwarded-Proto") != "https" {
 		logger.Warn("You are using \"secure\" cookies for a request that was not " +
