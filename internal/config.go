@@ -219,6 +219,16 @@ func (c *Config) parseUnknownFlag(option string, arg flags.SplitArgument, args [
 			list := CommaSeparatedList{}
 			list.UnmarshalFlag(val)
 			rule.Domains = list
+		case "groups":
+			list := CommaSeparatedList{}
+			list.UnmarshalFlag(val)
+			rule.Groups = list
+		case "groupmode":
+			if val == "any" {
+				rule.GroupMode = "any"
+			} else {
+				rule.GroupMode = "all"
+			}
 		default:
 			return args, fmt.Errorf("invalid route param: %v", option)
 		}
@@ -339,6 +349,8 @@ type Rule struct {
 	Action    string
 	Rule      string
 	Provider  string
+	Groups    CommaSeparatedList
+	GroupMode string // "any" or "all"
 	Whitelist CommaSeparatedList
 	Domains   CommaSeparatedList
 }

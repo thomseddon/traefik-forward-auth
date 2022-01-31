@@ -92,7 +92,7 @@ func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 		}
 
 		// Validate cookie
-		email, err := ValidateCookie(r, c)
+		user, err := ValidateCookie(r, c)
 		if err != nil {
 			if err.Error() == "Cookie has expired" {
 				logger.Info("Cookie has expired")
@@ -105,16 +105,23 @@ func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 		}
 
 		// Validate user
-		valid := ValidateEmail(email, rule)
+		valid := ValidateEmail(user.Email, rule)
 		if !valid {
-			logger.WithField("email", email).Warn("Invalid email")
+			logger.WithField("email", user.Email).Warn("Invalid email")
+			http.Error(w, "Not authorized", 401)
+			return
+		}
+
+		validGroups := ValidateGroups(*user, rule)
+		if !validGroups {
+			logger.Warn("User did not have sufficient groups")
 			http.Error(w, "Not authorized", 401)
 			return
 		}
 
 		// Valid request
 		logger.Debug("Allowing valid request")
-		w.Header().Set("X-Forwarded-User", email)
+		w.Header().Set("X-Forwarded-User", user.Email)
 		w.WriteHeader(200)
 	}
 }
@@ -186,7 +193,7 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 		}
 
 		// Generate cookie
-		http.SetCookie(w, MakeCookie(r, user.Email))
+		http.SetCookie(w, MakeCookie(r, user))
 		logger.WithFields(logrus.Fields{
 			"provider": providerName,
 			"redirect": redirect,

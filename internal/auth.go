@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -19,41 +20,68 @@ import (
 
 // ValidateCookie verifies that a cookie matches the expected format of:
 // Cookie = hash(secret, cookie domain, email, expires)|expires|email
-func ValidateCookie(r *http.Request, c *http.Cookie) (string, error) {
+func ValidateCookie(r *http.Request, c *http.Cookie) (*provider.User, error) {
 	parts := strings.Split(c.Value, "|")
 
 	if len(parts) != 3 {
-		return "", errors.New("Invalid cookie format")
+		return nil, errors.New("Invalid cookie format")
 	}
 
 	mac, err := base64.URLEncoding.DecodeString(parts[0])
 	if err != nil {
-		return "", errors.New("Unable to decode cookie mac")
+		return nil, errors.New("Unable to decode cookie mac")
 	}
 
 	expectedSignature := cookieSignature(r, parts[2], parts[1])
 	expected, err := base64.URLEncoding.DecodeString(expectedSignature)
 	if err != nil {
-		return "", errors.New("Unable to generate mac")
+		return nil, errors.New("Unable to generate mac")
 	}
 
 	// Valid token?
 	if !hmac.Equal(mac, expected) {
-		return "", errors.New("Invalid cookie mac")
+		return nil, errors.New("Invalid cookie mac")
 	}
 
 	expires, err := strconv.ParseInt(parts[1], 10, 64)
 	if err != nil {
-		return "", errors.New("Unable to parse cookie expiry")
+		return nil, errors.New("Unable to parse cookie expiry")
 	}
 
 	// Has it expired?
 	if time.Unix(expires, 0).Before(time.Now()) {
-		return "", errors.New("Cookie has expired")
+		return nil, errors.New("Cookie has expired")
 	}
 
 	// Looks valid
-	return parts[2], nil
+	user, err := DecodeUser(&parts[2])
+	return user, err
+}
+
+func ValidateGroups(user provider.User, ruleName string) bool {
+	rule, ok := config.Rules[ruleName]
+	if !ok {
+		return true
+	}
+
+	groupsDesired := len(rule.Groups)
+	groupsMatched := 0
+	for _, group := range rule.Groups {
+		for _, userGroup := range user.Groups {
+			if group == userGroup {
+				groupsMatched += 1
+			}
+		}
+	}
+
+	log.Debugf("Requested %d groups (mode %s), matched %d (rule: %s, user: %s)\n", groupsDesired, rule.GroupMode, groupsMatched, rule.Groups, user.Groups)
+	log.Debugf("Requested %d groups (mode %s), matched %d", groupsDesired, rule.GroupMode, groupsMatched)
+	switch rule.GroupMode {
+	case "all":
+		return groupsDesired == groupsMatched
+	default:
+		return groupsMatched > 0 || groupsDesired == 0
+	}
 }
 
 // ValidateEmail checks if the given email address matches either a whitelisted
@@ -161,11 +189,38 @@ func useAuthDomain(r *http.Request) (bool, string) {
 
 // Cookie methods
 
+func EncodeUser(user *provider.User) (string, error) {
+	json, err := json.Marshal(user)
+	if err != nil {
+		return "", err
+	}
+	return base64.URLEncoding.EncodeToString(json), nil
+}
+
+func DecodeUser(encoded *string) (*provider.User, error) {
+	user := &provider.User{}
+	j, err := base64.URLEncoding.DecodeString(*encoded)
+	if err != nil {
+		return nil, errors.New("Invalid base64 payload")
+	}
+	err = json.Unmarshal(j, &user)
+	if err != nil {
+		return nil, errors.New("Invalid JSON")
+	}
+
+	return user, err
+}
+
 // MakeCookie creates an auth cookie
-func MakeCookie(r *http.Request, email string) *http.Cookie {
+func MakeCookie(r *http.Request, user provider.User) *http.Cookie {
 	expires := cookieExpiry()
-	mac := cookieSignature(r, email, fmt.Sprintf("%d", expires.Unix()))
-	value := fmt.Sprintf("%s|%d|%s", mac, expires.Unix(), email)
+	encoded, err := EncodeUser(&user)
+	if err != nil {
+		log.Errorf("User not encoded correctly: %s", err)
+	}
+
+	mac := cookieSignature(r, encoded, fmt.Sprintf("%d", expires.Unix()))
+	value := fmt.Sprintf("%s|%d|%s", mac, expires.Unix(), encoded)
 
 	return &http.Cookie{
 		Name:     config.CookieName,
