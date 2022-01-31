@@ -48,18 +48,19 @@ func TestAuthValidateCookie(t *testing.T) {
 
 	// Should catch expired
 	config.Lifetime = time.Second * time.Duration(-1)
-	c = MakeCookie(r, "test@test.com")
+	c = MakeCookie(r, provider.User{Email: "test@test.com"})
 	_, err = ValidateCookie(r, c)
+
 	if assert.Error(err) {
 		assert.Equal("Cookie has expired", err.Error())
 	}
 
 	// Should accept valid cookie
 	config.Lifetime = time.Second * time.Duration(10)
-	c = MakeCookie(r, "test@test.com")
-	email, err := ValidateCookie(r, c)
+	c = MakeCookie(r, provider.User{Email: "test@test.com"})
+	user, err := ValidateCookie(r, c)
 	assert.Nil(err, "valid request should not return an error")
-	assert.Equal("test@test.com", email, "valid request should return user email")
+	assert.Equal("test@test.com", user.Email, "valid request should return user email")
 }
 
 func TestAuthValidateEmail(t *testing.T) {
@@ -194,6 +195,29 @@ func TestAuthValidateEmail(t *testing.T) {
 	assert.True(v, "should allow user in whitelist")
 }
 
+func TestAuthValidateGroups(t *testing.T) {
+	assert := assert.New(t)
+	var (
+		rule *Rule
+		v    bool
+	)
+
+	rule = NewRule()
+	config.Rules = map[string]*Rule{"test": rule}
+
+	user := provider.User{
+		Groups: []string{"access"},
+	}
+
+	rule.Groups = []string{"access"}
+	v = ValidateGroups(user, "test")
+	assert.True(v, "should allow user with access group")
+
+	rule.Groups = []string{"missing"}
+	v = ValidateGroups(user, "test")
+	assert.False(v, "should not allow user without the access group")
+}
+
 func TestRedirectUri(t *testing.T) {
 	assert := assert.New(t)
 
@@ -260,7 +284,7 @@ func TestAuthMakeCookie(t *testing.T) {
 	r, _ := http.NewRequest("GET", "http://app.example.com", nil)
 	r.Header.Add("X-Forwarded-Host", "app.example.com")
 
-	c := MakeCookie(r, "test@example.com")
+	c := MakeCookie(r, provider.User{Email: "test@test.com"})
 	assert.Equal("_forward_auth", c.Name)
 	parts := strings.Split(c.Value, "|")
 	assert.Len(parts, 3, "cookie should be 3 parts")
@@ -275,7 +299,7 @@ func TestAuthMakeCookie(t *testing.T) {
 
 	config.CookieName = "testname"
 	config.InsecureCookie = true
-	c = MakeCookie(r, "test@example.com")
+	c = MakeCookie(r, provider.User{Email: "test@test.com"})
 	assert.Equal("testname", c.Name)
 	assert.False(c.Secure)
 }
@@ -379,18 +403,18 @@ func TestMakeState(t *testing.T) {
 	r.Header.Add("X-Forwarded-Proto", "http")
 
 	// Test with google
-	p := provider.Google{}
-	state := MakeState(r, &p, "nonce")
+	p := &provider.Google{}
+	state := MakeState(r, p, "nonce")
 	assert.Equal("nonce:google:http://example.com/hello", state)
 
 	// Test with OIDC
-	p2 := provider.OIDC{}
-	state = MakeState(r, &p2, "nonce")
+	p2 := &provider.OIDC{}
+	state = MakeState(r, p2, "nonce")
 	assert.Equal("nonce:oidc:http://example.com/hello", state)
 
 	// Test with Generic OAuth
-	p3 := provider.GenericOAuth{}
-	state = MakeState(r, &p3, "nonce")
+	p3 := &provider.GenericOAuth{}
+	state = MakeState(r, p3, "nonce")
 	assert.Equal("nonce:generic-oauth:http://example.com/hello", state)
 }
 
