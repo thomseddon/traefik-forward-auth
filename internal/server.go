@@ -28,6 +28,10 @@ func (s *Server) buildRoutes() {
 		log.Fatal(err)
 	}
 
+	// Add callback and logout handlers at highest priority
+	s.router.Handle(config.Path, s.AuthCallbackHandler())
+	s.router.Handle(config.Path+"/logout", s.LogoutHandler())
+
 	// Let's build a router
 	for name, rule := range config.Rules {
 		matchRule := rule.formattedRule()
@@ -37,12 +41,6 @@ func (s *Server) buildRoutes() {
 			s.router.AddRoute(matchRule, 1, s.AuthHandler(rule.Provider, name))
 		}
 	}
-
-	// Add callback handler
-	s.router.Handle(config.Path, s.AuthCallbackHandler())
-
-	// Add logout handler
-	s.router.Handle(config.Path+"/logout", s.LogoutHandler())
 
 	// Add a default handler
 	if config.DefaultAction == "allow" {
