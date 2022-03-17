@@ -215,7 +215,7 @@ func TestRedirectUri(t *testing.T) {
 	// With Auth URL but no matching cookie domain
 	// - will not use auth host
 	//
-	config.AuthHost = "auth.example.com"
+	config.AuthHosts = CommaSeparatedList{"auth.example.com"}
 
 	uri, err = url.Parse(redirectUri(r))
 	assert.Nil(err)
@@ -226,7 +226,7 @@ func TestRedirectUri(t *testing.T) {
 	//
 	// With correct Auth URL + cookie domain
 	//
-	config.AuthHost = "auth.example.com"
+	config.AuthHosts = CommaSeparatedList{"auth.example.com"}
 	config.CookieDomains = []CookieDomain{*NewCookieDomain("example.com")}
 
 	// Check url
@@ -243,10 +243,75 @@ func TestRedirectUri(t *testing.T) {
 	r = httptest.NewRequest("GET", "https://another.com/hello", nil)
 	r.Header.Add("X-Forwarded-Proto", "https")
 
-	config.AuthHost = "auth.example.com"
+	config.AuthHosts = CommaSeparatedList{"auth.example.com"}
 	config.CookieDomains = []CookieDomain{*NewCookieDomain("example.com")}
 
 	// Check url
+	uri, err = url.Parse(redirectUri(r))
+	assert.Nil(err)
+	assert.Equal("https", uri.Scheme)
+	assert.Equal("another.com", uri.Host)
+	assert.Equal("/_oauth", uri.Path)
+
+	//
+	// With correct Auth URL + cookie domain, multiple AuthHosts and cookie domains
+	// - will use matching authHost
+	//
+	config.AuthHosts = CommaSeparatedList{"auth.example.com", "auth.another.com"}
+	config.CookieDomains = []CookieDomain{*NewCookieDomain("example.com"), *NewCookieDomain("another.com")}
+
+	uri, err = url.Parse(redirectUri(r))
+	assert.Nil(err)
+	assert.Equal("https", uri.Scheme)
+	assert.Equal("auth.another.com", uri.Host)
+	assert.Equal("/_oauth", uri.Path)
+
+	//
+	// With correct Auth URL + no cookie domains
+	// - will not use authHost
+	//
+	config.AuthHosts = CommaSeparatedList{"auth.example.com", "auth.another.com"}
+	config.CookieDomains = []CookieDomain{}
+
+	uri, err = url.Parse(redirectUri(r))
+	assert.Nil(err)
+	assert.Equal("https", uri.Scheme)
+	assert.Equal("another.com", uri.Host)
+	assert.Equal("/_oauth", uri.Path)
+
+	//
+	// With correct Auth URL + no matching cookie domains
+	// - will not use authHost
+	//
+	config.AuthHosts = CommaSeparatedList{"auth.example.com", "auth.another.com"}
+	config.CookieDomains = []CookieDomain{*NewCookieDomain("example.com"), *NewCookieDomain("another.example")}
+
+	uri, err = url.Parse(redirectUri(r))
+	assert.Nil(err)
+	assert.Equal("https", uri.Scheme)
+	assert.Equal("another.com", uri.Host)
+	assert.Equal("/_oauth", uri.Path)
+
+	//
+	// With no matching Auth Host + matching cookie domains
+	// - will not use authHost
+	//
+	config.AuthHosts = CommaSeparatedList{"auth.example.com", "auth.another.example"}
+	config.CookieDomains = []CookieDomain{*NewCookieDomain("example.com"), *NewCookieDomain("another.com")}
+
+	uri, err = url.Parse(redirectUri(r))
+	assert.Nil(err)
+	assert.Equal("https", uri.Scheme)
+	assert.Equal("another.com", uri.Host)
+	assert.Equal("/_oauth", uri.Path)
+
+	//
+	// With no matching Auth Host + no matching cookie domains
+	// - will not use authHost
+	//
+	config.AuthHosts = CommaSeparatedList{"auth.example.com", "auth.another.example"}
+	config.CookieDomains = []CookieDomain{*NewCookieDomain("example.com"), *NewCookieDomain("another.example")}
+
 	uri, err = url.Parse(redirectUri(r))
 	assert.Nil(err)
 	assert.Equal("https", uri.Scheme)
@@ -298,7 +363,7 @@ func TestAuthMakeCSRFCookie(t *testing.T) {
 	assert.Equal("app.example.com", c.Domain)
 
 	// With cookie domain and auth url
-	config.AuthHost = "auth.example.com"
+	config.AuthHosts = CommaSeparatedList{"auth.example.com"}
 	config.CookieDomains = []CookieDomain{*NewCookieDomain("example.com")}
 	c = MakeCSRFCookie(r, "12333378901234567890123456789012")
 	assert.Equal("_forward_auth_csrf_123333", c.Name)
