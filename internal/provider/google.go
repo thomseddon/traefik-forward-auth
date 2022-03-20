@@ -1,11 +1,16 @@
 package provider
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
+
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
 )
 
 // Google provider
@@ -40,8 +45,8 @@ func (g *Google) Setup() error {
 	}
 	g.TokenURL = &url.URL{
 		Scheme: "https",
-		Host:   "www.googleapis.com",
-		Path:   "/oauth2/v3/token",
+		Host:   "oauth2.googleapis.com",
+		Path:   "/token",
 	}
 	g.UserURL = &url.URL{
 		Scheme: "https",
@@ -73,23 +78,24 @@ func (g *Google) GetLoginURL(redirectURI, state string) string {
 
 // ExchangeCode exchanges the given redirect uri and code for a token
 func (g *Google) ExchangeCode(redirectURI, code string) (string, error) {
-	form := url.Values{}
-	form.Set("client_id", g.ClientID)
-	form.Set("client_secret", g.ClientSecret)
-	form.Set("grant_type", "authorization_code")
-	form.Set("redirect_uri", redirectURI)
-	form.Set("code", code)
+	ctx := context.Background()
 
-	res, err := http.PostForm(g.TokenURL.String(), form)
+	var conf = &oauth2.Config{
+		ClientID:     g.ClientID,
+		ClientSecret: g.ClientSecret,
+		Endpoint:     google.Endpoint,
+		Scopes:       []string{"https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email"},
+		RedirectURL:  redirectURI,
+	}
+
+	token, err := conf.Exchange(ctx, code)
+	if err != nil {
+		log.Fatal(err)
+	}
 	if err != nil {
 		return "", err
 	}
-
-	var token token
-	defer res.Body.Close()
-	err = json.NewDecoder(res.Body).Decode(&token)
-
-	return token.Token, err
+	return token.AccessToken, err
 }
 
 // GetUser uses the given token and returns a complete provider.User object
