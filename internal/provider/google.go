@@ -19,10 +19,8 @@ type Google struct {
 	ClientSecret string `long:"client-secret" env:"CLIENT_SECRET" description:"Client Secret" json:"-"`
 	Scope        string
 	Prompt       string `long:"prompt" env:"PROMPT" default:"select_account" description:"Space separated list of OpenID prompt options"`
-
-	LoginURL *url.URL
-	TokenURL *url.URL
-	UserURL  *url.URL
+	LoginURL     *url.URL
+	UserURL      *url.URL
 }
 
 // Name returns the name of the provider
@@ -42,11 +40,6 @@ func (g *Google) Setup() error {
 		Scheme: "https",
 		Host:   "accounts.google.com",
 		Path:   "/o/oauth2/auth",
-	}
-	g.TokenURL = &url.URL{
-		Scheme: "https",
-		Host:   "oauth2.googleapis.com",
-		Path:   "/token",
 	}
 	g.UserURL = &url.URL{
 		Scheme: "https",
