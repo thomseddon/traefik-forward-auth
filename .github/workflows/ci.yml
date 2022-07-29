@@ -44,6 +44,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       -
+        name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+      -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       -
