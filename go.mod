@@ -3,13 +3,13 @@ module github.com/thomseddon/traefik-forward-auth
 go 1.13
 
 require (
-	github.com/containous/traefik/v2 v2.1.2
+	github.com/containous/traefik/v2 v2.2.8
 	github.com/coreos/go-oidc v2.1.0+incompatible
 	github.com/pquerna/cachecontrol v0.0.0-20180517163645-1555304b9b35 // indirect
 	github.com/sirupsen/logrus v1.4.2
-	github.com/stretchr/testify v1.4.0
+	github.com/stretchr/testify v1.5.1
 	github.com/thomseddon/go-flags v1.4.1-0.20190507184247-a3629c504486
-	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
+	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	gopkg.in/square/go-jose.v2 v2.3.1
 )
 
