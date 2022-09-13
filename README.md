@@ -166,6 +166,7 @@ Application Options:
   --whitelist=                                          Only allow given email addresses, can be set multiple times [$WHITELIST]
   --port=                                               Port to listen on (default: 4181) [$PORT]
   --rule.<name>.<param>=                                Rule definitions, param can be: "action", "rule" or "provider"
+  --trusted-ip-address=                                 List of trusted IP addresses or IP networks (in CIDR notation) that are considered authenticated [$TRUSTED_IP_ADDRESS]  
 
 Google Provider:
   --providers.google.client-id=                         Client ID [$PROVIDERS_GOOGLE_CLIENT_ID]
@@ -361,6 +362,17 @@ All options can be supplied in any of the following ways, in the following prece
    ```
 
    Note: It is possible to break your redirect flow with rules, please be careful not to create an `allow` rule that matches your redirect_uri unless you know what you're doing. This limitation is being tracked in in #101 and the behaviour will change in future releases.
+
+- `trusted-ip-address`
+
+  This option adds an IP address or an IP network given in CIDR notation to the list of trusted networks. Requests originating
+  from a trusted network are considered authenticated and are never redirected to an OAuth IDP. The option can be used
+  multiple times to add many trusted address ranges.
+
+  * `--trusted-ip-address=2.3.4.5` adds a single IP (`2.3.4.5`) as a trusted IP.
+  * `--trusted-ip-address=30.1.0.0/16` adds the address range from `30.1.0.1` to `30.1.255.254` as a trusted range
+
+  The list of trusted networks is initially empty.
 
 ## Concepts
 

@@ -160,6 +160,42 @@ func TestServerAuthHandlerValid(t *testing.T) {
 	assert.Equal([]string{"test@example.com"}, users, "X-Forwarded-User header should match user")
 }
 
+func TestServerAuthHandlerTrustedIP_trusted(t *testing.T) {
+	assert := assert.New(t)
+	config = newDefaultConfig()
+
+	// Should allow valid request email
+	req := newHTTPRequest("GET", "http://example.com/foo")
+	req.Header.Set("X-Forwarded-For", "127.0.0.2")
+
+	res, _ := doHttpRequest(req, nil)
+	assert.Equal(200, res.StatusCode, "trusted ip should be allowed")
+}
+
+func TestServerAuthHandlerTrustedIP_notTrusted(t *testing.T) {
+	assert := assert.New(t)
+	config = newDefaultConfig()
+
+	// Should allow valid request email
+	req := newHTTPRequest("GET", "http://example.com/foo")
+	req.Header.Set("X-Forwarded-For", "127.0.0.1")
+
+	res, _ := doHttpRequest(req, nil)
+	assert.Equal(307, res.StatusCode, "untrusted ip should not be allowed")
+}
+
+func TestServerAuthHandlerTrustedIP_invalidAddress(t *testing.T) {
+	assert := assert.New(t)
+	config = newDefaultConfig()
+
+	// Should allow valid request email
+	req := newHTTPRequest("GET", "http://example.com/foo")
+	req.Header.Set("X-Forwarded-For", "127.0")
+
+	res, _ := doHttpRequest(req, nil)
+	assert.Equal(307, res.StatusCode, "invalid ip should not be allowed")
+}
+
 func TestServerAuthCallback(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
@@ -556,6 +592,7 @@ func newDefaultConfig() *Config {
 	config, _ = NewConfig([]string{
 		"--providers.google.client-id=id",
 		"--providers.google.client-secret=secret",
+		"--trusted-ip-address=127.0.0.2",
 	})
 
 	// Setup the google providers without running all the config validation
@@ -576,5 +613,6 @@ func newHTTPRequest(method, target string) *http.Request {
 	r.Header.Add("X-Forwarded-Proto", u.Scheme)
 	r.Header.Add("X-Forwarded-Host", u.Host)
 	r.Header.Add("X-Forwarded-Uri", u.RequestURI())
+	r.Header.Add("X-Forwarded-For", "127.0.0.1")
 	return r
 }
