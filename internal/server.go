@@ -4,10 +4,15 @@ import (
 	"net/http"
 	"net/url"
 
+	_ "embed"
+
 	"github.com/containous/traefik/v2/pkg/rules"
 	"github.com/sirupsen/logrus"
 	"github.com/thomseddon/traefik-forward-auth/internal/provider"
 )
+
+//go:embed tmpl/denied.html
+var accessDenied string
 
 // Server contains router and handler methods
 type Server struct {
@@ -28,6 +33,10 @@ func (s *Server) buildRoutes() {
 		log.Fatal(err)
 	}
 
+	// Add callback and logout handlers at highest priority
+	s.router.Handle(config.Path, s.AuthCallbackHandler())
+	s.router.Handle(config.Path+"/logout", s.LogoutHandler())
+
 	// Let's build a router
 	for name, rule := range config.Rules {
 		matchRule := rule.formattedRule()
@@ -37,12 +46,6 @@ func (s *Server) buildRoutes() {
 			s.router.AddRoute(matchRule, 1, s.AuthHandler(rule.Provider, name))
 		}
 	}
-
-	// Add callback handler
-	s.router.Handle(config.Path, s.AuthCallbackHandler())
-
-	// Add logout handler
-	s.router.Handle(config.Path+"/logout", s.LogoutHandler())
 
 	// Add a default handler
 	if config.DefaultAction == "allow" {
@@ -76,6 +79,14 @@ func (s *Server) AllowHandler(rule string) http.HandlerFunc {
 	}
 }
 
+func denyAccess(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, ClearCookie(r))
+
+	w.Header().Set("Content-type", "text/html")
+	w.WriteHeader(http.StatusUnauthorized)
+	w.Write([]byte(accessDenied))
+}
+
 // AuthHandler Authenticates requests
 func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 	p, _ := config.GetConfiguredProvider(providerName)
@@ -98,8 +109,9 @@ func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 				logger.Info("Cookie has expired")
 				s.authRedirect(logger, w, r, p)
 			} else {
+				http.SetCookie(w, ClearCookie(r))
 				logger.WithField("error", err).Warn("Invalid cookie")
-				http.Error(w, "Not authorized", 401)
+				s.authRedirect(logger, w, r, p)
 			}
 			return
 		}
@@ -138,7 +150,7 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 			logger.WithFields(logrus.Fields{
 				"error": err,
 			}).Warn("Error validating state")
-			http.Error(w, "Not authorized", 401)
+			denyAccess(w, r)
 			return
 		}
 
@@ -146,7 +158,7 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 		c, err := FindCSRFCookie(r, state)
 		if err != nil {
 			logger.Info("Missing csrf cookie")
-			http.Error(w, "Not authorized", 401)
+			denyAccess(w, r)
 			return
 		}
 
@@ -157,7 +169,7 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 				"error":       err,
 				"csrf_cookie": c,
 			}).Warn("Error validating csrf cookie")
-			http.Error(w, "Not authorized", 401)
+			denyAccess(w, r)
 			return
 		}
 
@@ -169,7 +181,7 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 				"csrf_cookie": c,
 				"provider":    providerName,
 			}).Warn("Invalid provider in csrf cookie")
-			http.Error(w, "Not authorized", 401)
+			denyAccess(w, r)
 			return
 		}
 
