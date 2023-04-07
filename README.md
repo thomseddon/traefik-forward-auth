@@ -328,6 +328,8 @@ All options can be supplied in any of the following ways, in the following prece
        - `provider` - same usage as [`default-provider`](#default-provider), supported values:
            - `google`
            - `oidc`
+       - `groups` - a comma-delimited list of group claims to match
+       - `groupmode` - `any` or `all`, indicating that either all groups should match to produce an authorized request, or any matching group should permit the request
        - `rule` - a rule to match a request, this uses traefik's v2 rule parser for which you can find the documentation here: https://docs.traefik.io/v2.0/routing/routers/#rule, supported values are summarised here:
            - ``Headers(`key`, `value`)``
            - ``HeadersRegexp(`key`, `regexp`)``
@@ -358,6 +360,10 @@ All options can be supplied in any of the following ways, in the following prece
    rule.two.action = allow
    rule.two.rule = Path(`/janes-eyes-only`)
    rule.two.whitelist = jane@example.com
+
+   # Allow a user whose token makes a group claim of `admin` to access the whole app
+   rule.admins.rule = PathPrefix(`/`)
+   rule.admins.groups = admin
    ```
 
    Note: It is possible to break your redirect flow with rules, please be careful not to create an `allow` rule that matches your redirect_uri unless you know what you're doing. This limitation is being tracked in in #101 and the behaviour will change in future releases.
@@ -370,6 +376,7 @@ You can restrict who can login with the following parameters:
 
 * `domain` - Use this to limit logins to a specific domain, e.g. test.com only
 * `whitelist` - Use this to only allow specific users to login e.g. thom@test.com only
+* `groups` - Use this to allow users in specific groups (as specified on the `groups` claim in an ID token)
 
 Note, if you pass both `whitelist` and `domain`, then the default behaviour is for only `whitelist` to be used and `domain` will be effectively ignored. You can allow users matching *either* `whitelist` or `domain` by passing the `match-whitelist-or-domain` parameter (this will be the default behaviour in v3). If you set `domains` or `whitelist` on a rule, the global configuration is ignored.
 

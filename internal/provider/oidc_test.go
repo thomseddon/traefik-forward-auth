@@ -127,8 +127,6 @@ func TestOIDCGetUser(t *testing.T) {
 	assert.Equal("example@example.com", user.Email)
 }
 
-// Utils
-
 // setOIDCTest creates a key, OIDCServer and initilises an OIDC provider
 func setupOIDCTest(t *testing.T, bodyValues map[string]map[string]string) (*OIDC, *httptest.Server, *url.URL, *rsaKey) {
 	// Generate key

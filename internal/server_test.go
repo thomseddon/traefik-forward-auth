@@ -14,6 +14,7 @@ import (
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/thomseddon/traefik-forward-auth/internal/provider"
 	"golang.org/x/oauth2"
 )
 
@@ -98,20 +99,52 @@ func TestServerAuthHandlerInvalid(t *testing.T) {
 
 	// Should catch invalid cookie
 	req = newDefaultHttpRequest("/foo")
-	c := MakeCookie(req, "test@example.com")
+	c := MakeCookie(req, provider.User{Email: "test@example.com"})
 	parts = strings.Split(c.Value, "|")
 	c.Value = fmt.Sprintf("bad|%s|%s", parts[1], parts[2])
 
 	res, _ = doHttpRequest(req, c)
-	assert.Equal(401, res.StatusCode, "invalid cookie should not be authorised")
+	assert.Equal(307, res.StatusCode, "invalid cookie should not be authorised")
 
 	// Should validate email
 	req = newDefaultHttpRequest("/foo")
-	c = MakeCookie(req, "test@example.com")
+	c = MakeCookie(req, provider.User{Email: "test@example.com"})
 	config.Domains = []string{"test.com"}
-
 	res, _ = doHttpRequest(req, c)
 	assert.Equal(401, res.StatusCode, "invalid email should not be authorised")
+
+	// Should validate groups
+	req = newDefaultHttpRequest("/foo")
+	c = MakeCookie(req, provider.User{Groups: []string{"foo", "bar"}})
+	config.Domains = []string{}
+	config.Rules = map[string]*Rule{
+		"test": NewRule(),
+	}
+
+	// Validate no valid groups
+	config.Rules["test"].Rule = "PathPrefix(`/`)"
+	config.Rules["test"].Groups = []string{"admin", "superuser"}
+	res, _ = doHttpRequest(req, c)
+	assert.Equal(401, res.StatusCode, "invalid group should not be accepted")
+
+	// Validate a valid group
+	req = newDefaultHttpRequest("/foo")
+	c = MakeCookie(req, provider.User{Groups: []string{"foo", "superuser"}})
+	res, _ = doHttpRequest(req, c)
+	assert.Equal(200, res.StatusCode, "valid group should be accepted")
+
+	// Validate any invalid groups when mode = all
+	config.Rules["test"].GroupMode = "all"
+	config.Rules["test"].Groups = []string{"admin", "superuser"}
+	req = newDefaultHttpRequest("/foo")
+	c = MakeCookie(req, provider.User{Groups: []string{"foo", "superuser"}})
+	res, _ = doHttpRequest(req, c)
+	assert.Equal(401, res.StatusCode, "group set missing a required group should be rejected")
+
+	req = newDefaultHttpRequest("/foo")
+	c = MakeCookie(req, provider.User{Groups: []string{"admin", "superuser", "regular user"}})
+	res, _ = doHttpRequest(req, c)
+	assert.Equal(200, res.StatusCode, "all requested groups are matched")
 }
 
 func TestServerAuthHandlerExpired(t *testing.T) {
@@ -122,7 +155,7 @@ func TestServerAuthHandlerExpired(t *testing.T) {
 
 	// Should redirect expired cookie
 	req := newHTTPRequest("GET", "http://example.com/foo")
-	c := MakeCookie(req, "test@example.com")
+	c := MakeCookie(req, provider.User{Email: "test@example.com"})
 	res, _ := doHttpRequest(req, c)
 	require.Equal(t, 307, res.StatusCode, "request with expired cookie should be redirected")
 
@@ -148,7 +181,7 @@ func TestServerAuthHandlerValid(t *testing.T) {
 
 	// Should allow valid request email
 	req := newHTTPRequest("GET", "http://example.com/foo")
-	c := MakeCookie(req, "test@example.com")
+	c := MakeCookie(req, provider.User{Email: "test@example.com"})
 	config.Domains = []string{}
 
 	res, _ := doHttpRequest(req, c)
@@ -545,7 +578,7 @@ func doHttpRequest(r *http.Request, c *http.Cookie) (*http.Response, string) {
 	res := w.Result()
 	body, _ := ioutil.ReadAll(res.Body)
 
-	// if res.StatusCode > 300 && res.StatusCode < 400 {
+	// if res.StatusCode > 300 {
 	// 	fmt.Printf("%#v", res.Header)
 	// }
 

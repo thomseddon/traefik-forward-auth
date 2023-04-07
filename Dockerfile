@@ -1,4 +1,4 @@
-FROM golang:1.13-alpine as builder
+FROM golang:1.17-alpine as builder
 
 # Setup
 RUN mkdir -p /go/src/github.com/thomseddon/traefik-forward-auth
@@ -8,6 +8,8 @@ WORKDIR /go/src/github.com/thomseddon/traefik-forward-auth
 RUN apk add --no-cache git
 
 # Copy & build
+ADD go.mod go.sum ./
+RUN go mod download
 ADD . /go/src/github.com/thomseddon/traefik-forward-auth/
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -installsuffix nocgo -o /traefik-forward-auth github.com/thomseddon/traefik-forward-auth/cmd
 
