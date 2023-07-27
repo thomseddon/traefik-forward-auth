@@ -4,17 +4,17 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/containous/traefik/v2/pkg/rules"
 	"github.com/sirupsen/logrus"
 	"github.com/thomseddon/traefik-forward-auth/internal/provider"
+	muxhttp "github.com/traefik/traefik/v2/pkg/muxer/http"
 )
 
-// Server contains router and handler methods
+// Server contains muxer and handler methods
 type Server struct {
-	router *rules.Router
+	muxer *muxhttp.Muxer
 }
 
-// NewServer creates a new server object and builds router
+// NewServer creates a new server object and builds muxer
 func NewServer() *Server {
 	s := &Server{}
 	s.buildRoutes()
@@ -23,32 +23,32 @@ func NewServer() *Server {
 
 func (s *Server) buildRoutes() {
 	var err error
-	s.router, err = rules.NewRouter()
+	s.muxer, err = muxhttp.NewMuxer()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Let's build a router
+	// Let's build a muxer
 	for name, rule := range config.Rules {
 		matchRule := rule.formattedRule()
 		if rule.Action == "allow" {
-			s.router.AddRoute(matchRule, 1, s.AllowHandler(name))
+			_ = s.muxer.AddRoute(matchRule, 1, s.AllowHandler(name))
 		} else {
-			s.router.AddRoute(matchRule, 1, s.AuthHandler(rule.Provider, name))
+			_ = s.muxer.AddRoute(matchRule, 1, s.AuthHandler(rule.Provider, name))
 		}
 	}
 
 	// Add callback handler
-	s.router.Handle(config.Path, s.AuthCallbackHandler())
+	s.muxer.Handle(config.Path, s.AuthCallbackHandler())
 
 	// Add logout handler
-	s.router.Handle(config.Path+"/logout", s.LogoutHandler())
+	s.muxer.Handle(config.Path+"/logout", s.LogoutHandler())
 
 	// Add a default handler
 	if config.DefaultAction == "allow" {
-		s.router.NewRoute().Handler(s.AllowHandler("default"))
+		s.muxer.NewRoute().Handler(s.AllowHandler("default"))
 	} else {
-		s.router.NewRoute().Handler(s.AuthHandler(config.DefaultProvider, "default"))
+		s.muxer.NewRoute().Handler(s.AuthHandler(config.DefaultProvider, "default"))
 	}
 }
 
@@ -65,7 +65,7 @@ func (s *Server) RootHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Pass to mux
-	s.router.ServeHTTP(w, r)
+	s.muxer.ServeHTTP(w, r)
 }
 
 // AllowHandler Allows requests
