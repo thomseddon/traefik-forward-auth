@@ -3,6 +3,7 @@ package tfa
 import (
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/containous/traefik/v2/pkg/rules"
 	"github.com/sirupsen/logrus"
@@ -57,6 +58,14 @@ func (s *Server) buildRoutes() {
 func (s *Server) RootHandler(w http.ResponseWriter, r *http.Request) {
 	// Modify request
 	r.Method = r.Header.Get("X-Forwarded-Method")
+
+	/// Avoid HEAD bug
+	/// https://github.com/thomseddon/traefik-forward-auth/issues/156
+	var m = r.Header.Get("X-Forwarded-Method")
+	if m != "HEAD" {
+		r.Method = m
+	}
+
 	r.Host = r.Header.Get("X-Forwarded-Host")
 
 	// Read URI from header if we're acting as forward auth middleware
@@ -222,6 +231,13 @@ func (s *Server) authRedirect(logger *logrus.Entry, w http.ResponseWriter, r *ht
 		logger.WithField("error", err).Error("Error generating nonce")
 		http.Error(w, "Service unavailable", 503)
 		return
+	}
+
+	// clean existing CSRF cookie
+	for _, v := range r.Cookies() {
+		if strings.Contains(v.Name, config.CSRFCookieName) {
+			http.SetCookie(w, ClearCSRFCookie(r, v))
+		}
 	}
 
 	// Set the CSRF cookie
