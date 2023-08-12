@@ -16,28 +16,35 @@ A minimal forward authentication service that provides OAuth/SSO login and authe
 
 # Contents
 
-- [Releases](#releases)
-- [Usage](#usage)
-  - [Simple](#simple)
-  - [Advanced](#advanced)
-  - [Provider Setup](#provider-setup)
-- [Configuration](#configuration)
-  - [Overview](#overview)
-  - [Option Details](#option-details)
-- [Concepts](#concepts)
-  - [Forwarded Headers](#forwarded-headers)
-  - [User Restriction](#user-restriction)
-  - [Applying Authentication](#applying-authentication)
-    - [Global Authentication](#global-authentication)
-    - [Selective Ingress Authentication in Kubernetes](#selective-ingress-authentication-in-kubernetes)
-    - [Selective Container Authentication in Swarm](#selective-container-authentication-in-swarm)
-    - [Rules Based Authentication](#rules-based-authentication)
-  - [Operation Modes](#operation-modes)
-    - [Overlay Mode](#overlay-mode)
-    - [Auth Host Mode](#auth-host-mode)
-  - [Logging Out](#logging-out)
-- [Copyright](#copyright)
-- [License](#license)
+- [Traefik Forward Auth    ](#traefik-forward-auth----)
+  - [Why?](#why)
+- [Contents](#contents)
+  - [Releases](#releases)
+      - [Upgrade Guide](#upgrade-guide)
+  - [Usage](#usage)
+      - [Simple:](#simple)
+      - [Advanced:](#advanced)
+      - [Provider Setup](#provider-setup)
+        - [Google](#google)
+        - [OpenID Connect](#openid-connect)
+        - [Generic OAuth2](#generic-oauth2)
+  - [Configuration](#configuration)
+    - [Overview](#overview)
+    - [Option Details](#option-details)
+  - [Concepts](#concepts)
+    - [User Restriction](#user-restriction)
+    - [Forwarded Headers](#forwarded-headers)
+    - [Applying Authentication](#applying-authentication)
+      - [Global Authentication](#global-authentication)
+      - [Selective Ingress Authentication in Kubernetes](#selective-ingress-authentication-in-kubernetes)
+      - [Selective Container Authentication in Swarm](#selective-container-authentication-in-swarm)
+      - [Rules Based Authentication](#rules-based-authentication)
+    - [Operation Modes](#operation-modes)
+      - [Overlay Mode](#overlay-mode)
+      - [Auth Host Mode](#auth-host-mode)
+    - [Logging Out](#logging-out)
+  - [Copyright](#copyright)
+  - [License](#license)
 
 ## Releases
 
@@ -302,6 +309,12 @@ All options can be supplied in any of the following ways, in the following prece
    Default: `/_oauth`
 
    Please note that when using the default [Overlay Mode](#overlay-mode) requests to this exact path will be intercepted by this service and not forwarded to your application. Use this option (or [Auth Host Mode](#auth-host-mode)) if the default `/_oauth` path will collide with an existing route in your application.
+
+- `logout-if-invalid-email`
+
+   When enabled, logs out users if their email address isn't found on the allow list, allowing them to retry with another email address.
+
+   Default: `false`
 
 - `secret`
 

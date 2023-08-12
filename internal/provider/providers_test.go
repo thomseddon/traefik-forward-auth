@@ -2,7 +2,7 @@ package provider
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -25,7 +25,7 @@ func NewOAuthServer(t *testing.T, body map[string]string) (*httptest.Server, *ur
 }
 
 func (s *OAuthServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	body, _ := ioutil.ReadAll(r.Body)
+	body, _ := io.ReadAll(r.Body)
 	// fmt.Println("Got request:", r.URL, r.Method, string(body))
 
 	if r.Method == "POST" && r.URL.Path == "/token" {

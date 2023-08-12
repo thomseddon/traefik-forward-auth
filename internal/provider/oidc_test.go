@@ -4,7 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -138,15 +138,14 @@ func setupOIDCTest(t *testing.T, bodyValues map[string]map[string]string) (*OIDC
 	}
 
 	body := make(map[string]string)
-	if bodyValues != nil {
-		// URL encode bodyValues into body
-		for method, values := range bodyValues {
-			q := url.Values{}
-			for k, v := range values {
-				q.Set(k, v)
-			}
-			body[method] = q.Encode()
+
+	// URL encode bodyValues into body
+	for method, values := range bodyValues {
+		q := url.Values{}
+		for k, v := range values {
+			q.Set(k, v)
 		}
+		body[method] = q.Encode()
 	}
 
 	// Set up oidc server
@@ -184,7 +183,7 @@ func NewOIDCServer(t *testing.T, key *rsaKey, body map[string]string) (*httptest
 }
 
 func (s *OIDCServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	body, _ := ioutil.ReadAll(r.Body)
+	body, _ := io.ReadAll(r.Body)
 
 	if r.URL.Path == "/.well-known/openid-configuration" {
 		// Open id config

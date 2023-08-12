@@ -12,13 +12,15 @@ import (
 
 // GenericOAuth provider
 type GenericOAuth struct {
-	AuthURL      string   `long:"auth-url" env:"AUTH_URL" description:"Auth/Login URL"`
-	TokenURL     string   `long:"token-url" env:"TOKEN_URL" description:"Token URL"`
-	UserURL      string   `long:"user-url" env:"USER_URL" description:"URL used to retrieve user info"`
-	ClientID     string   `long:"client-id" env:"CLIENT_ID" description:"Client ID"`
-	ClientSecret string   `long:"client-secret" env:"CLIENT_SECRET" description:"Client Secret" json:"-"`
-	Scopes       []string `long:"scope" env:"SCOPE" env-delim:"," default:"profile" default:"email" description:"Scopes"`
-	TokenStyle   string   `long:"token-style" env:"TOKEN_STYLE" default:"header" choice:"header" choice:"query" description:"How token is presented when querying the User URL"`
+	AuthURL      string `long:"auth-url" env:"AUTH_URL" description:"Auth/Login URL"`
+	TokenURL     string `long:"token-url" env:"TOKEN_URL" description:"Token URL"`
+	UserURL      string `long:"user-url" env:"USER_URL" description:"URL used to retrieve user info"`
+	ClientID     string `long:"client-id" env:"CLIENT_ID" description:"Client ID"`
+	ClientSecret string `long:"client-secret" env:"CLIENT_SECRET" description:"Client Secret" json:"-"`
+	//nolint:staticcheck // SA5008 ignore this!
+	Scopes []string `long:"scope" env:"SCOPE" env-delim:"," default:"profile" default:"email" description:"Scopes"`
+	//nolint:staticcheck // SA5008 ignore this!
+	TokenStyle string `long:"token-style" env:"TOKEN_STYLE" default:"header" choice:"header" choice:"query" description:"How token is presented when querying the User URL"`
 
 	OAuthProvider
 }

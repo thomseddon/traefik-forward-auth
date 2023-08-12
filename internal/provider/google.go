@@ -64,8 +64,7 @@ func (g *Google) GetLoginURL(redirectURI, state string) string {
 	q.Set("redirect_uri", redirectURI)
 	q.Set("state", state)
 
-	var u url.URL
-	u = *g.LoginURL
+	u := *g.LoginURL
 	u.RawQuery = q.Encode()
 
 	return u.String()
