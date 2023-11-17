@@ -57,6 +57,21 @@ func (s *Server) buildRoutes() {
 // RootHandler Overwrites the request method, host and URL with those from the
 // forwarded request so it's correctly routed by mux
 func (s *Server) RootHandler(w http.ResponseWriter, r *http.Request) {
+	// Print everything inclusing string dump of headers
+	log.WithFields(logrus.Fields{
+		"method": r.Method,
+		"host":   r.Host,
+		"uri":    r.URL,
+		"headers": func() string {
+			// print headers
+			var headers string
+			for k, v := range r.Header {
+				headers += k + ": " + v[0] + "\n"
+			}
+			return headers
+		}(),
+	}).Debug("Received request")
+
 	// Modify request
 	r.Method = r.Header.Get("X-Forwarded-Method")
 	r.Host = r.Header.Get("X-Forwarded-Host")
