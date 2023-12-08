@@ -5,7 +5,7 @@ on:
     types: [ created ]
 
 env:
-  KO_OPTS: --tags ${{ github.ref_name }} --tags latest
+  KO_OPTS: --tags ${{ github.event.release.tag_name }} --tags latest
 
 jobs:
 
