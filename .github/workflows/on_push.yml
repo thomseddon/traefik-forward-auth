@@ -1,0 +1,81 @@
+name: Build & Test
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up Go 1.20
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.20.x
+
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Setup go-junit-report
+        run: go install github.com/jstemmer/go-junit-report/v2@latest
+
+      - name: Test
+        run: make test-with-cover-report
+
+      - name: Test Report
+        uses: dorny/test-reporter@v1.6.0
+        if: success() || failure()
+        continue-on-error: true
+        with:
+          name: GO Tests
+          path: report.xml
+          reporter: java-junit
+
+      - name: Test Summary
+        uses: test-summary/action@v2
+        with:
+          paths: |
+            report.xml
+        if: success() || failure()
+        continue-on-error: true
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go 1.20
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.20.x
+
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Vendor
+        run: go mod vendor
+
+      - name: Build Deep
+        run: make build
+
+  lint:
+    name: Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go 1.20
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.20.x
+
+      - name: Check out code
+        uses: actions/checkout@v3
+      - run: go install mvdan.cc/gofumpt@latest
+      - run: go install golang.org/x/tools/cmd/goimports@latest
+
+      - run: make check-fmt

@@ -301,7 +301,6 @@ func TestServerLogout(t *testing.T) {
 	assert.Equal("http", fwd.Scheme, "valid request should be redirected to return url")
 	assert.Equal("redirect", fwd.Host, "valid request should be redirected to return url")
 	assert.Equal("/path", fwd.Path, "valid request should be redirected to return url")
-
 }
 
 func TestServerDefaultAction(t *testing.T) {

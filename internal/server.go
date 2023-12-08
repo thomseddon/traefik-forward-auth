@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/Umaaz/traefik-forward-auth/internal/provider"
 	"github.com/containous/traefik/v2/pkg/rules"
 	"github.com/sirupsen/logrus"
-	"github.com/thomseddon/traefik-forward-auth/internal/provider"
 )
 
 // Server contains router and handler methods
@@ -37,6 +37,9 @@ func (s *Server) buildRoutes() {
 			s.router.AddRoute(matchRule, 1, s.AuthHandler(rule.Provider, name))
 		}
 	}
+
+	// Heath check
+	s.router.Handle("/health", s.healthHandler())
 
 	// Add callback handler
 	s.router.Handle(config.Path, s.AuthCallbackHandler())
@@ -262,4 +265,10 @@ func (s *Server) logger(r *http.Request, handler, rule, msg string) *logrus.Entr
 	}).Debug(msg)
 
 	return logger
+}
+
+func (s *Server) healthHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("hello"))
+	}
 }
