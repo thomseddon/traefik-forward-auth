@@ -19,7 +19,7 @@ build:
 
 .PHONY: docker
 docker:
-	KO_DOCKER_REPO=bendonnelly/traefik-forward-auth ${GOPATH}/bin/ko build --bare --platform=linux/amd64,linux/arm64 $(KO_OPTS) ./cmd
+	KO_DOCKER_REPO=bendonnelly/traefik-forward-auth ko build --bare --platform=linux/amd64,linux/arm64 $(KO_OPTS) ./cmd
 
 .PHONY: format
 format:
