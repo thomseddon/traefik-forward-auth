@@ -1,0 +1,27 @@
+repo_name: Traefik Forward Auth
+repo_url: https://github.com/Umaaz/traefik-forward-auth
+
+docs_dir: docs_out
+site_dir: _site
+
+site_name: Deep Helm Charts
+site_url: https://umaaz.github.io/traefik-forward-auth/
+
+copyright: Intergral GmbH 2023
+
+theme:
+  logo: https://raw.githubusercontent.com/Umaaz/traefik-forward-auth/master/chart/traefik-forward-auth/treafik.logo.png
+  favicon: https://raw.githubusercontent.com/Umaaz/traefik-forward-auth/master/chart/traefik-forward-auth/treafik.logo.png
+  name: material
+  features:
+    - content.code.copy
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+

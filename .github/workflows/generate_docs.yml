@@ -1,0 +1,65 @@
+name: Generate Docs
+
+on:
+  workflow_run:
+    workflows:
+      - Release
+    types:
+      - completed
+  release:
+    types:
+      - released
+  workflow_dispatch: 
+    
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+
+  get_index:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: gh-pages
+      - name: upload index
+        uses: actions/upload-artifact@v3
+        with:
+          name: helm_index
+          path: index.yaml
+
+  build_docs:
+    needs: get_index
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: master
+      - run: pip install helm_mkdocs mkdocs-material
+      - run: |
+          helm-mkdocs ./charts/traefik-forward-auth -o docs_out/traefik-forward-auth
+      - run: cp README.md docs_out/index.md
+      - run: cp styles.css docs_out/styles.css
+      - run: mkdocs build
+      - name: Download index
+        uses: actions/download-artifact@v3
+        with:
+          name: helm_index
+      - run: cp index.yaml _site/index.yaml
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v1
+
+  deploy:
+    needs: build_docs
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2

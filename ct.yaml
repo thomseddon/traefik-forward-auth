@@ -1,0 +1,10 @@
+# See https://github.com/helm/chart-testing#configuration
+validate-maintainers: false
+chart-repos:
+  - prometheus-community=https://prometheus-community.github.io/helm-charts
+  - grafana=https://grafana.github.io/helm-charts
+helm-extra-args: --timeout 600s
+remote: origin
+target-branch: master
+chart-dirs:
+  - charts
