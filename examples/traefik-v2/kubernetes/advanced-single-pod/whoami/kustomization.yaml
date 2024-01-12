@@ -1,0 +1,7 @@
+commonLabels:
+  app: whoami
+
+resources:
+- deployment.yaml
+- service.yaml
+- ingress.yaml

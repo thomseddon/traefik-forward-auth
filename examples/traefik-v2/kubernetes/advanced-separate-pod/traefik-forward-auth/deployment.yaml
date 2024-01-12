@@ -1,0 +1,71 @@
+#
+# Traefik Forward Auth Deployment
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traefik-forward-auth
+  labels:
+    app: traefik-forward-auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: traefik-forward-auth
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: traefik-forward-auth
+    spec:
+      serviceAccountName: traefik-ingress-controller
+      terminationGracePeriodSeconds: 60
+      containers:
+      - image: thomseddon/traefik-forward-auth:2
+        name: traefik-forward-auth
+        ports:
+        - containerPort: 4181
+          protocol: TCP
+        env:
+        - name: CONFIG
+          value: "/config"
+        - name: DOMAIN
+          value: "example.com"
+        # INSECURE_COOKIE is required if not using a https entrypoint
+        # - name: INSECURE_COOKIE
+        #   value: "true"
+        # Remove COOKIE_DOMAIN if not using auth host mode
+        - name: COOKIE_DOMAIN
+          value: "example.com"
+        - name: AUTH_HOST
+          value: "auth.example.com"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: PROVIDERS_GOOGLE_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: traefik-forward-auth-secrets
+              key: google-client-id
+        - name: PROVIDERS_GOOGLE_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: traefik-forward-auth-secrets
+              key: google-client-secret
+        - name: SECRET
+          valueFrom:
+            secretKeyRef:
+              name: traefik-forward-auth-secrets
+              key: secret
+        volumeMounts:
+        - name: configs
+          mountPath: /config
+          subPath: traefik-forward-auth.ini
+
+      volumes:
+      - name: configs
+        configMap:
+          name: configs
+      - name: traefik-forward-auth-secrets
+        secret:
+          secretName: traefik-forward-auth-secrets

@@ -2,8 +2,8 @@ version: '3'
 
 services:
   traefik:
-    image: traefik
-    command: -c /traefik.toml --logLevel=DEBUG
+    image: traefik:1.7
+    command: -c /traefik.toml
     ports:
       - "8085:80"
       - "8086:8080"
@@ -14,7 +14,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
 
   whoami1:
-    image: emilevauge/whoami
+    image: containous/whoami
     networks:
       - traefik
     labels:
@@ -23,11 +23,12 @@ services:
       - "traefik.frontend.rule=Host:whoami.localhost.com"
 
   traefik-forward-auth:
-    build: ../
-    command: ./traefik-forward-auth --rule.1.action=allow --rule.1.rule="Path(`/`)"
+    build: thomseddon/traefik-forward-auth:2
     environment:
-      - PROVIDERS_GOOGLE_CLIENT_ID=your-client-id
-      - PROVIDERS_GOOGLE_CLIENT_SECRET=your-client-secret
+      - DEFAULT_PROVIDER=oidc
+      - PROVIDERS_OIDC_ISSUER_URL=https://login.microsoftonline.com/{tenant}
+      - PROVIDERS_OIDC_CLIENT_ID=your-client-id
+      - PROVIDERS_OIDC_CLIENT_SECRET=your-client-secret
       - SECRET=something-random
       - INSECURE_COOKIE=true
       - DOMAIN=yourcompany.com

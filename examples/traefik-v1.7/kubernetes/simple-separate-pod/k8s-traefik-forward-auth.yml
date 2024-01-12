@@ -1,0 +1,90 @@
+#
+# Traefik Forward Auth Deployment
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traefik-forward-auth
+  labels:
+    app: traefik-forward-auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: traefik-forward-auth
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: traefik-forward-auth
+    spec:
+      terminationGracePeriodSeconds: 60
+      containers:
+      - image: thomseddon/traefik-forward-auth:2
+        name: traefik-forward-auth
+        ports:
+        - containerPort: 4181
+          protocol: TCP
+        env:
+        - name: DOMAIN
+          value: "example.com"
+        # INSECURE_COOKIE is required unless using https entrypoint
+        - name: INSECURE_COOKIE
+          value: "true"
+        - name: PROVIDERS_GOOGLE_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: traefik-forward-auth-secrets
+              key: traefik-forward-auth-google-client-id
+        - name: PROVIDERS_GOOGLE_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: traefik-forward-auth-secrets
+              key: traefik-forward-auth-google-client-secret
+        - name: SECRET
+          valueFrom:
+            secretKeyRef:
+              name: traefik-forward-auth-secrets
+              key: traefik-forward-auth-secret
+
+---
+#
+# Auth Service
+#
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik-forward-auth
+  labels:
+    app: traefik-forward-auth
+spec:
+  type: ClusterIP
+  selector:
+    app: traefik-forward-auth
+  ports:
+  - name: auth-http
+    port: 4181
+    targetPort: 4181
+
+---
+#
+# Secrets
+#
+# Kubernetes requires secret values to be converted to base64 when defined
+# explicitly like this. (use `echo -n 'secret-value' | base64`)
+#
+# These are here for completeness, in reality you may define these elsewhere,
+# for example using kustomize (shown in advanced examples)
+#
+apiVersion: v1
+kind: Secret
+metadata:
+  name: traefik-forward-auth-secrets
+  labels:
+    app: traefik-forward-auth
+type: Opaque
+data:
+  traefik-forward-auth-google-client-id: base64-client-id
+  traefik-forward-auth-google-client-secret: base64-client-secret
+  traefik-forward-auth-secret: base64-something-random

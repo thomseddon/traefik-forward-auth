@@ -1,0 +1,36 @@
+#
+# Auth Ingress
+#
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: traefik-forward-auth
+  labels:
+    app: traefik
+spec:
+  rules:
+  - host: auth.example.com
+    http:
+      paths:
+      - backend:
+          serviceName: traefik-forward-auth
+          servicePort: auth-http
+
+---
+#
+# Dash Ingress
+#
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: traefik-dashboard
+  labels:
+    app: traefik
+spec:
+  rules:
+  - host: traefik.example.com
+    http:
+      paths:
+      - backend:
+          serviceName: traefik-dashboard
+          servicePort: dashboard-http
