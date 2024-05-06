@@ -1,11 +1,11 @@
 package provider
 
 import (
+	"golang.org/x/oauth2"
 	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/oauth2"
 )
 
 // Tests
@@ -35,6 +35,68 @@ func TestGenericOAuthSetup(t *testing.T) {
 	}
 	err = p.Setup()
 	assert.Nil(err)
+}
+
+func TestGenericOAuthGetAuthStyleDefault(t *testing.T) {
+	assert := assert.New(t)
+	p := GenericOAuth{
+		AuthURL:      "https://provider.com/oauth2/auth",
+		TokenURL:     "https://provider.com/oauth2/token",
+		UserURL:      "https://provider.com/oauth2/user",
+		ClientID:     "idtest",
+		ClientSecret: "secret",
+		Scopes:       []string{"scopetest"},
+	}
+
+	err := p.Setup()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	authStyle := parseAuthStyle(p.AuthStyle)
+	assert.Equal(oauth2.AuthStyleAutoDetect, authStyle)
+}
+
+func TestGenericOAuthGetAuthStyleHeader(t *testing.T) {
+	assert := assert.New(t)
+	p := GenericOAuth{
+		AuthStyle:    "header",
+		AuthURL:      "https://provider.com/oauth2/auth",
+		TokenURL:     "https://provider.com/oauth2/token",
+		UserURL:      "https://provider.com/oauth2/user",
+		ClientID:     "idtest",
+		ClientSecret: "secret",
+		Scopes:       []string{"scopetest"},
+	}
+
+	err := p.Setup()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	authStyle := parseAuthStyle(p.AuthStyle)
+	assert.Equal(oauth2.AuthStyleInHeader, authStyle)
+}
+
+func TestGenericOAuthGetAuthStyleParams(t *testing.T) {
+	assert := assert.New(t)
+	p := GenericOAuth{
+		AuthStyle:    "params",
+		AuthURL:      "https://provider.com/oauth2/auth",
+		TokenURL:     "https://provider.com/oauth2/token",
+		UserURL:      "https://provider.com/oauth2/user",
+		ClientID:     "idtest",
+		ClientSecret: "secret",
+		Scopes:       []string{"scopetest"},
+	}
+
+	err := p.Setup()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	authStyle := parseAuthStyle(p.AuthStyle)
+	assert.Equal(oauth2.AuthStyleInParams, authStyle)
 }
 
 func TestGenericOAuthGetLoginURL(t *testing.T) {
@@ -89,6 +151,9 @@ func TestGenericOAuthExchangeCode(t *testing.T) {
 
 	// Setup provider
 	p := GenericOAuth{
+		// We force AuthStyleInParams to prevent the test failure when the
+		// AuthStyleInHeader is attempted
+		AuthStyle: 	  "params",
 		AuthURL:      "https://provider.com/oauth2/auth",
 		TokenURL:     serverURL.String() + "/token",
 		UserURL:      "https://provider.com/oauth2/user",
@@ -99,10 +164,6 @@ func TestGenericOAuthExchangeCode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	// We force AuthStyleInParams to prevent the test failure when the
-	// AuthStyleInHeader is attempted
-	p.Config.Endpoint.AuthStyle = oauth2.AuthStyleInParams
 
 	token, err := p.ExchangeCode("http://example.com/_oauth", "code")
 	assert.Nil(err)
@@ -118,6 +179,9 @@ func TestGenericOAuthGetUser(t *testing.T) {
 
 	// Setup provider
 	p := GenericOAuth{
+		// We force AuthStyleInParams to prevent the test failure when the
+		// AuthStyleInHeader is attempted
+		AuthStyle: 	  "params",
 		AuthURL:      "https://provider.com/oauth2/auth",
 		TokenURL:     "https://provider.com/oauth2/token",
 		UserURL:      serverURL.String() + "/userinfo",
@@ -128,10 +192,6 @@ func TestGenericOAuthGetUser(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	// We force AuthStyleInParams to prevent the test failure when the
-	// AuthStyleInHeader is attempted
-	p.Config.Endpoint.AuthStyle = oauth2.AuthStyleInParams
 
 	user, err := p.GetUser("123456789")
 	assert.Nil(err)

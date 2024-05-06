@@ -177,6 +177,8 @@ OIDC Provider:
   --providers.oidc.client-id=                           Client ID [$PROVIDERS_OIDC_CLIENT_ID]
   --providers.oidc.client-secret=                       Client Secret [$PROVIDERS_OIDC_CLIENT_SECRET]
   --providers.oidc.resource=                            Optional resource indicator [$PROVIDERS_OIDC_RESOURCE]
+  --providers.oidc.auth-type=                           Optionally choose the authentication type of the OAuth2 library
+    [auto-detect, header, params]                       (default: auto-detect) [$PROVIDERS_OIDC_AUTH_TYPE]
 
 Generic OAuth2 Provider:
   --providers.generic-oauth.auth-url=                   Auth/Login URL [$PROVIDERS_GENERIC_OAUTH_AUTH_URL]
@@ -188,6 +190,8 @@ Generic OAuth2 Provider:
   --providers.generic-oauth.token-style=[header|query]  How token is presented when querying the User URL (default: header)
                                                         [$PROVIDERS_GENERIC_OAUTH_TOKEN_STYLE]
   --providers.generic-oauth.resource=                   Optional resource indicator [$PROVIDERS_GENERIC_OAUTH_RESOURCE]
+  --providers.generic-oauth.auth-type=                  Optionally choose the authentication type of the OAuth2 library
+    [auto-detect, header, params]                       (default: auto-detect) [$PROVIDERS_GENERIC_OAUTH_AUTH_TYPE]
 
 Help Options:
   -h, --help                                            Show this help message
