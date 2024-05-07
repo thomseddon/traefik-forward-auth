@@ -113,8 +113,9 @@ func ValidateDomains(email string, domains CommaSeparatedList) bool {
 	if len(parts) < 2 {
 		return false
 	}
+	emailDomain := strings.ToLower(parts[1])
 	for _, domain := range domains {
-		if domain == parts[1] {
+		if domain == emailDomain {
 			return true
 		}
 	}
