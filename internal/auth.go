@@ -100,7 +100,7 @@ func ValidateEmail(email, ruleName string) bool {
 // ValidateWhitelist checks if the email is in whitelist
 func ValidateWhitelist(email string, whitelist CommaSeparatedList) bool {
 	for _, whitelist := range whitelist {
-		if email == whitelist {
+		if strings.EqualFold(email, whitelist) {
 			return true
 		}
 	}
@@ -114,7 +114,7 @@ func ValidateDomains(email string, domains CommaSeparatedList) bool {
 		return false
 	}
 	for _, domain := range domains {
-		if domain == parts[1] {
+		if strings.EqualFold(domain, parts[1]) {
 			return true
 		}
 	}
