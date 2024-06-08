@@ -31,6 +31,20 @@ func TestOIDCSetup(t *testing.T) {
 	if assert.Error(err) {
 		assert.Equal("providers.oidc.issuer-url, providers.oidc.client-id, providers.oidc.client-secret must be set", err.Error())
 	}
+
+	p.IssuerURL = "url"
+
+	err = p.Setup()
+	if assert.Error(err) {
+		assert.Equal("providers.oidc.client-id, providers.oidc.client-secret must be set", err.Error())
+	}
+
+	p.ClientID = "id"
+
+	err = p.Setup()
+	if assert.Error(err) {
+		assert.Equal("providers.oidc.client-secret must be set", err.Error())
+	}
 }
 
 func TestOIDCGetLoginURL(t *testing.T) {
@@ -40,7 +54,8 @@ func TestOIDCGetLoginURL(t *testing.T) {
 	defer server.Close()
 
 	// Check url
-	uri, err := url.Parse(provider.GetLoginURL("http://example.com/_oauth", "state"))
+	loginUrl, _ := provider.GetLoginURL("http://example.com/_oauth", "state")
+	uri, err := url.Parse(loginUrl)
 	assert.Nil(err)
 	assert.Equal(serverURL.Scheme, uri.Scheme)
 	assert.Equal(serverURL.Host, uri.Host)
@@ -54,6 +69,37 @@ func TestOIDCGetLoginURL(t *testing.T) {
 		"response_type": []string{"code"},
 		"scope":         []string{"openid profile email"},
 		"state":         []string{"state"},
+		"nonce":         []string{provider.nonce},
+	}
+	assert.Equal(expectedQs, qs)
+
+	// Calling the method should not modify the underlying config
+	assert.Equal("", provider.Config.RedirectURL)
+
+	//
+	// Test with PkceRequired config option
+	//
+	provider.PkceRequired = true
+
+	// Check url
+	loginUrl, _ = provider.GetLoginURL("http://example.com/_oauth", "state")
+	uri, err = url.Parse(loginUrl)
+	assert.Nil(err)
+	assert.Equal(serverURL.Scheme, uri.Scheme)
+	assert.Equal(serverURL.Host, uri.Host)
+	assert.Equal("/auth", uri.Path)
+
+	// Check query string
+	qs = uri.Query()
+	expectedQs = url.Values{
+		"client_id":             []string{"idtest"},
+		"code_challenge":        []string{provider.pkceVerifier.CodeChallengeS256()},
+		"code_challenge_method": []string{"S256"},
+		"redirect_uri":          []string{"http://example.com/_oauth"},
+		"response_type":         []string{"code"},
+		"scope":                 []string{"openid profile email"},
+		"state":                 []string{"state"},
+		"nonce":                 []string{provider.nonce},
 	}
 	assert.Equal(expectedQs, qs)
 
@@ -66,7 +112,8 @@ func TestOIDCGetLoginURL(t *testing.T) {
 	provider.Resource = "resourcetest"
 
 	// Check url
-	uri, err = url.Parse(provider.GetLoginURL("http://example.com/_oauth", "state"))
+	loginUrl, _ = provider.GetLoginURL("http://example.com/_oauth", "state")
+	uri, err = url.Parse(loginUrl)
 	assert.Nil(err)
 	assert.Equal(serverURL.Scheme, uri.Scheme)
 	assert.Equal(serverURL.Host, uri.Host)

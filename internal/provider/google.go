@@ -53,7 +53,7 @@ func (g *Google) Setup() error {
 }
 
 // GetLoginURL provides the login url for the given redirect uri and state
-func (g *Google) GetLoginURL(redirectURI, state string) string {
+func (g *Google) GetLoginURL(redirectURI, state string) (string, error) {
 	q := url.Values{}
 	q.Set("client_id", g.ClientID)
 	q.Set("response_type", "code")
@@ -68,7 +68,7 @@ func (g *Google) GetLoginURL(redirectURI, state string) string {
 	u = *g.LoginURL
 	u.RawQuery = q.Encode()
 
-	return u.String()
+	return u.String(), nil
 }
 
 // ExchangeCode exchanges the given redirect uri and code for a token

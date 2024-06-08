@@ -235,7 +235,14 @@ func (s *Server) authRedirect(logger *logrus.Entry, w http.ResponseWriter, r *ht
 	}
 
 	// Forward them on
-	loginURL := p.GetLoginURL(redirectUri(r), MakeState(r, p, nonce))
+	loginURL, err := p.GetLoginURL(redirectUri(r), MakeState(r, p, nonce))
+
+	if err != nil {
+		logger.WithField("error", err).Error("Get login url failed")
+		http.Error(w, "Service unavailable", 503)
+		return
+	}
+
 	http.Redirect(w, r, loginURL, http.StatusTemporaryRedirect)
 
 	logger.WithFields(logrus.Fields{
