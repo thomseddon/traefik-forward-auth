@@ -52,8 +52,8 @@ func (o *GenericOAuth) Setup() error {
 }
 
 // GetLoginURL provides the login url for the given redirect uri and state
-func (o *GenericOAuth) GetLoginURL(redirectURI, state string) string {
-	return o.OAuthGetLoginURL(redirectURI, state)
+func (o *GenericOAuth) GetLoginURL(redirectURI, state string) (string, error) {
+	return o.OAuthGetLoginURL(redirectURI, state), nil
 }
 
 // ExchangeCode exchanges the given redirect uri and code for a token

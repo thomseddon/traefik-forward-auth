@@ -54,7 +54,8 @@ func TestOIDCGetLoginURL(t *testing.T) {
 	defer server.Close()
 
 	// Check url
-	uri, err := url.Parse(provider.GetLoginURL("http://example.com/_oauth", "state"))
+	loginUrl, _ := provider.GetLoginURL("http://example.com/_oauth", "state")
+	uri, err := url.Parse(loginUrl)
 	assert.Nil(err)
 	assert.Equal(serverURL.Scheme, uri.Scheme)
 	assert.Equal(serverURL.Host, uri.Host)
@@ -68,6 +69,7 @@ func TestOIDCGetLoginURL(t *testing.T) {
 		"response_type": []string{"code"},
 		"scope":         []string{"openid profile email"},
 		"state":         []string{"state"},
+		"nonce":         []string{provider.nonce},
 	}
 	assert.Equal(expectedQs, qs)
 
@@ -80,7 +82,8 @@ func TestOIDCGetLoginURL(t *testing.T) {
 	provider.PkceRequired = true
 
 	// Check url
-	uri, err = url.Parse(provider.GetLoginURL("http://example.com/_oauth", "state"))
+	loginUrl, _ = provider.GetLoginURL("http://example.com/_oauth", "state")
+	uri, err = url.Parse(loginUrl)
 	assert.Nil(err)
 	assert.Equal(serverURL.Scheme, uri.Scheme)
 	assert.Equal(serverURL.Host, uri.Host)
@@ -96,6 +99,7 @@ func TestOIDCGetLoginURL(t *testing.T) {
 		"response_type":         []string{"code"},
 		"scope":                 []string{"openid profile email"},
 		"state":                 []string{"state"},
+		"nonce":                 []string{provider.nonce},
 	}
 	assert.Equal(expectedQs, qs)
 
@@ -108,7 +112,8 @@ func TestOIDCGetLoginURL(t *testing.T) {
 	provider.Resource = "resourcetest"
 
 	// Check url
-	uri, err = url.Parse(provider.GetLoginURL("http://example.com/_oauth", "state"))
+	loginUrl, _ = provider.GetLoginURL("http://example.com/_oauth", "state")
+	uri, err = url.Parse(loginUrl)
 	assert.Nil(err)
 	assert.Equal(serverURL.Scheme, uri.Scheme)
 	assert.Equal(serverURL.Host, uri.Host)
