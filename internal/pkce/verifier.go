@@ -1,21 +1,25 @@
 package pkce
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
-	"math/rand"
-	"strings"
-	"time"
+	"fmt"
+	"io"
 )
 
 type CodeVerifier struct {
 	Value string
 }
 
-func CreateCodeVerifier() *CodeVerifier {
-	return &CodeVerifier{
-		Value: encode([]byte(randomString(32))),
+func CreateCodeVerifier() (*CodeVerifier, error) {
+	secureRandomString, err := generateSecureRandomString(32)
+	if err != nil {
+		return nil, err
 	}
+	return &CodeVerifier{
+		Value: secureRandomString,
+	}, nil
 }
 
 func (v *CodeVerifier) String() string {
@@ -25,26 +29,24 @@ func (v *CodeVerifier) String() string {
 func (v *CodeVerifier) CodeChallengeS256() string {
 	h := sha256.New()
 	h.Write([]byte(v.Value))
+	hash := h.Sum(nil)
 
-	return encode(h.Sum(nil))
+	return encode(hash)
 }
 
-func randomString(n int) string {
-	var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-	rand.Seed(time.Now().UnixNano())
+func GenerateNonce() (string, error) {
+	return generateSecureRandomString(32)
+}
 
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
+func generateSecureRandomString(length int) (string, error) {
+	bytes := make([]byte, length)
+	if _, err := io.ReadFull(rand.Reader, bytes); err != nil {
+		return "", fmt.Errorf("failed to generate secure random string: %w", err)
 	}
-
-	return string(b)
+	return base64.RawURLEncoding.EncodeToString(bytes), nil
 }
 
 func encode(msg []byte) string {
-	encoded := base64.StdEncoding.EncodeToString(msg)
-	encoded = strings.Replace(encoded, "+", "-", -1)
-	encoded = strings.Replace(encoded, "/", "_", -1)
-	encoded = strings.Replace(encoded, "=", "", -1)
+	encoded := base64.RawURLEncoding.EncodeToString(msg)
 	return encoded
 }

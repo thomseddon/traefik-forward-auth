@@ -17,7 +17,7 @@ type Providers struct {
 // Provider is used to authenticate users
 type Provider interface {
 	Name() string
-	GetLoginURL(redirectURI, state string) string
+	GetLoginURL(redirectURI, state string) (string, error)
 	ExchangeCode(redirectURI, code string) (string, error)
 	GetUser(token string) (User, error)
 	Setup() error

@@ -3,10 +3,10 @@ package provider
 import (
 	"context"
 	"errors"
-	"github.com/thomseddon/traefik-forward-auth/internal/pkce"
 	"strings"
 
 	"github.com/coreos/go-oidc"
+	"github.com/thomseddon/traefik-forward-auth/internal/pkce"
 	"golang.org/x/oauth2"
 )
 
@@ -22,6 +22,7 @@ type OIDC struct {
 	provider     *oidc.Provider
 	verifier     *oidc.IDTokenVerifier
 	pkceVerifier *pkce.CodeVerifier
+	nonce        string
 }
 
 // Name returns the name of the provider
@@ -64,14 +65,27 @@ func (o *OIDC) Setup() error {
 }
 
 // GetLoginURL provides the login url for the given redirect uri and state
-func (o *OIDC) GetLoginURL(redirectURI, state string) string {
+func (o *OIDC) GetLoginURL(redirectURI, state string) (string, error) {
 	var opts []oauth2.AuthCodeOption
+
+	// Generate and store nonce
+	var err error
+	o.nonce, err = pkce.GenerateNonce()
+	if err != nil {
+		return "", err
+	}
+
+	opts = append(opts, oauth2.SetAuthURLParam("nonce", o.nonce))
+
 	if o.PkceRequired {
-		o.pkceVerifier = pkce.CreateCodeVerifier()
+		o.pkceVerifier, err = pkce.CreateCodeVerifier()
+		if err != nil {
+			return "", err
+		}
 		opts = append(opts, oauth2.SetAuthURLParam("code_challenge_method", "S256"))
 		opts = append(opts, oauth2.SetAuthURLParam("code_challenge", o.pkceVerifier.CodeChallengeS256()))
 	}
-	return o.OAuthGetLoginURL(redirectURI, state, opts...)
+	return o.OAuthGetLoginURL(redirectURI, state, opts...), nil
 }
 
 // ExchangeCode exchanges the given redirect uri and code for a token
@@ -91,6 +105,15 @@ func (o *OIDC) ExchangeCode(redirectURI, code string) (string, error) {
 	rawIDToken, ok := token.Extra("id_token").(string)
 	if !ok {
 		return "", errors.New("Missing id_token")
+	}
+
+	// Verify nonce
+	idToken, err := o.verifier.Verify(o.ctx, rawIDToken)
+	if err != nil {
+		return "", err
+	}
+	if idToken.Nonce != o.nonce {
+		return "", errors.New("nonce verification failed")
 	}
 
 	return rawIDToken, nil
