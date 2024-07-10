@@ -12,6 +12,7 @@ import (
 // Server contains muxer and handler methods
 type Server struct {
 	muxer *muxhttp.Muxer
+	directory *Directory
 }
 
 // NewServer creates a new server object and builds muxer
