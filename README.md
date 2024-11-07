@@ -134,6 +134,7 @@ You must set:
 You can also set:
 - `providers.generic-oauth.scope`- Any scopes that should be included in the request (default: profile, email)
 - `providers.generic-oauth.token-style` - How token is presented when querying the User URL. Can be `header` or `query`, defaults to `header`. With `header` the token is provided in an Authorization header, with query the token is provided in the `access_token` query string value.
+- `providers.generic-oauth.skip-verify-tls` Skips the TLS certificate verificatio when making requests to the authentication service. 
 
 Please see the [Provider Setup](https://github.com/thomseddon/traefik-forward-auth/wiki/Provider-Setup) wiki page for examples.
 

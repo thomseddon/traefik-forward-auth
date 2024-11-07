@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,15 +13,17 @@ import (
 
 // GenericOAuth provider
 type GenericOAuth struct {
-	AuthURL      string   `long:"auth-url" env:"AUTH_URL" description:"Auth/Login URL"`
-	TokenURL     string   `long:"token-url" env:"TOKEN_URL" description:"Token URL"`
-	UserURL      string   `long:"user-url" env:"USER_URL" description:"URL used to retrieve user info"`
-	ClientID     string   `long:"client-id" env:"CLIENT_ID" description:"Client ID"`
-	ClientSecret string   `long:"client-secret" env:"CLIENT_SECRET" description:"Client Secret" json:"-"`
-	Scopes       []string `long:"scope" env:"SCOPE" env-delim:"," default:"profile" default:"email" description:"Scopes"`
-	TokenStyle   string   `long:"token-style" env:"TOKEN_STYLE" default:"header" choice:"header" choice:"query" description:"How token is presented when querying the User URL"`
+	AuthURL       string   `long:"auth-url" env:"AUTH_URL" description:"Auth/Login URL"`
+	TokenURL      string   `long:"token-url" env:"TOKEN_URL" description:"Token URL"`
+	UserURL       string   `long:"user-url" env:"USER_URL" description:"URL used to retrieve user info"`
+	ClientID      string   `long:"client-id" env:"CLIENT_ID" description:"Client ID"`
+	ClientSecret  string   `long:"client-secret" env:"CLIENT_SECRET" description:"Client Secret" json:"-"`
+	Scopes        []string `long:"scope" env:"SCOPE" env-delim:"," default:"profile" default:"email" description:"Scopes"`
+	TokenStyle    string   `long:"token-style" env:"TOKEN_STYLE" default:"header" choice:"header" choice:"query" description:"How token is presented when querying the User URL"`
+	SkipVerifyTLS bool     `long:"skip-verify-tls" env:"SKIP_VERIFY_TLS" description:"Skip TLS certificate verification"`
 
 	OAuthProvider
+	httpClient *http.Client
 }
 
 // Name returns the name of the provider
@@ -47,6 +50,19 @@ func (o *GenericOAuth) Setup() error {
 	}
 
 	o.ctx = context.Background()
+
+	// Create custom HTTP client with TLS config
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: o.SkipVerifyTLS},
+	}
+	o.httpClient = &http.Client{Transport: tr}
+
+	// Create a context with the custom HTTP client
+	ctx := context.WithValue(o.ctx, oauth2.HTTPClient, o.httpClient)
+	o.ctx = ctx
+
+	// Remove this line
+	// o.Config.HTTPClient = o.httpClient
 
 	return nil
 }
@@ -83,8 +99,7 @@ func (o *GenericOAuth) GetUser(token string) (User, error) {
 		req.URL.RawQuery = q.Encode()
 	}
 
-	client := &http.Client{}
-	res, err := client.Do(req)
+	res, err := o.httpClient.Do(req)
 	if err != nil {
 		return user, err
 	}
