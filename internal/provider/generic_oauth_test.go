@@ -53,7 +53,8 @@ func TestGenericOAuthGetLoginURL(t *testing.T) {
 	}
 
 	// Check url
-	uri, err := url.Parse(p.GetLoginURL("http://example.com/_oauth", "state"))
+	loginURL, _ := p.GetLoginURL("http://example.com/_oauth", "state", nil)
+	uri, err := url.Parse(loginURL)
 	assert.Nil(err)
 	assert.Equal("https", uri.Scheme)
 	assert.Equal("provider.com", uri.Host)
@@ -104,7 +105,7 @@ func TestGenericOAuthExchangeCode(t *testing.T) {
 	// AuthStyleInHeader is attempted
 	p.Config.Endpoint.AuthStyle = oauth2.AuthStyleInParams
 
-	token, err := p.ExchangeCode("http://example.com/_oauth", "code")
+	token, err := p.ExchangeCode("http://example.com/_oauth", "code", nil)
 	assert.Nil(err)
 	assert.Equal("123456789", token)
 }

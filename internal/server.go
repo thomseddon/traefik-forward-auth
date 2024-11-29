@@ -5,6 +5,7 @@ import (
 	"net/url"
 
 	"github.com/sirupsen/logrus"
+	"github.com/thomseddon/traefik-forward-auth/internal/cookie"
 	"github.com/thomseddon/traefik-forward-auth/internal/provider"
 	muxhttp "github.com/traefik/traefik/v2/pkg/muxer/http"
 )
@@ -169,8 +170,9 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 		// Clear CSRF cookie
 		http.SetCookie(w, ClearCSRFCookie(r, c))
 
+		cookieStore := cookie.NewCookieStore(w, r, config.InsecureCookie)
 		// Exchange code for token
-		token, err := p.ExchangeCode(redirectUri(r), r.URL.Query().Get("code"))
+		token, err := p.ExchangeCode(redirectUri(r), r.URL.Query().Get("code"), cookieStore)
 		if err != nil {
 			logger.WithField("error", err).Error("Code exchange failed with provider")
 			http.Error(w, "Service unavailable", 503)
@@ -234,8 +236,16 @@ func (s *Server) authRedirect(logger *logrus.Entry, w http.ResponseWriter, r *ht
 			"\"insecure-cookie\" config option to permit cookies via http.")
 	}
 
+	cookieStore := cookie.NewCookieStore(w, r, config.InsecureCookie)
 	// Forward them on
-	loginURL := p.GetLoginURL(redirectUri(r), MakeState(r, p, nonce))
+	loginURL, err := p.GetLoginURL(redirectUri(r), MakeState(r, p, nonce), cookieStore)
+
+	if err != nil {
+		logger.WithField("error", err).Error("Get login url failed")
+		http.Error(w, "Service unavailable", 503)
+		return
+	}
+
 	http.Redirect(w, r, loginURL, http.StatusTemporaryRedirect)
 
 	logger.WithFields(logrus.Fields{

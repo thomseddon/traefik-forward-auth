@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/thomseddon/traefik-forward-auth/internal/cookie"
 	"golang.org/x/oauth2"
 )
 
@@ -52,12 +53,12 @@ func (o *GenericOAuth) Setup() error {
 }
 
 // GetLoginURL provides the login url for the given redirect uri and state
-func (o *GenericOAuth) GetLoginURL(redirectURI, state string) string {
-	return o.OAuthGetLoginURL(redirectURI, state)
+func (o *GenericOAuth) GetLoginURL(redirectURI, state string, _ cookie.CookieStore) (string, error) {
+	return o.OAuthGetLoginURL(redirectURI, state), nil
 }
 
 // ExchangeCode exchanges the given redirect uri and code for a token
-func (o *GenericOAuth) ExchangeCode(redirectURI, code string) (string, error) {
+func (o *GenericOAuth) ExchangeCode(redirectURI, code string, _ cookie.CookieStore) (string, error) {
 	token, err := o.OAuthExchangeCode(redirectURI, code)
 	if err != nil {
 		return "", err
