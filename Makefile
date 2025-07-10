@@ -8,6 +8,6 @@ test:
 .PHONY: mock
 mock: ## run testify mockery for all the interfaces
 	rm -rf mocks
-	mockery --all --dir internal --output ./mocks/internal --keeptree
+	mockery --all --dir pkg --output ./mocks/pkg --keeptree
 
 .PHONY: format test

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/aliotta/traefik-forward-auth/pkg/provider"
 	"github.com/golang-jwt/jwt/v4"
 	"io"
 	"io/ioutil"
@@ -15,7 +16,6 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/aliotta/traefik-forward-auth/pkg/provider"
 	"github.com/sirupsen/logrus"
 	muxhttp "github.com/traefik/traefik/v2/pkg/muxer/http"
 )

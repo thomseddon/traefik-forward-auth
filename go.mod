@@ -1,11 +1,10 @@
-module github.com/thomseddon/traefik-forward-auth
+module github.com/aliotta/traefik-forward-auth
 
 go 1.22
 
 toolchain go1.22.2
 
 require (
-	github.com/aliotta/traefik-forward-auth v0.0.0-20250626153930-456e5e60b904
 	github.com/coreos/go-oidc v2.2.1+incompatible
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/sirupsen/logrus v1.9.3
@@ -25,6 +24,7 @@ require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/pquerna/cachecontrol v0.2.0 // indirect
+	github.com/stretchr/objx v0.5.1 // indirect
 	github.com/traefik/paerser v0.2.0 // indirect
 	github.com/vulcand/predicate v1.2.0 // indirect
 	golang.org/x/crypto v0.23.0 // indirect

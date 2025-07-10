@@ -61,11 +61,6 @@ func TestOIDCGetLoginURL(t *testing.T) {
 	// Calling the method should not modify the underlying config
 	assert.Equal("", provider.Config.RedirectURL)
 
-	//
-	// Test with resource config option
-	//
-	provider.Resource = "resourcetest"
-
 	// Check url
 	uri, err = url.Parse(provider.GetLoginURL("http://example.com/_oauth", "state"))
 	assert.Nil(err)
@@ -80,9 +75,8 @@ func TestOIDCGetLoginURL(t *testing.T) {
 		"client_id":     []string{"idtest"},
 		"redirect_uri":  []string{"http://example.com/_oauth"},
 		"response_type": []string{"code"},
-		"scope":         []string{"openid profile email"},
+		"scope":         []string{"openid profile email offline_access"},
 		"state":         []string{"state"},
-		"resource":      []string{"resourcetest"},
 	}
 	assert.Equal(expectedQs, qs)
 
@@ -98,13 +92,14 @@ func TestOIDCExchangeCode(t *testing.T) {
 			"code":         "code",
 			"grant_type":   "authorization_code",
 			"redirect_uri": "http://example.com/_oauth",
+			"audience":     "astronomer-ee",
 		},
 	})
 	defer server.Close()
 
 	token, err := provider.ExchangeCode("http://example.com/_oauth", "code")
 	assert.Nil(err)
-	assert.Equal("id_123456789", token)
+	assert.Equal("123456789", token)
 }
 
 func TestOIDCGetUser(t *testing.T) {

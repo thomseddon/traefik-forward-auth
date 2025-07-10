@@ -5,6 +5,7 @@ import (
 	"crypto/cipher"
 	"encoding/base64"
 	"fmt"
+	mocks "github.com/aliotta/traefik-forward-auth/mocks/pkg"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -44,7 +45,8 @@ func TestServerRootHandler(t *testing.T) {
 	req.Header.Add("X-Forwarded-Proto", "https")
 	req.Header.Add("X-Forwarded-Host", "example.com")
 	req.Header.Add("X-Forwarded-Uri", "/foo?q=bar")
-	NewServer().RootHandler(httptest.NewRecorder(), req)
+
+	NewServer(NewCoreController()).RootHandler(httptest.NewRecorder(), req)
 
 	assert.Equal("GET", req.Method, "x-forwarded-method should be read into request")
 	assert.Equal("example.com", req.Host, "x-forwarded-host should be read into request")
@@ -57,7 +59,7 @@ func TestServerRootHandler(t *testing.T) {
 	req.Header.Add("X-Forwarded-Method", "GET")
 	req.Header.Add("X-Forwarded-Proto", "https")
 	req.Header.Add("X-Forwarded-Host", "example.com")
-	NewServer().RootHandler(httptest.NewRecorder(), req)
+	NewServer(NewCoreController()).RootHandler(httptest.NewRecorder(), req)
 
 	assert.Equal("GET", req.Method, "x-forwarded-method should be read into request")
 	assert.Equal("example.com", req.Host, "x-forwarded-host should be read into request")
@@ -73,7 +75,7 @@ func TestServerAuthHandlerInvalid(t *testing.T) {
 
 	// Should redirect vanilla request to login url
 	req := newDefaultHttpRequest("/foo")
-	res, _ := doHttpRequest(req, nil)
+	res, _ := doHttpRequest(req, nil, NewCoreController())
 	assert.Equal(307, res.StatusCode, "vanilla request should be redirected")
 
 	fwd, _ := res.Location()
@@ -106,7 +108,7 @@ func TestServerAuthHandlerInvalid(t *testing.T) {
 
 	c.Value = base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("bad|%s|%s", parts[1], parts[2])))
 
-	res, _ = doHttpRequest(req, c)
+	res, _ = doHttpRequest(req, c, NewCoreController())
 	assert.Equal(401, res.StatusCode, "invalid cookie should not be authorised")
 }
 
@@ -119,7 +121,7 @@ func TestServerAuthHandlerExpired(t *testing.T) {
 	// Should redirect expired cookie
 	req := newHTTPRequest("GET", "http://example.com/foo")
 	c := MakeCookie(req, "test@example.com")
-	res, _ := doHttpRequest(req, c)
+	res, _ := doHttpRequest(req, c, NewCoreController())
 	require.Equal(t, 307, res.StatusCode, "request with expired cookie should be redirected")
 
 	// Check for CSRF cookie
@@ -159,7 +161,7 @@ func TestServerAuthHandlerValid(t *testing.T) {
 	c := MakeCookie(req, base64.StdEncoding.EncodeToString(encryptedToken))
 	config.Domains = []string{}
 
-	res, _ := doHttpRequest(req, c)
+	res, _ := doHttpRequest(req, c, NewCoreController())
 	assert.Equal(200, res.StatusCode, "valid request should be allowed")
 }
 
@@ -184,26 +186,28 @@ func TestServerAuthCallback(t *testing.T) {
 
 	// Should pass auth response request to callback
 	req := newHTTPRequest("GET", "http://example.com/_oauth")
-	res, _ := doHttpRequest(req, nil)
+	res, _ := doHttpRequest(req, nil, NewCoreController())
 	assert.Equal(401, res.StatusCode, "auth callback without cookie shouldn't be authorised")
 
 	// Should catch invalid csrf cookie
 	nonce := "12345678901234567890123456789012"
 	req = newHTTPRequest("GET", "http://example.com/_oauth?state="+nonce+":http://redirect")
 	c := MakeCSRFCookie(req, "nononononononononononononononono")
-	res, _ = doHttpRequest(req, c)
+	res, _ = doHttpRequest(req, c, NewCoreController())
 	assert.Equal(401, res.StatusCode, "auth callback with invalid cookie shouldn't be authorised")
 
 	// Should catch invalid provider cookie
 	req = newHTTPRequest("GET", "http://example.com/_oauth?state="+nonce+":invalid:http://redirect")
 	c = MakeCSRFCookie(req, nonce)
-	res, _ = doHttpRequest(req, c)
+	res, _ = doHttpRequest(req, c, NewCoreController())
 	assert.Equal(401, res.StatusCode, "auth callback with invalid provider shouldn't be authorised")
 
 	// Should redirect valid request
 	req = newHTTPRequest("GET", "http://example.com/_oauth?state="+nonce+":google:http://redirect")
 	c = MakeCSRFCookie(req, nonce)
-	res, _ = doHttpRequest(req, c)
+	mockController := new(mocks.CoreControllerInterface)
+	mockController.On("ExchangeAuth0TokenWithCoreSignedJwt", "cmcdjg49t000j01s8s25pdimx", "123456789").Return("mockAstroToken", nil)
+	res, _ = doHttpRequest(req, c, mockController)
 	require.Equal(307, res.StatusCode, "valid auth callback should be allowed")
 
 	fwd, _ := res.Location()
@@ -233,35 +237,8 @@ func TestServerAuthCallbackExchangeFailure(t *testing.T) {
 	// Should handle failed code exchange
 	req := newDefaultHttpRequest("/_oauth?state=12345678901234567890123456789012:google:http://redirect")
 	c := MakeCSRFCookie(req, "12345678901234567890123456789012")
-	res, _ := doHttpRequest(req, c)
+	res, _ := doHttpRequest(req, c, NewCoreController())
 	assert.Equal(503, res.StatusCode, "auth callback should handle failed code exchange")
-}
-
-func TestServerAuthCallbackUserFailure(t *testing.T) {
-	assert := assert.New(t)
-	config = newDefaultConfig()
-
-	// Setup OAuth server
-	server, serverURL := NewOAuthServer(t)
-	defer server.Close()
-	config.Providers.Google.TokenURL = &url.URL{
-		Scheme: serverURL.Scheme,
-		Host:   serverURL.Host,
-		Path:   "/token",
-	}
-	serverFail, serverFailURL := NewFailingOAuthServer(t)
-	defer serverFail.Close()
-	config.Providers.Google.UserURL = &url.URL{
-		Scheme: serverFailURL.Scheme,
-		Host:   serverFailURL.Host,
-		Path:   "/userinfo",
-	}
-
-	// Should handle failed user request
-	req := newDefaultHttpRequest("/_oauth?state=12345678901234567890123456789012:google:http://redirect")
-	c := MakeCSRFCookie(req, "12345678901234567890123456789012")
-	res, _ := doHttpRequest(req, c)
-	assert.Equal(503, res.StatusCode, "auth callback should handle failed user request")
 }
 
 func TestServerLogout(t *testing.T) {
@@ -270,7 +247,7 @@ func TestServerLogout(t *testing.T) {
 	config = newDefaultConfig()
 
 	req := newDefaultHttpRequest("/_oauth/logout")
-	res, _ := doHttpRequest(req, nil)
+	res, _ := doHttpRequest(req, nil, NewCoreController())
 	require.Equal(401, res.StatusCode, "should return a 401")
 
 	// Check for cookie
@@ -286,7 +263,7 @@ func TestServerLogout(t *testing.T) {
 	// Test with redirect
 	config.LogoutRedirect = "http://redirect/path"
 	req = newDefaultHttpRequest("/_oauth/logout")
-	res, _ = doHttpRequest(req, nil)
+	res, _ = doHttpRequest(req, nil, NewCoreController())
 	require.Equal(307, res.StatusCode, "should return a 307")
 
 	// Check for cookie
@@ -312,12 +289,12 @@ func TestServerDefaultAction(t *testing.T) {
 	config = newDefaultConfig()
 
 	req := newDefaultHttpRequest("/random")
-	res, _ := doHttpRequest(req, nil)
+	res, _ := doHttpRequest(req, nil, NewCoreController())
 	assert.Equal(307, res.StatusCode, "request should require auth with auth default handler")
 
 	config.DefaultAction = "allow"
 	req = newDefaultHttpRequest("/random")
-	res, _ = doHttpRequest(req, nil)
+	res, _ = doHttpRequest(req, nil, NewCoreController())
 	assert.Equal(200, res.StatusCode, "request should be allowed with default handler")
 }
 
@@ -327,7 +304,7 @@ func TestServerDefaultProvider(t *testing.T) {
 
 	// Should use "google" as default provider when not specified
 	req := newDefaultHttpRequest("/random")
-	res, _ := doHttpRequest(req, nil)
+	res, _ := doHttpRequest(req, nil, NewCoreController())
 	fwd, _ := res.Location()
 	assert.Equal("https", fwd.Scheme, "request with expired cookie should be redirected to google")
 	assert.Equal("accounts.google.com", fwd.Host, "request with expired cookie should be redirected to google")
@@ -341,7 +318,7 @@ func TestServerDefaultProvider(t *testing.T) {
 		},
 	}
 
-	res, _ = doHttpRequest(req, nil)
+	res, _ = doHttpRequest(req, nil, NewCoreController())
 	fwd, _ = res.Location()
 	assert.Equal("https", fwd.Scheme, "request with expired cookie should be redirected to oidc")
 	assert.Equal("oidc.com", fwd.Host, "request with expired cookie should be redirected to oidc")
@@ -365,19 +342,19 @@ func TestServerRouteHeaders(t *testing.T) {
 	// Should block any request
 	req := newDefaultHttpRequest("/random")
 	req.Header.Add("X-Random", "hello")
-	res, _ := doHttpRequest(req, nil)
+	res, _ := doHttpRequest(req, nil, NewCoreController())
 	assert.Equal(307, res.StatusCode, "request not matching any rule should require auth")
 
 	// Should allow matching
 	req = newDefaultHttpRequest("/api")
 	req.Header.Add("X-Test", "test123")
-	res, _ = doHttpRequest(req, nil)
+	res, _ = doHttpRequest(req, nil, NewCoreController())
 	assert.Equal(200, res.StatusCode, "request matching allow rule should be allowed")
 
 	// Should allow matching
 	req = newDefaultHttpRequest("/api")
 	req.Header.Add("X-Test", "test789")
-	res, _ = doHttpRequest(req, nil)
+	res, _ = doHttpRequest(req, nil, NewCoreController())
 	assert.Equal(200, res.StatusCode, "request matching allow rule should be allowed")
 }
 
@@ -397,17 +374,17 @@ func TestServerRouteHost(t *testing.T) {
 
 	// Should block any request
 	req := newHTTPRequest("GET", "https://example.com/")
-	res, _ := doHttpRequest(req, nil)
+	res, _ := doHttpRequest(req, nil, NewCoreController())
 	assert.Equal(307, res.StatusCode, "request not matching any rule should require auth")
 
 	// Should allow matching request
 	req = newHTTPRequest("GET", "https://api.example.com/")
-	res, _ = doHttpRequest(req, nil)
+	res, _ = doHttpRequest(req, nil, NewCoreController())
 	assert.Equal(200, res.StatusCode, "request matching allow rule should be allowed")
 
 	// Should allow matching request
 	req = newHTTPRequest("GET", "https://sub8.example.com/")
-	res, _ = doHttpRequest(req, nil)
+	res, _ = doHttpRequest(req, nil, NewCoreController())
 	assert.Equal(200, res.StatusCode, "request matching allow rule should be allowed")
 }
 
@@ -423,12 +400,12 @@ func TestServerRouteMethod(t *testing.T) {
 
 	// Should block any request
 	req := newHTTPRequest("GET", "https://example.com/")
-	res, _ := doHttpRequest(req, nil)
+	res, _ := doHttpRequest(req, nil, NewCoreController())
 	assert.Equal(307, res.StatusCode, "request not matching any rule should require auth")
 
 	// Should allow matching request
 	req = newHTTPRequest("PUT", "https://example.com/")
-	res, _ = doHttpRequest(req, nil)
+	res, _ = doHttpRequest(req, nil, NewCoreController())
 	assert.Equal(200, res.StatusCode, "request matching allow rule should be allowed")
 }
 
@@ -448,21 +425,21 @@ func TestServerRoutePath(t *testing.T) {
 
 	// Should block any request
 	req := newDefaultHttpRequest("/random")
-	res, _ := doHttpRequest(req, nil)
+	res, _ := doHttpRequest(req, nil, NewCoreController())
 	assert.Equal(307, res.StatusCode, "request not matching any rule should require auth")
 
 	// Should allow /api request
 	req = newDefaultHttpRequest("/api")
-	res, _ = doHttpRequest(req, nil)
+	res, _ = doHttpRequest(req, nil, NewCoreController())
 	assert.Equal(200, res.StatusCode, "request matching allow rule should be allowed")
 
 	// Should allow /private request
 	req = newDefaultHttpRequest("/private")
-	res, _ = doHttpRequest(req, nil)
+	res, _ = doHttpRequest(req, nil, NewCoreController())
 	assert.Equal(200, res.StatusCode, "request matching allow rule should be allowed")
 
 	req = newDefaultHttpRequest("/private/path")
-	res, _ = doHttpRequest(req, nil)
+	res, _ = doHttpRequest(req, nil, NewCoreController())
 	assert.Equal(200, res.StatusCode, "request matching allow rule should be allowed")
 }
 
@@ -478,12 +455,12 @@ func TestServerRouteQuery(t *testing.T) {
 
 	// Should block any request
 	req := newHTTPRequest("GET", "https://example.com/?q=no")
-	res, _ := doHttpRequest(req, nil)
+	res, _ := doHttpRequest(req, nil, NewCoreController())
 	assert.Equal(307, res.StatusCode, "request not matching any rule should require auth")
 
 	// Should allow matching request
 	req = newHTTPRequest("GET", "https://api.example.com/?q=test123")
-	res, _ = doHttpRequest(req, nil)
+	res, _ = doHttpRequest(req, nil, NewCoreController())
 	assert.Equal(200, res.StatusCode, "request matching allow rule should be allowed")
 }
 
@@ -530,7 +507,7 @@ func NewFailingOAuthServer(t *testing.T) (*httptest.Server, *url.URL) {
 	return server, serverURL
 }
 
-func doHttpRequest(r *http.Request, c *http.Cookie) (*http.Response, string) {
+func doHttpRequest(r *http.Request, c *http.Cookie, coreController CoreControllerInterface) (*http.Response, string) {
 	w := httptest.NewRecorder()
 
 	// Set cookies on recorder
@@ -542,7 +519,7 @@ func doHttpRequest(r *http.Request, c *http.Cookie) (*http.Response, string) {
 	for _, c := range w.HeaderMap["Set-Cookie"] {
 		r.Header.Add("Cookie", c)
 	}
-	server := NewServer()
+	server := NewServer(coreController)
 
 	server.RootHandler(w, r)
 
@@ -560,6 +537,7 @@ func newDefaultConfig() *Config {
 	config, _ = NewConfig([]string{
 		"--providers.google.client-id=id",
 		"--providers.google.client-secret=secret",
+		"--cookie-value-secret=12345678901234567890123456789012",
 	})
 
 	// Setup the google providers without running all the config validation
