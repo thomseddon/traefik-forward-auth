@@ -1,0 +1,108 @@
+version: 2.1
+
+yaml-anchors:
+  parameter-false-boolean: &parameter-false-boolean
+    type: boolean
+    default: false
+
+setup: true
+
+orbs:
+  path-filtering: circleci/path-filtering@1.3.0
+
+parameters:
+  auto-updater-tag:
+    type: string
+    default: main
+  run-auto-updater-workflow: *parameter-false-boolean
+  run-workenv-image-builder-workflow: *parameter-false-boolean
+  run-path-filtering-workflow: *parameter-false-boolean
+
+workflows:
+  auto-updater-workflow:
+    when: << pipeline.parameters.run-auto-updater-workflow >>
+    jobs:
+      - auto-updater:
+          context:
+            - quay.io
+            - azurecr.io
+            - automated-updater-prod
+          auto-updater-tag: << pipeline.parameters.auto-updater-tag >>
+
+  webhook-workflow: &path-filtering-workflow
+    when:
+      equal: [webhook, << pipeline.trigger_source >>]
+    jobs:
+      - path-filtering/filter:
+          name: check-updated-files
+          mapping: |
+            images/traefik-forward-auth-workenv/.* run-workenv-image-builder-workflow true
+
+  workenv-image-builder-workflow:
+    when: << pipeline.parameters.run-workenv-image-builder-workflow >>
+    jobs:
+      - workenv-image-builder-job:
+          context:
+            - quay.io
+            - azurecr.io
+
+jobs:
+  auto-updater:
+    parameters:
+      auto-updater-tag:
+        type: string
+        default: main
+    machine:
+      image: ubuntu-2204:current
+    resource_class: medium
+    environment:
+      CONFIG_FILE: tools/auto-updater.yaml
+      LOG_LEVEL: debug
+    working_directory: ~/project
+    steps:
+      - checkout:
+          path: ~/project
+      - run:
+          name: Login to Quay.io
+          command: |
+            mkdir -p "${HOME}/.docker"
+            QUAY_AUTH="$(echo -n "${QUAY_USERNAME}:${QUAY_PASSWORD}" | base64 | tr -d '\n')"
+            echo "{\"auths\":{\"https://quay.io/v2\":{\"auth\":\"${QUAY_AUTH}\"}}}" > "${HOME}/.docker/config.json"
+      - run:
+          name: Get auto-updater binary
+          command: |
+            docker pull quay.io/astronomer/dockerfile-updater:<< parameters.auto-updater-tag >>
+            docker create --name dockerfile-updater-${CIRCLE_PIPELINE_ID} quay.io/astronomer/dockerfile-updater:<< parameters.auto-updater-tag >>
+            docker cp dockerfile-updater-${CIRCLE_PIPELINE_ID}:/usr/local/bin/apply /home/circleci/project/tools
+            docker rm -f dockerfile-updater-${CIRCLE_PIPELINE_ID}
+            chmod 0755 /home/circleci/project/tools/apply
+
+      - run:
+          name: Run auto-updater
+          command: /home/circleci/project/tools/apply -config "${HOME}/project/tools/auto-updater.yaml" -basedir "${HOME}/project"  -enable-github-pull-requests true
+
+  workenv-image-builder-job:
+    docker:
+      - image: cimg/base:current
+    working_directory: ~/project
+    steps:
+      - checkout:
+          path: ~/project
+      - setup_remote_docker:
+          version: default
+      - run:
+          name: unit tests
+          command: make test
+      - run:
+          name: Login to Quay.io
+          command: >-
+            echo $QUAY_PASSWORD |
+            docker login --username $QUAY_USERNAME --password-stdin quay.io || true
+      - run:
+          name: Login to Azure Container Registry
+          command: >-
+            echo $ACR_PASSWORD |
+            docker login --username $ACR_USERNAME --password-stdin astrocr.azurecr.io || true
+      - run:
+          name: Build and push
+          command: make workenv-image-cibuild

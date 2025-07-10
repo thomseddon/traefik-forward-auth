@@ -1,0 +1,41 @@
+version: 2.1
+
+yaml-anchors:
+  parameter-false-boolean: &parameter-false-boolean
+    type: boolean
+    default: false
+
+parameters:
+  run-workenv-image-builder-workflow: *parameter-false-boolean
+
+workflows:
+  workenv-image-builder-workflow:
+    when: << pipeline.parameters.run-workenv-image-builder-workflow >>
+    jobs:
+      - workenv-image-builder-job:
+          context:
+            - quay.io
+            - azurecr.io
+jobs:
+  workenv-image-builder-job:
+    docker:
+      - image: cimg/base:current
+    working_directory: ~/project
+    steps:
+      - checkout:
+          path: ~/project
+      - setup_remote_docker:
+          version: default
+      - run:
+          name: Login to Quay.io
+          command: >-
+            echo $QUAY_PASSWORD |
+            docker login --username $QUAY_USERNAME --password-stdin quay.io || true
+      - run:
+          name: Login to Azure Container Registry
+          command: >-
+            echo $ACR_PASSWORD |
+            docker login --username $ACR_USERNAME --password-stdin astrocr.azurecr.io || true
+      - run:
+          name: Build and push
+          command: make workenv-image-cibuild
