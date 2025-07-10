@@ -19,7 +19,7 @@ func main() {
 	config.Validate()
 
 	// Build server
-	server := internal.NewServer()
+	server := internal.NewServer(internal.NewCoreController())
 
 	// Attach router to default server
 	http.HandleFunc("/", server.RootHandler)

@@ -49,10 +49,11 @@ func TestOIDCGetLoginURL(t *testing.T) {
 	// Check query string
 	qs := uri.Query()
 	expectedQs := url.Values{
+		"audience":      []string{"astronomer-ee"},
 		"client_id":     []string{"idtest"},
 		"redirect_uri":  []string{"http://example.com/_oauth"},
 		"response_type": []string{"code"},
-		"scope":         []string{"openid profile email"},
+		"scope":         []string{"openid profile email offline_access"},
 		"state":         []string{"state"},
 	}
 	assert.Equal(expectedQs, qs)
@@ -75,6 +76,7 @@ func TestOIDCGetLoginURL(t *testing.T) {
 	// Check query string
 	qs = uri.Query()
 	expectedQs = url.Values{
+		"audience":      []string{"astronomer-ee"},
 		"client_id":     []string{"idtest"},
 		"redirect_uri":  []string{"http://example.com/_oauth"},
 		"response_type": []string{"code"},

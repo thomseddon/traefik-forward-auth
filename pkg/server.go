@@ -15,23 +15,47 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/aliotta/traefik-forward-auth/internal/provider"
+	"github.com/aliotta/traefik-forward-auth/pkg/provider"
 	"github.com/sirupsen/logrus"
 	muxhttp "github.com/traefik/traefik/v2/pkg/muxer/http"
 )
 
+type ServerInterface interface {
+	buildRoutes()
+	RootHandler(w http.ResponseWriter, r *http.Request)
+	AllowHandler(rule string) http.HandlerFunc
+	AuthHandler(providerName, rule string) http.HandlerFunc
+	AuthCallbackHandler() http.HandlerFunc
+	LogoutHandler() http.HandlerFunc
+	authRedirect(logger *logrus.Entry, w http.ResponseWriter, r *http.Request, p provider.Provider)
+}
+
+type CoreControllerInterface interface {
+	ExchangeAuth0TokenWithCoreSignedJwt(deploymentId, token string) (string, error)
+}
+
 // Server contains muxer and handler methods
 type Server struct {
-	muxer         *muxhttp.Muxer
-	EncryptionKey string
+	muxer          *muxhttp.Muxer
+	EncryptionKey  string
+	coreController CoreControllerInterface
 }
 
 // NewServer creates a new server object and builds muxer
-func NewServer() *Server {
+func NewServer(coreController CoreControllerInterface) ServerInterface {
 	s := &Server{}
 	s.buildRoutes()
 	s.EncryptionKey = config.CookieValueSecret
+	s.coreController = coreController
 	return s
+}
+
+type CoreController struct {
+}
+
+func NewCoreController() CoreControllerInterface {
+	c := &CoreController{}
+	return c
 }
 
 func (s *Server) buildRoutes() {
@@ -174,6 +198,7 @@ func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 
 			block, err := aes.NewCipher([]byte(s.EncryptionKey))
 			if err != nil {
+				fmt.Println("Error creating cipher:", err)
 				logger.Warn("Failed to create AES cipher:", err)
 				http.Error(w, "Error:", http.StatusInternalServerError)
 				return
@@ -181,6 +206,7 @@ func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 
 			gcm, err := cipher.NewGCM(block)
 			if err != nil {
+				fmt.Println("Error creating gcm:", err)
 				logger.Warn("Failed to create gcm:", err)
 				http.Error(w, "Error:", http.StatusInternalServerError)
 				return
@@ -206,7 +232,6 @@ func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 			logger.Debug("Allowing valid request", r.Body)
 			logger.Debug("Allowing valid request header", r.Header)
 			w.Header().Set("Authorization", fmt.Sprintf("Bearer %s", decryptedToken))
-			w.Header().Set("X-Forwarded-User", "pasta")
 			w.WriteHeader(200)
 		}
 	}
@@ -270,7 +295,7 @@ func (s *Server) AuthCallbackHandler() http.HandlerFunc {
 			return
 		}
 
-		token, err := s.ExchangeAuth0TokenWithCoreSignedJwt("cmcdjg49t000j01s8s25pdimx", auth0Token)
+		token, err := s.coreController.ExchangeAuth0TokenWithCoreSignedJwt("cmcdjg49t000j01s8s25pdimx", auth0Token)
 		if err != nil {
 			logger.WithField("error", err).Error("Code exchange failed with core")
 			http.Error(w, "Service unavailable", 503)
@@ -318,7 +343,7 @@ type CoreJwtResponse struct {
 	Jwt string `json:"jwt"`
 }
 
-func (s *Server) ExchangeAuth0TokenWithCoreSignedJwt(deploymentId, token string) (string, error) {
+func (c *CoreController) ExchangeAuth0TokenWithCoreSignedJwt(deploymentId, token string) (string, error) {
 	url := fmt.Sprintf("http://host.docker.internal:8888/private/v1alpha1/authz/deployments/%s/airflow-jwt", deploymentId)
 
 	// Create a new HTTP request

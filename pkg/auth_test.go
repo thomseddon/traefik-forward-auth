@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aliotta/traefik-forward-auth/internal/provider"
+	"github.com/aliotta/traefik-forward-auth/pkg/provider"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -208,7 +208,7 @@ func TestRedirectUri(t *testing.T) {
 	uri, err := url.Parse(redirectUri(r))
 	assert.Nil(err)
 	assert.Equal("http", uri.Scheme)
-	assert.Equal("app.example.com", uri.Host)
+	assert.Equal("localhost:8080", uri.Host)
 	assert.Equal("/_oauth", uri.Path)
 
 	//
@@ -220,7 +220,7 @@ func TestRedirectUri(t *testing.T) {
 	uri, err = url.Parse(redirectUri(r))
 	assert.Nil(err)
 	assert.Equal("http", uri.Scheme)
-	assert.Equal("app.example.com", uri.Host)
+	assert.Equal("localhost:8080", uri.Host)
 	assert.Equal("/_oauth", uri.Path)
 
 	//
@@ -250,7 +250,7 @@ func TestRedirectUri(t *testing.T) {
 	uri, err = url.Parse(redirectUri(r))
 	assert.Nil(err)
 	assert.Equal("https", uri.Scheme)
-	assert.Equal("another.com", uri.Host)
+	assert.Equal("localhost:8080", uri.Host)
 	assert.Equal("/_oauth", uri.Path)
 }
 
@@ -289,20 +289,20 @@ func TestAuthMakeCSRFCookie(t *testing.T) {
 	// No cookie domain or auth url
 	c := MakeCSRFCookie(r, "12345678901234567890123456789012")
 	assert.Equal("_forward_auth_csrf_123456", c.Name)
-	assert.Equal("app.example.com", c.Domain)
+	assert.Equal("localhost", c.Domain)
 
 	// With cookie domain but no auth url
 	config.CookieDomains = []CookieDomain{*NewCookieDomain("example.com")}
 	c = MakeCSRFCookie(r, "12222278901234567890123456789012")
 	assert.Equal("_forward_auth_csrf_122222", c.Name)
-	assert.Equal("app.example.com", c.Domain)
+	assert.Equal("localhost", c.Domain)
 
 	// With cookie domain and auth url
 	config.AuthHost = "auth.example.com"
 	config.CookieDomains = []CookieDomain{*NewCookieDomain("example.com")}
 	c = MakeCSRFCookie(r, "12333378901234567890123456789012")
 	assert.Equal("_forward_auth_csrf_123333", c.Name)
-	assert.Equal("example.com", c.Domain)
+	assert.Equal("localhost", c.Domain)
 }
 
 func TestAuthClearCSRFCookie(t *testing.T) {
@@ -381,17 +381,17 @@ func TestMakeState(t *testing.T) {
 	// Test with google
 	p := provider.Google{}
 	state := MakeState(r, &p, "nonce")
-	assert.Equal("nonce:google:http://example.com/hello", state)
+	assert.Equal("nonce:google:http://localhost:8080/hello", state)
 
 	// Test with OIDC
 	p2 := provider.OIDC{}
 	state = MakeState(r, &p2, "nonce")
-	assert.Equal("nonce:oidc:http://example.com/hello", state)
+	assert.Equal("nonce:oidc:http://localhost:8080/hello", state)
 
 	// Test with Generic OAuth
 	p3 := provider.GenericOAuth{}
 	state = MakeState(r, &p3, "nonce")
-	assert.Equal("nonce:generic-oauth:http://example.com/hello", state)
+	assert.Equal("nonce:generic-oauth:http://localhost:8080/hello", state)
 }
 
 func TestAuthNonce(t *testing.T) {

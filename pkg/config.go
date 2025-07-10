@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aliotta/traefik-forward-auth/internal/provider"
+	"github.com/aliotta/traefik-forward-auth/pkg/provider"
 	"github.com/thomseddon/go-flags"
 )
 

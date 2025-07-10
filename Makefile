@@ -5,4 +5,9 @@ format:
 test:
 	go test -v ./...
 
+.PHONY: mock
+mock: ## run testify mockery for all the interfaces
+	rm -rf mocks
+	mockery --all --dir internal --output ./mocks/internal --keeptree
+
 .PHONY: format test

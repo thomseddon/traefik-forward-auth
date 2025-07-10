@@ -37,7 +37,7 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 	start := time.Now()
 
 	// Log request details
-	lrt.Logger.Printf("Sending request: %s %s", req.Method, req.URL.String(), req.Header["Content-Type"])
+	lrt.Logger.Printf("Sending request: %s %s", req.Method, req.URL.String())
 
 	// Execute the actual request
 	resp, err := lrt.Proxied.RoundTrip(req)

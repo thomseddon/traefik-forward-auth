@@ -62,6 +62,7 @@ func TestGenericOAuthGetLoginURL(t *testing.T) {
 	// Check query string
 	qs := uri.Query()
 	expectedQs := url.Values{
+		"audience":      []string{"astronomer-ee"},
 		"client_id":     []string{"idtest"},
 		"redirect_uri":  []string{"http://example.com/_oauth"},
 		"response_type": []string{"code"},
@@ -76,6 +77,7 @@ func TestGenericOAuthExchangeCode(t *testing.T) {
 
 	// Setup server
 	expected := url.Values{
+		"audience":      []string{"astronomer-ee"},
 		"client_id":     []string{"idtest"},
 		"client_secret": []string{"sectest"},
 		"code":          []string{"code"},
