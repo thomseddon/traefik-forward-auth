@@ -166,7 +166,7 @@ Application Options:
   --whitelist=                                          Only allow given email addresses, can be set multiple times [$WHITELIST]
   --port=                                               Port to listen on (default: 4181) [$PORT]
   --rule.<name>.<param>=                                Rule definitions, param can be: "action", "rule" or "provider"
-  --authorization-url=                                   URL to use for forward authorization to another service [$AUTHORIZATION_URL]
+  --authorization-url=                                  URL to use for forward authorization to another service [$AUTHORIZATION_URL]
 
 Google Provider:
   --providers.google.client-id=                         Client ID [$PROVIDERS_GOOGLE_CLIENT_ID]
