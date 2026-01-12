@@ -13,13 +13,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
-    - name: Set up Go 1.x
-      uses: actions/setup-go@v2
+    - name: Set up Go
+      uses: actions/setup-go@v4
       with:
-        go-version: ^1.13
+        go-version: '1.22'
 
-    - name: Check out code into the Go module directory
-      uses: actions/checkout@v2
+    - name: Check out code
+      uses: actions/checkout@v4
 
     - name: Get dependencies
       run: |
