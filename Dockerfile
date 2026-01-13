@@ -1,4 +1,4 @@
-Dockerfile FROM golang:1.22-alpine as builder
+FROM golang:1.25-alpine as builder
 
 # Setup
 RUN mkdir -p /go/src/github.com/thomseddon/traefik-forward-auth
