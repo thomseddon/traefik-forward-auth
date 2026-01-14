@@ -1,0 +1,72 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: traefik-forward-auth
+    {{- if .Values.deployment.labels }}
+    {{ toYaml .Values.deployment.labels | indent 4}}
+    {{- end }}
+  annotations:
+    {{ toYaml .Values.deployment.annotations | indent 4 }}
+  name: traefik-forward-auth
+  namespace: {{ .Values.namespace | default "kube-system" }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: traefik-forward-auth
+  template:
+    metadata:
+      labels:
+        app: traefik-forward-auth
+    spec:
+      containers:
+        - name: traefik-forward-auth
+          image: thomseddon/traefik-forward-auth
+          ports:
+            - containerPort: 4181
+              protocol: TCP
+          env:
+            {{- if .Values.deployment.provider.google }}
+            - name: PROVIDERS_GOOGLE_CLIENT_ID
+            {{- else if .Values.deployment.provider.oidc }}
+            - name: DEFAULT_PROVIDER
+              value: oidc
+            - name: PROVIDERS_OIDC_ISSUER_URL
+              value: {{ .Values.deployment.issuer.url }}
+            - name: PROVIDERS_OIDC_CLIENT_ID
+            {{- end }} 
+              value: {{ .Values.deployment.client.id }}
+            {{- if .Values.deployment.provider.google }}
+            - name: PROVIDERS_GOOGLE_CLIENT_SECRET
+            {{- else if .Values.deployment.provider.oidc }}
+            - name: PROVIDERS_OIDC_CLIENT_SECRET
+            {{- end }}
+              valueFrom:
+                secretKeyRef:
+                  name: traefik-forward-auth-secrets
+                  key: CLIENT_SECRET
+            - name: SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: traefik-forward-auth-secrets
+                  key: SECRET
+            - name: INSECURE_COOKIE
+              value: {{ .Values.deployment.cookie.insecure | quote }}
+            - name: COOKIE_DOMAIN
+              value: {{ .Values.deployment.cookie.domain }}
+            - name: DOMAIN
+              value: {{ .Values.deployment.domain }}
+            {{- if .Values.deployment.auth }}
+            - name: AUTH_HOST
+              value: {{ .Values.deployment.auth.host_url }}
+            {{- end }}
+          livenessProbe:
+            tcpSocket:
+              port: 4181
+            initialDelaySeconds: 20
+            failureThreshold: 3
+            successThreshold: 1
+            periodSeconds: 10
+            timeoutSeconds: 2
