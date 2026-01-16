@@ -16,28 +16,35 @@ A minimal forward authentication service that provides OAuth/SSO login and authe
 
 # Contents
 
-- [Releases](#releases)
-- [Usage](#usage)
-  - [Simple](#simple)
-  - [Advanced](#advanced)
-  - [Provider Setup](#provider-setup)
-- [Configuration](#configuration)
-  - [Overview](#overview)
-  - [Option Details](#option-details)
-- [Concepts](#concepts)
-  - [Forwarded Headers](#forwarded-headers)
-  - [User Restriction](#user-restriction)
-  - [Applying Authentication](#applying-authentication)
-    - [Global Authentication](#global-authentication)
-    - [Selective Ingress Authentication in Kubernetes](#selective-ingress-authentication-in-kubernetes)
-    - [Selective Container Authentication in Swarm](#selective-container-authentication-in-swarm)
-    - [Rules Based Authentication](#rules-based-authentication)
-  - [Operation Modes](#operation-modes)
-    - [Overlay Mode](#overlay-mode)
-    - [Auth Host Mode](#auth-host-mode)
-  - [Logging Out](#logging-out)
-- [Copyright](#copyright)
-- [License](#license)
+- [Traefik Forward Auth !Build Status [![Go Report Card](https://goreportcard.com/badge/github.com/thomseddon/traefik-forward-auth)](https://goreportcard.com/report/github.com/thomseddon/traefik-forward-auth) ![Docker Pulls](https://img.shields.io/docker/pulls/thomseddon/traefik-forward-auth.svg) [![GitHub release](https://img.shields.io/github/release/thomseddon/traefik-forward-auth.svg)](https://GitHub.com/thomseddon/traefik-forward-auth/releases/)](#traefik-forward-auth----)
+  - [Why?](#why)
+- [Contents](#contents)
+  - [Releases](#releases)
+      - [Upgrade Guide](#upgrade-guide)
+  - [Usage](#usage)
+      - [Simple:](#simple)
+      - [Advanced:](#advanced)
+      - [Provider Setup](#provider-setup)
+        - [Google](#google)
+        - [OpenID Connect](#openid-connect)
+        - [Generic OAuth2](#generic-oauth2)
+  - [Configuration](#configuration)
+    - [Overview](#overview)
+    - [Option Details](#option-details)
+  - [Concepts](#concepts)
+    - [User Restriction](#user-restriction)
+    - [Forwarded Headers](#forwarded-headers)
+    - [Applying Authentication](#applying-authentication)
+      - [Global Authentication](#global-authentication)
+      - [Selective Ingress Authentication in Kubernetes](#selective-ingress-authentication-in-kubernetes)
+      - [Selective Container Authentication in Swarm](#selective-container-authentication-in-swarm)
+      - [Rules Based Authentication](#rules-based-authentication)
+    - [Operation Modes](#operation-modes)
+      - [Overlay Mode](#overlay-mode)
+      - [Auth Host Mode](#auth-host-mode)
+    - [Logging Out](#logging-out)
+  - [Copyright](#copyright)
+  - [License](#license)
 
 ## Releases
 
@@ -154,6 +161,7 @@ Application Options:
   --config=                                             Path to config file [$CONFIG]
   --cookie-domain=                                      Domain to set auth cookie on, can be set multiple times [$COOKIE_DOMAIN]
   --insecure-cookie                                     Use insecure cookies [$INSECURE_COOKIE]
+  --same-site-cookie                                    Set SameSite cookie property (0: Default (1), 1: Lax, 2: Strict, 3: None)
   --cookie-name=                                        Cookie Name (default: _forward_auth) [$COOKIE_NAME]
   --csrf-cookie-name=                                   CSRF Cookie Name (default: _forward_auth_csrf) [$CSRF_COOKIE_NAME]
   --default-action=[auth|allow]                         Default action (default: auth) [$DEFAULT_ACTION]
@@ -242,6 +250,10 @@ All options can be supplied in any of the following ways, in the following prece
 - `insecure-cookie`
 
    If you are not using HTTPS between the client and traefik, you will need to pass the `insecure-cookie` option which will mean the `Secure` attribute on the cookie will not be set.
+
+- `same-site-cookie`
+
+   A future release of Chrome will only deliver cookies with cross-site requests if they are set with `SameSite=None` (same-site-cookie=4) and `Secure` (insecure-cookie=false). You can review cookies in developer tools under Application>Storage>Cookies and see more details at https://www.chromestatus.com/feature/5088147346030592 and https://www.chromestatus.com/feature/5633521622188032
 
 - `cookie-name`
 
