@@ -13,6 +13,7 @@ type OIDC struct {
 	IssuerURL    string `long:"issuer-url" env:"ISSUER_URL" description:"Issuer URL"`
 	ClientID     string `long:"client-id" env:"CLIENT_ID" description:"Client ID"`
 	ClientSecret string `long:"client-secret" env:"CLIENT_SECRET" description:"Client Secret" json:"-"`
+	AuthStyle    string `long:"auth-style" env:"AUTH_STYLE" default:"auto-detect" choice:"auto-detect" choice:"header" choice:"params" description:"Authentication style to be used by the OAuth library"`
 
 	OAuthProvider
 
@@ -45,7 +46,11 @@ func (o *OIDC) Setup() error {
 	o.Config = &oauth2.Config{
 		ClientID:     o.ClientID,
 		ClientSecret: o.ClientSecret,
-		Endpoint:     o.provider.Endpoint(),
+		Endpoint: oauth2.Endpoint{
+			AuthStyle: parseAuthStyle(o.AuthStyle),
+			AuthURL:  o.provider.Endpoint().AuthURL,
+			TokenURL: o.provider.Endpoint().TokenURL,
+		},
 
 		// "openid" is a required scope for OpenID Connect flows.
 		Scopes: []string{oidc.ScopeOpenID, "profile", "email"},
