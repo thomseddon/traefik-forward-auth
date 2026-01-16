@@ -303,6 +303,12 @@ All options can be supplied in any of the following ways, in the following prece
 
    Please note that when using the default [Overlay Mode](#overlay-mode) requests to this exact path will be intercepted by this service and not forwarded to your application. Use this option (or [Auth Host Mode](#auth-host-mode)) if the default `/_oauth` path will collide with an existing route in your application.
 
+- `logout-if-invalid-email`
+
+   When enabled, logs out users if their email address isn't found on the allow list, allowing them to retry with another email address.
+
+   Default: `false`
+
 - `secret`
 
    Used to sign cookies authentication, should be a random (e.g. `openssl rand -hex 16`)

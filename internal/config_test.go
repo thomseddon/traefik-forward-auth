@@ -38,6 +38,7 @@ func TestConfigDefaults(t *testing.T) {
 	assert.Equal("/_oauth", c.Path)
 	assert.Len(c.Whitelist, 0)
 	assert.Equal(c.Port, 4181)
+	assert.Equal(false, c.LogoutIfInvalidEmail)
 
 	assert.Equal("select_account", c.Providers.Google.Prompt)
 }
