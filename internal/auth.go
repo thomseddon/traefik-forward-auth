@@ -128,9 +128,10 @@ func redirectBase(r *http.Request) string {
 	return fmt.Sprintf("%s://%s", r.Header.Get("X-Forwarded-Proto"), r.Host)
 }
 
-// Return url
+// returnUrl is the URL that we will return to after authentication. Uses `RequestURI()` in order
+// to preserve both the path and query parameters.
 func returnUrl(r *http.Request) string {
-	return fmt.Sprintf("%s%s", redirectBase(r), r.URL.Path)
+	return fmt.Sprintf("%s%s", redirectBase(r), r.URL.RequestURI())
 }
 
 // Get oauth redirect uri

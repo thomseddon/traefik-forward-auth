@@ -392,6 +392,23 @@ func TestMakeState(t *testing.T) {
 	p3 := provider.GenericOAuth{}
 	state = MakeState(r, &p3, "nonce")
 	assert.Equal("nonce:generic-oauth:http://example.com/hello", state)
+
+	// Test at the root, but with a forwarded prefix
+	// this is how traefik forwards the request path information
+	r = httptest.NewRequest("GET", "http://example.com", nil)
+	r.Header.Add("X-Forwarded-Proto", "https")
+	r.Header.Add("X-Forwarded-Prefix", "/other/path")
+	p4 := provider.GenericOAuth{}
+	state = MakeState(r, &p4, "nonce")
+	assert.Equal("nonce:generic-oauth:https://example.com/other/path", state)
+
+	// Path and a forwarded prefix should use the path
+	r = httptest.NewRequest("GET", "http://example.com/multi/path", nil)
+	r.Header.Add("X-Forwarded-Proto", "https")
+	r.Header.Add("X-Forwarded-Prefix", "/something")
+	p5 := provider.GenericOAuth{}
+	state = MakeState(r, &p5, "nonce")
+	assert.Equal("nonce:generic-oauth:https://example.com/multi/path", state)
 }
 
 func TestAuthNonce(t *testing.T) {
