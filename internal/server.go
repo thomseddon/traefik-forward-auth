@@ -56,7 +56,14 @@ func (s *Server) buildRoutes() {
 // forwarded request so it's correctly routed by mux
 func (s *Server) RootHandler(w http.ResponseWriter, r *http.Request) {
 	// Modify request
-	r.Method = r.Header.Get("X-Forwarded-Method")
+
+	/// Avoid HEAD bug
+	/// https://github.com/thomseddon/traefik-forward-auth/issues/156
+	var m = r.Header.Get("X-Forwarded-Method")
+	if m != "HEAD" {
+		r.Method = m
+	}
+
 	r.Host = r.Header.Get("X-Forwarded-Host")
 
 	// Read URI from header if we're acting as forward auth middleware
