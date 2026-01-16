@@ -72,6 +72,13 @@ func TestAuthValidateEmail(t *testing.T) {
 	v = ValidateEmail("one@two.com", "default")
 	assert.True(v, "should allow any domain if email domain is not defined")
 
+	// ValidateEmail is case-insensitive
+	v = ValidateEmail("Test@Test.com", "default")
+	assert.True(v, "should allow any domain if email domain is not defined")
+	config.Domains = []string{"test.com"}
+	v = ValidateEmail("Test@Test.com", "default")
+	assert.True(v, "should allow user from allowed domain")
+
 	// Should allow matching domain
 	config.Domains = []string{"test.com"}
 	v = ValidateEmail("one@two.com", "default")
