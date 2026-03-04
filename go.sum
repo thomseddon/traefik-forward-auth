@@ -40,8 +40,8 @@ github.com/thomseddon/go-flags v1.4.1-0.20190507184247-a3629c504486 h1:hk17f4niA
 github.com/thomseddon/go-flags v1.4.1-0.20190507184247-a3629c504486/go.mod h1:NK9eZpNBmSKVxvyB/MExg6jW0Bo9hQyAuCP+b8MJFow=
 github.com/traefik/paerser v0.2.2 h1:cpzW/ZrQrBh3mdwD/jnp6aXASiUFKOVr6ldP+keJTcQ=
 github.com/traefik/paerser v0.2.2/go.mod h1:7BBDd4FANoVgaTZG+yh26jI6CA2nds7D/4VTEdIsh24=
-github.com/traefik/traefik/v2 v2.11.34 h1:TSMC60rpQHDaoYcnyiTQtHZimXenFZR+600MhHJEVoY=
-github.com/traefik/traefik/v2 v2.11.34/go.mod h1:4IsMkzOastNmRZoIvVSKTGFcJ8arGaOkYuenYDOlDM8=
+github.com/traefik/traefik/v2 v2.11.38 h1:A0+6AIlKFApmzJPCDtr1uNllZYTxI1Pr+TcdU7dgy3o=
+github.com/traefik/traefik/v2 v2.11.38/go.mod h1:19sRX1gJDnFJvR1SZmGTPQQgJ+/8SVmpSFF3TQrl4mU=
 github.com/vulcand/predicate v1.3.0 h1:jtNe4PHbLJ649dR7Gl+MSAzUhLGtLspAkWlSjoOiXg8=
 github.com/vulcand/predicate v1.3.0/go.mod h1:opzv9MetRuMNnuoPeTSWtwzjcXsxQC00/fuWzkPTn4s=
 golang.org/x/crypto v0.47.0 h1:V6e3FRj+n4dbpw86FJ8Fv7XVOql7TEwpHapKoMJ/GO8=
