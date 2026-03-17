@@ -166,6 +166,7 @@ Application Options:
   --whitelist=                                          Only allow given email addresses, can be set multiple times [$WHITELIST]
   --port=                                               Port to listen on (default: 4181) [$PORT]
   --rule.<name>.<param>=                                Rule definitions, param can be: "action", "rule" or "provider"
+  --authorization-url=                                  URL to use for forward authorization to another service [$AUTHORIZATION_URL]
 
 Google Provider:
   --providers.google.client-id=                         Client ID [$PROVIDERS_GOOGLE_CLIENT_ID]
@@ -361,6 +362,22 @@ All options can be supplied in any of the following ways, in the following prece
    ```
 
    Note: It is possible to break your redirect flow with rules, please be careful not to create an `allow` rule that matches your redirect_uri unless you know what you're doing. This limitation is being tracked in in #101 and the behaviour will change in future releases.
+
+- `authorization-url`
+
+   When defined, an authorization layer is added after the 'rules'.
+
+  - A request with the following information is sent to the URL:
+       - `email`
+       - `request`
+           - `method`
+           - `host`
+           - `path`
+  - The user's authorization must be indicated by the following response:
+       - Status: `OK 200`
+       - Body: `Authorized`
+  - If the authorization service responds with anything else, the user will not be authorized to access the requested resource.
+
 
 ## Concepts
 

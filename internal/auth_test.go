@@ -194,6 +194,43 @@ func TestAuthValidateEmail(t *testing.T) {
 	assert.True(v, "should allow user in whitelist")
 }
 
+func TestAuthValidateRequest(t *testing.T) {
+	assert := assert.New(t)
+	config, _ = NewConfig([]string{})
+
+	r := httptest.NewRequest("GET", "http://example.com/foo", nil)
+	r.Header.Add("X-Forwarded-Method", "POST")
+	r.Header.Add("X-Forwarded-Host", "example.com")
+	r.Header.Add("X-Forwarded-Uri", "/foo")
+
+	// No Authorization URL configured, skip request validation
+	config.AuthorizationURL = ""
+	v := ValidateRequest(r, "test@test.com")
+	assert.True(v, "should skip request validation if no authorization URL is configured")
+
+	// Authorization URL configured, validate request response 200 Authorized
+	srvOk := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Authorized"))
+	}))
+	defer srvOk.Close()
+
+	config.AuthorizationURL = srvOk.URL
+	v = ValidateRequest(r, "test@test.com")
+	assert.True(v, "should allow request if authorization URL returns 200 OK")
+
+	// Authorization URL configured, validate request response 200 Unauthorized
+	srvKo := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Unauthorized"))
+	}))
+	defer srvKo.Close()
+
+	config.AuthorizationURL = srvKo.URL
+	v = ValidateRequest(r, "test@test.com")
+	assert.False(v, "should not allow request if authorization URL returns 200 Unauthorized")
+}
+
 func TestRedirectUri(t *testing.T) {
 	assert := assert.New(t)
 

@@ -1,12 +1,15 @@
 package tfa
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -91,6 +94,55 @@ func ValidateEmail(email, ruleName string) bool {
 
 	// Domain validation
 	if len(domains) > 0 && ValidateDomains(email, domains) {
+		return true
+	}
+
+	return false
+}
+
+// ValidateRequest validates the request against the authorization service
+// and returns true if the request is authorized
+func ValidateRequest(r *http.Request, email string) bool {
+	if config.AuthorizationURL == "" {
+		fmt.Println("Authorization URL not set, skipping request validation")
+		return true
+	}
+
+	// Get info from request
+	method := r.Header.Get("X-Forwarded-Method")
+	host := r.Header.Get("X-Forwarded-Host")
+	path := r.Header.Get("X-Forwarded-Uri")
+
+	// Build JSON body
+	reqMap := map[string]interface{}{
+		"email": email,
+		"request": map[string]string{
+			"method": method,
+			"host":   host,
+			"path":   path,
+		},
+	}
+
+	// Marshal JSON body
+	jsonBody, err := json.Marshal(reqMap)
+	if err != nil {
+		return false
+	}
+
+	// Throw request to authorization service
+	resp, err := http.Post(config.AuthorizationURL, "application/json", bytes.NewReader(jsonBody))
+	if err != nil {
+		return false
+	}
+
+	// Get response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return false
+	}
+
+	// Check the response
+	if resp.StatusCode == http.StatusOK && string(body) == "Authorized" {
 		return true
 	}
 

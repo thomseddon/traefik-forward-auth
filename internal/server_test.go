@@ -160,6 +160,41 @@ func TestServerAuthHandlerValid(t *testing.T) {
 	assert.Equal([]string{"test@example.com"}, users, "X-Forwarded-User header should match user")
 }
 
+func TestServerAuthHandlerValidateRequest(t *testing.T) {
+	assert := assert.New(t)
+	config = newDefaultConfig()
+	config.Domains = []string{}
+
+	req := newDefaultHttpRequest("/foo")
+	c := MakeCookie(req, "test@example.com")
+
+	// Authorization service denies (should return 403)
+	srvKo := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusForbidden)
+		w.Write([]byte("Unauthorized"))
+	}))
+	defer srvKo.Close()
+	config.AuthorizationURL = srvKo.URL
+
+	res, _ := doHttpRequest(req, c)
+	assert.Equal(403, res.StatusCode, "Should return 403 if ValidateRequest returns false")
+
+	// Authorization service accepts (200 + "Authorized")
+	srvOk := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Authorized"))
+	}))
+	defer srvOk.Close()
+	config.AuthorizationURL = srvOk.URL
+
+	res, _ = doHttpRequest(req, c)
+	assert.Equal(200, res.StatusCode, "Should return 200 if ValidateRequest returns true")
+
+	users := res.Header["X-Forwarded-User"]
+	assert.Len(users, 1, "valid request should have X-Forwarded-User header")
+	assert.Equal([]string{"test@example.com"}, users, "X-Forwarded-User header should match user")
+}
+
 func TestServerAuthCallback(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)

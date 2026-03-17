@@ -44,6 +44,8 @@ type Config struct {
 	Providers provider.Providers `group:"providers" namespace:"providers" env-namespace:"PROVIDERS"`
 	Rules     map[string]*Rule   `long:"rule.<name>.<param>" description:"Rule definitions, param can be: \"action\", \"rule\" or \"provider\""`
 
+	AuthorizationURL string `long:"authorization-url" env:"AUTHORIZATION_URL" description:"The URL used for forward authorization requests, the body of the request will be a JSON object with the following fields: \"email\", \"request\". The request field is an array of objects with the following fields: \"method\", \"host\", \"path\""`
+
 	// Filled during transformations
 	Secret   []byte `json:"-"`
 	Lifetime time.Duration

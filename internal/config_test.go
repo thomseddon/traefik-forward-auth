@@ -38,6 +38,7 @@ func TestConfigDefaults(t *testing.T) {
 	assert.Equal("/_oauth", c.Path)
 	assert.Len(c.Whitelist, 0)
 	assert.Equal(c.Port, 4181)
+	assert.Equal("", c.AuthorizationURL)
 
 	assert.Equal("select_account", c.Providers.Google.Prompt)
 }
@@ -52,6 +53,7 @@ func TestConfigParseArgs(t *testing.T) {
 		"--rule.1.rule=PathPrefix(`/one`)",
 		"--rule.two.action=auth",
 		"--rule.two.rule=\"Host(`two.com`) && Path(`/two`)\"",
+		"--authorization-url=http://authorize.example.org/authorize",
 		"--port=8000",
 	})
 	require.Nil(t, err)
@@ -60,6 +62,7 @@ func TestConfigParseArgs(t *testing.T) {
 	assert.Equal("cookiename", c.CookieName)
 	assert.Equal("csrfcookiename", c.CSRFCookieName)
 	assert.Equal("oidc", c.DefaultProvider)
+	assert.Equal("http://authorize.example.org/authorize", c.AuthorizationURL)
 	assert.Equal(8000, c.Port)
 
 	// Check rules

@@ -112,6 +112,14 @@ func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 			return
 		}
 
+		// Validate if request is authorized
+		authorized := ValidateRequest(r, email)
+		if !authorized {
+			logger.WithField("email", email).Debug("Request not authorized for user")
+			http.Error(w, "Not authorized", 403)
+			return
+		}
+
 		// Valid request
 		logger.Debug("Allowing valid request")
 		w.Header().Set("X-Forwarded-User", email)
