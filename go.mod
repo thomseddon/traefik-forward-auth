@@ -1,8 +1,6 @@
 module github.com/thomseddon/traefik-forward-auth
 
-go 1.25
-
-toolchain go1.25.0
+go 1.25.0
 
 require (
 	github.com/coreos/go-oidc v2.4.0+incompatible
@@ -10,7 +8,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.11.1
 	github.com/thomseddon/go-flags v1.4.1-0.20190507184247-a3629c504486
-	github.com/traefik/traefik/v2 v2.11.34
+	github.com/traefik/traefik/v2 v2.11.41
 	golang.org/x/oauth2 v0.34.0
 )
 
@@ -25,13 +23,13 @@ require (
 	github.com/pquerna/cachecontrol v0.2.0 // indirect
 	github.com/traefik/paerser v0.2.2 // indirect
 	github.com/vulcand/predicate v1.3.0 // indirect
-	golang.org/x/crypto v0.47.0 // indirect
+	golang.org/x/crypto v0.48.0 // indirect
 	golang.org/x/mod v0.32.0 // indirect
-	golang.org/x/net v0.48.0 // indirect
+	golang.org/x/net v0.51.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
-	golang.org/x/sys v0.40.0 // indirect
-	golang.org/x/text v0.33.0 // indirect
-	golang.org/x/tools v0.40.0 // indirect
+	golang.org/x/sys v0.41.0 // indirect
+	golang.org/x/text v0.34.0 // indirect
+	golang.org/x/tools v0.41.0 // indirect
 	gopkg.in/go-jose/go-jose.v2 v2.6.3 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
