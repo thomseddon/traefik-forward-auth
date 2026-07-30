@@ -3,11 +3,18 @@ package tfa
 import (
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 	"github.com/thomseddon/traefik-forward-auth/internal/provider"
 	muxhttp "github.com/traefik/traefik/v2/pkg/muxer/http"
 )
+
+// maxCSRFCookies is the number of CSRF cookies a request may already carry
+// before authRedirect purges them all. Auth flows that never complete leave
+// their (uniquely named, 1h) CSRF cookie behind, so this bounds accumulation
+// while still permitting a reasonable number of concurrent logins.
+const maxCSRFCookies = 5
 
 // Server contains muxer and handler methods
 type Server struct {
@@ -222,6 +229,21 @@ func (s *Server) authRedirect(logger *logrus.Entry, w http.ResponseWriter, r *ht
 		logger.WithField("error", err).Error("Error generating nonce")
 		http.Error(w, "Service unavailable", 503)
 		return
+	}
+
+	// Purge accumulated CSRF cookies once past the threshold. Auth flows that
+	// never complete (background reloads, prefetches) leave their uniquely
+	// named cookie behind for its full 1h lifetime, which can outpace expiry.
+	var csrfCookies []*http.Cookie
+	for _, v := range r.Cookies() {
+		if strings.HasPrefix(v.Name, config.CSRFCookieName) {
+			csrfCookies = append(csrfCookies, v)
+		}
+	}
+	if len(csrfCookies) > maxCSRFCookies {
+		for _, v := range csrfCookies {
+			http.SetCookie(w, ClearCSRFCookie(r, v))
+		}
 	}
 
 	// Set the CSRF cookie

@@ -4,6 +4,20 @@
 
 A minimal forward authentication service that provides OAuth/SSO login and authentication for the [traefik](https://github.com/containous/traefik) reverse proxy/load balancer.
 
+## Fork Divergence
+
+This is a fork of [thomseddon/traefik-forward-auth](https://github.com/thomseddon/traefik-forward-auth) carrying one behavioural change, described below. Everything else tracks upstream.
+
+**What changed.** `authRedirect()` in `internal/server.go` now counts the CSRF cookies already present on the incoming request and, if there are more than **5**, clears all of them before setting the new one. The threshold is the `maxCSRFCookies` constant in the same file.
+
+**Why.** Each auth redirect mints a *uniquely named* CSRF cookie (`buildCSRFCookieName()` appends the first six characters of the nonce) with a fixed 1 hour expiry. Upstream sets one on every request that reaches `authRedirect()` and only ever clears the single cookie matching the state nonce returned to `AuthCallbackHandler()`. Any auth flow that begins but never completes — background tab reloads, favicon requests, service workers, link prefetches — therefore leaks one cookie for a full hour. Across several protected services these accumulate faster than they expire, until the `Cookie:` request header exceeds the receiving server's header buffer and it answers `400 Bad Request - Request Header Or Cookie Too Large`. This bites hardest when the cookies are scoped to a parent domain, because they are then sent to services that do not use forward-auth at all. See upstream [#238](https://github.com/thomseddon/traefik-forward-auth/issues/238).
+
+**Why not the upstream fix.** Upstream [PR #295](https://github.com/thomseddon/traefik-forward-auth/pull/295) clears *all* CSRF cookies on *every* `authRedirect`. That is a full revert to single-cookie behaviour and so reintroduces [#113](https://github.com/thomseddon/traefik-forward-auth/issues/113), where concurrent auth flows clobber one another's CSRF cookie and whichever flow completes second fails. Gating the purge on a count keeps growth bounded while leaving normal parallel flows working: up to 5 simultaneous in-flight logins behave exactly as upstream does today.
+
+**Tradeoff.** The #113 failure mode is not eliminated, only made much harder to hit — more than 5 auth flows genuinely in flight at once will still lose the older cookies. In exchange the cookie jar cannot grow without bound. This fork also uses `strings.HasPrefix` rather than PR #295's `strings.Contains`, so only cookies actually named for the configured `csrf-cookie-name` prefix are considered.
+
+**Images.** Published to `ghcr.io/stuckj/traefik-forward-auth` by `.github/workflows/ghcr.yml` on tag push, tagged with the git tag only. No `latest` tag is published, so upgrades must be a deliberate change to the pinned tag.
+
 ## Why?
 
 - Seamlessly overlays any http service with a single endpoint (see: `url-path` in [Configuration](#configuration))
@@ -16,6 +30,7 @@ A minimal forward authentication service that provides OAuth/SSO login and authe
 
 # Contents
 
+- [Fork Divergence](#fork-divergence)
 - [Releases](#releases)
 - [Usage](#usage)
   - [Simple](#simple)

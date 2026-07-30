@@ -160,6 +160,39 @@ func TestServerAuthHandlerValid(t *testing.T) {
 	assert.Equal([]string{"test@example.com"}, users, "X-Forwarded-User header should match user")
 }
 
+func TestServerAuthHandlerCSRFCookiePurge(t *testing.T) {
+	assert := assert.New(t)
+	config = newDefaultConfig()
+
+	// At the threshold, existing csrf cookies should be left in place
+	req := newDefaultHttpRequest("/foo")
+	addCSRFCookies(req, maxCSRFCookies)
+
+	res, _ := doHttpRequest(req, nil)
+	assert.Equal(307, res.StatusCode, "request without auth cookie should be redirected")
+
+	cleared, set := splitCSRFCookies(res)
+	assert.Len(cleared, 0, "csrf cookies should not be purged at the threshold")
+	assert.Len(set, 1, "a new csrf cookie should be set")
+
+	// Above the threshold, every existing csrf cookie should be cleared
+	req = newDefaultHttpRequest("/foo")
+	addCSRFCookies(req, maxCSRFCookies+1)
+
+	res, _ = doHttpRequest(req, nil)
+	assert.Equal(307, res.StatusCode, "request without auth cookie should be redirected")
+
+	cleared, set = splitCSRFCookies(res)
+	assert.Len(cleared, maxCSRFCookies+1, "all csrf cookies should be purged above the threshold")
+	assert.Len(set, 1, "a new csrf cookie should still be set")
+
+	// Purging must not touch cookies belonging to anything else
+	for _, c := range res.Cookies() {
+		assert.True(strings.HasPrefix(c.Name, config.CSRFCookieName),
+			"only csrf cookies should be modified, got "+c.Name)
+	}
+}
+
 func TestServerAuthCallback(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
@@ -550,6 +583,33 @@ func doHttpRequest(r *http.Request, c *http.Cookie) (*http.Response, string) {
 	// }
 
 	return res, string(body)
+}
+
+// addCSRFCookies adds n uniquely named csrf cookies to a request, mimicking
+// the cookies left behind by auth flows that were started but never completed.
+func addCSRFCookies(r *http.Request, n int) {
+	for i := 0; i < n; i++ {
+		r.AddCookie(&http.Cookie{
+			Name:  fmt.Sprintf("%s_%06d", config.CSRFCookieName, i),
+			Value: "01234567890123456789012345678901",
+		})
+	}
+}
+
+// splitCSRFCookies partitions the csrf cookies on a response into those being
+// cleared (empty value, expiry in the past) and those being set.
+func splitCSRFCookies(res *http.Response) (cleared, set []*http.Cookie) {
+	for _, c := range res.Cookies() {
+		if !strings.HasPrefix(c.Name, config.CSRFCookieName) {
+			continue
+		}
+		if c.Value == "" && c.Expires.Before(time.Now()) {
+			cleared = append(cleared, c)
+		} else {
+			set = append(set, c)
+		}
+	}
+	return
 }
 
 func newDefaultConfig() *Config {
