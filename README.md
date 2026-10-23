@@ -164,6 +164,7 @@ Application Options:
   --url-path=                                           Callback URL Path (default: /_oauth) [$URL_PATH]
   --secret=                                             Secret used for signing (required) [$SECRET]
   --whitelist=                                          Only allow given email addresses, can be set multiple times [$WHITELIST]
+  --user-header-map=                                    Add HTTP response headers based on email address [$USER_HEADERS]
   --port=                                               Port to listen on (default: 4181) [$PORT]
   --rule.<name>.<param>=                                Rule definitions, param can be: "action", "rule" or "provider"
 
@@ -314,6 +315,16 @@ All options can be supplied in any of the following ways, in the following prece
    For example, setting `--whitelist=thom@example.com --whitelist=alice@example.com` would mean that only those two exact users will be permitted. So thom@example.com would be allowed but john@example.com would not.
 
    For more details, please also read [User Restriction](#user-restriction) in the concepts section.
+
+- `user-header-map`
+
+   Allows sending specific HTTP response headers for specific users. The format is `<email>=<name>:<value>[&<name>:<value>...]`. If `X-Forwarded-User` is found here, the normal value (the email address) is suppresed. In environment variables, the users are comma-separated.
+
+   Example: `--user-header-map=thom@example.com=X-Forwarded-User:thom&X-Forwarded-Email:thom@example.com --user-header-map=alice@example.com=X-Is-Forwarded:true`
+
+   This would override the `X-Forwarded-User` header for `thom@example.com`, but not for `alice@example.com`.
+
+   Default: empty; no overrides
 
 - `rule`
 

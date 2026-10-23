@@ -55,7 +55,11 @@ func (s *Server) buildRoutes() {
 // RootHandler Overwrites the request method, host and URL with those from the
 // forwarded request so it's correctly routed by mux
 func (s *Server) RootHandler(w http.ResponseWriter, r *http.Request) {
-	// Modify request
+	// Modify a copy: net/http decides how to write the response from the
+	// original request's method. Overwriting it with a forwarded HEAD made
+	// the reply to Traefik's GET a bodiless, unterminated response, which
+	// Traefik v3 fails on with a 500.
+	r = r.Clone(r.Context())
 	r.Method = r.Header.Get("X-Forwarded-Method")
 	r.Host = r.Header.Get("X-Forwarded-Host")
 
@@ -114,8 +118,39 @@ func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 
 		// Valid request
 		logger.Debug("Allowing valid request")
-		w.Header().Set("X-Forwarded-User", email)
+		writeHeadersForValidated(w, email, config.UserHeaderMap)
 		w.WriteHeader(200)
+	}
+}
+
+const (
+	xForwardedEmail = "X-Forwarded-Email"
+	xForwardedUser  = "X-Forwarded-User"
+)
+
+// writeHeadersForValidated writes headers from the provided
+// UserHeaderMap. If no X-Forwarded-User was listed explicitly, the
+// email is written in that header
+func writeHeadersForValidated(w http.ResponseWriter, email string, umap map[string][]UserHeader) {
+	if umap == nil {
+		return
+	}
+	var foundForwardedUser bool
+	var foundForwardedEmail bool
+	for _, hdr := range umap[email] {
+		w.Header().Set(hdr.Name, hdr.Value)
+		switch hdr.Name {
+		case xForwardedUser:
+			foundForwardedUser = true
+		case xForwardedEmail:
+			foundForwardedEmail = true
+		}
+	}
+
+	if !foundForwardedUser {
+		w.Header().Set(xForwardedUser, email)
+	} else if !foundForwardedEmail {
+		w.Header().Set(xForwardedEmail, email)
 	}
 }
 

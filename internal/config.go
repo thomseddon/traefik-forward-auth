@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -39,6 +40,7 @@ type Config struct {
 	Path                   string               `long:"url-path" env:"URL_PATH" default:"/_oauth" description:"Callback URL Path"`
 	SecretString           string               `long:"secret" env:"SECRET" description:"Secret used for signing (required)" json:"-"`
 	Whitelist              CommaSeparatedList   `long:"whitelist" env:"WHITELIST" env-delim:"," description:"Only allow given email addresses, can be set multiple times"`
+	UserHeaderMap          UserHeaderMap        `long:"user-header-map" env:"USER_HEADERS" env-delim:"," description:"Add HTTP response headers based on email address"`
 	Port                   int                  `long:"port" env:"PORT" default:"4181" description:"Port to listen on"`
 
 	Providers provider.Providers `group:"providers" namespace:"providers" env-namespace:"PROVIDERS"`
@@ -363,6 +365,52 @@ func (r *Rule) Validate(c *Config) error {
 	}
 
 	return c.setupProvider(r.Provider)
+}
+
+type UserHeader struct {
+	Name  string
+	Value string
+}
+
+type UserHeaderMap map[string][]UserHeader
+
+func (c *UserHeaderMap) UnmarshalFlag(value string) error {
+	if value == "" {
+		return nil
+	}
+	if *c == nil {
+		*c = make(map[string][]UserHeader)
+	}
+	for _, s := range strings.Split(value, ",") {
+		ss := strings.SplitN(s, "=", 2)
+		if len(ss) != 2 {
+			return fmt.Errorf("expected a 'user=headers' string, but found no equal sign: %s", s)
+		}
+
+		var uhdrs []UserHeader
+		for _, hdr := range strings.Split(ss[1], "&") {
+			nv := strings.SplitN(hdr, ":", 2)
+			if len(nv) != 2 {
+				return fmt.Errorf("expected a 'name:value' string, but found no colon: %s", hdr)
+			}
+			uhdrs = append(uhdrs, UserHeader{Name: nv[0], Value: nv[1]})
+		}
+		(*c)[ss[0]] = uhdrs
+	}
+	return nil
+}
+
+func (c *UserHeaderMap) MarshalFlag() (string, error) {
+	ss := make([]string, 0, len(*c))
+	for u, uhdrs := range *c {
+		vs := make([]string, 0, len(uhdrs))
+		for _, hdr := range uhdrs {
+			vs = append(vs, hdr.Name+":"+hdr.Value)
+		}
+		ss = append(ss, u+"="+strings.Join(vs, "&"))
+	}
+	sort.Strings(ss)
+	return strings.Join(ss, ","), nil
 }
 
 // Legacy support for comma separated lists
