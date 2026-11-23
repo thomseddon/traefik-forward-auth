@@ -128,9 +128,9 @@ func redirectBase(r *http.Request) string {
 	return fmt.Sprintf("%s://%s", r.Header.Get("X-Forwarded-Proto"), r.Host)
 }
 
-// Return url
+// Return url, keeping the query string so deep links survive the login redirect
 func returnUrl(r *http.Request) string {
-	return fmt.Sprintf("%s%s", redirectBase(r), r.URL.Path)
+	return fmt.Sprintf("%s%s", redirectBase(r), r.URL.RequestURI())
 }
 
 // Get oauth redirect uri
