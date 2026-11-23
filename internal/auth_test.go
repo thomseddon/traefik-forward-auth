@@ -392,6 +392,12 @@ func TestMakeState(t *testing.T) {
 	p3 := provider.GenericOAuth{}
 	state = MakeState(r, &p3, "nonce")
 	assert.Equal("nonce:generic-oauth:http://example.com/hello", state)
+
+	// Should keep the query string
+	r = httptest.NewRequest("GET", "http://example.com/hello?a=1&b=2", nil)
+	r.Header.Add("X-Forwarded-Proto", "http")
+	state = MakeState(r, &p, "nonce")
+	assert.Equal("nonce:google:http://example.com/hello?a=1&b=2", state)
 }
 
 func TestAuthNonce(t *testing.T) {
